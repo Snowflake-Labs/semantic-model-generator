@@ -144,14 +144,14 @@ def raw_schema_to_semantic_context(
     )
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
     table_objects = []
-    unique_database_schema: set[str] = set()
+    unique_database_schema: list[str] = []
     for table in fqn_tables:
         # Verify this is a valid FQN table. For now, we check that the table follows the following format.
         # {database}.{schema}.{table}
         fqn_table = create_fqn_table(table)
         fqn_databse_schema = f"{fqn_table.database}_{fqn_table.schema}"
         if fqn_databse_schema not in unique_database_schema:
-            unique_database_schema.add(fqn_databse_schema)
+            unique_database_schema.append(fqn_databse_schema)
 
         with connector.connect(
             db_name=fqn_table.database, schema_name=fqn_table.schema
