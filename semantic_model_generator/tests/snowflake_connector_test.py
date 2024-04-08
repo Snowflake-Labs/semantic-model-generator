@@ -7,6 +7,26 @@ from pandas.testing import assert_frame_equal
 
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.snowflake_utils import snowflake_connector
+from unittest.mock import patch
+
+@pytest.fixture
+def mock_snowflake_connection_env(monkeypatch):
+    # Mock environment variable
+    monkeypatch.setenv("SNOWFLAKE_HOST", "test_host")
+
+    # Use this fixture to also patch instance methods if needed
+    with patch.object(
+        snowflake_connector.SnowflakeConnector, "_get_user", return_value="test_user"
+    ), patch.object(
+        snowflake_connector.SnowflakeConnector, "_get_password", return_value="test_password"
+    ), patch.object(
+        snowflake_connector.SnowflakeConnector, "_get_role", return_value="test_role"
+    ), patch.object(
+        snowflake_connector.SnowflakeConnector, "_get_warehouse", return_value="test_warehouse"
+    ), patch.object(
+        snowflake_connector.SnowflakeConnector, "_get_host", return_value="test_host"
+    ):
+        yield
 
 
 @pytest.fixture
@@ -79,7 +99,7 @@ _TEST_TABLE_ONE = Table(
 @mock.patch(
     "semantic_model_generator.snowflake_utils.snowflake_connector.snowflake_connection"
 )
-def test_connect(mock_snowflake_connection: mock.MagicMock):
+def test_connect(mock_snowflake_connection: mock.MagicMock, mock_snowflake_connection_env):
     mock_snowflake_connection.return_value = mock.MagicMock()
 
     connector = snowflake_connector.SnowflakeConnector(account_name="test_account")
@@ -99,7 +119,7 @@ def test_connect(mock_snowflake_connection: mock.MagicMock):
 @mock.patch(
     "semantic_model_generator.snowflake_utils.snowflake_connector.snowflake_connection"
 )
-def test_connect_with_schema(mock_snowflake_connection: mock.MagicMock):
+def test_connect_with_schema(mock_snowflake_connection: mock.MagicMock, mock_snowflake_connection_env):
     mock_snowflake_connection.return_value = mock.MagicMock()
 
     connector = snowflake_connector.SnowflakeConnector(
