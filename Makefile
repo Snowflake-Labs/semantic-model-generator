@@ -42,6 +42,9 @@ fmt_lint: shell ## lint/fmt in current python environment
 test: shell ## Run tests.
 	python -m pytest -vvs semantic_model_generator
 
+test_github_workflow:
+	python -m pytest -vvs semantic_model_generator
+
 # Release
 update-version: ## Bump poetry and github version. TYPE should be `patch` `minor` or `major`
 	@echo "Updating Poetry version ($(TYPE)) and creating a Git tag..."

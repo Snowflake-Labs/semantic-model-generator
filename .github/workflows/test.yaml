@@ -43,4 +43,4 @@ jobs:
 
       - name: Test
         run: |
-          make test
+          make test_github_workflow
