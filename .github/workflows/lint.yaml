@@ -44,16 +44,16 @@ jobs:
 
       - name: Run mypy
         run: |
-          cd semantic_model_generator && make run_mypy
+            make run_mypy
 
       - name: Check with black
         run: |
-          cd semantic_model_generator && make check_black
+            make check_black
 
       - name: Check with isort
         run: |
-          cd semantic_model_generator && make check_isort
+            make check_isort
 
       - name: Run flake8
         run: |
-          cd semantic_model_generator && make run_flake8
+            make run_flake8
