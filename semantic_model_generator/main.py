@@ -170,7 +170,7 @@ def raw_schema_to_semantic_context(
                 schema_name=fqn_table.schema,
                 table_name=fqn_table.table,
                 table_index=0,
-                ndv_per_column=3,
+                ndv_per_column=10, # number of sample values to pull per column.
                 columns_df=valid_columns_df_this_table,
                 max_workers=1,
             )
