@@ -22,7 +22,7 @@ export SNOWFLAKE_HOST = "<your-snowflake-host>"
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format.
 
-All generated models be default are saved under `semantic_model_generator/output_models`.
+All generated semantic models by default are saved under `semantic_model_generator/output_models`.
 
 **Important**: After generation, your yamls will have a series lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. In addition, if there are columns included that are not useful for your internal teams, please remove them from the semantic model.
 
