@@ -164,6 +164,7 @@ def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
     def _get_df(query: str) -> pd.DataFrame:
         cursor = conn.cursor().execute(query)
         assert cursor is not None, "cursor should not be none here."
+
         df = pd.DataFrame(
             cursor.fetchall(), columns=[c.name for c in cursor.description]
         )

@@ -1,5 +1,5 @@
 from unittest import mock
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
 import pandas as pd
 import pytest
@@ -190,3 +190,58 @@ def test_get_valid_schema_table_columns_df(
     # Assert that the connection executed the expected queries.
     query = "select t.TABLE_SCHEMA, t.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COMMENT as COLUMN_COMMENT\nfrom information_schema.tables as t\njoin information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name where t.table_schema ilike 'TEST_SCHEMA_1' AND LOWER(t.table_name) in ('table_1') \norder by 1, 2, c.ordinal_position"
     mock_conn.cursor().execute.assert_any_call(query)
+
+
+@pytest.fixture
+def snowflake_data():
+    return [
+        # This mimics the return value of cursor.fetchall() for tables and views
+        ([("table1", "schema1", "A table comment")], [("column1", "dtype")]),
+        ([("view1", "schema1", "A view comment")], [("column1", "dtype")]),
+    ]
+
+
+@pytest.fixture
+def expected_df():
+    # Expected DataFrame structure based on mocked fetchall data
+    return pd.DataFrame(
+        {
+            snowflake_connector._TABLE_NAME_COL: ["table1", "view1"],
+            snowflake_connector._TABLE_SCHEMA_COL: ["schema1", "schema1"],
+            snowflake_connector._TABLE_COMMENT_COL: [
+                "A table comment",
+                "A view comment",
+            ],
+        }
+    )
+
+
+def test_fetch_valid_tables_and_views(snowflake_data, expected_df):
+    # Mock SnowflakeConnection and cursor
+    mock_conn = mock.MagicMock()
+    mock_cursor = mock_conn.cursor.return_value
+    mock_cursor.execute.return_value = mock_cursor
+    # Set side effects for fetchall and description based on snowflake_data fixture
+    mock_cursor.fetchall.side_effect = [snowflake_data[0][0], snowflake_data[1][0]]
+
+    mock_name_one = MagicMock()
+    mock_name_one.name = "name"
+    mock_name_two = MagicMock()
+    mock_name_two.name = "schema_name"
+    mock_name_three = MagicMock()
+    mock_name_three.name = "comment"
+
+    mocked_descriptions = [mock_name_one, mock_name_two, mock_name_three]
+    mock_cursor.description = mocked_descriptions
+
+    # Call the function to test
+    result_df = snowflake_connector._fetch_valid_tables_and_views(mock_conn)
+
+    # Assert the result is as expected
+    pd.testing.assert_frame_equal(
+        result_df.reset_index(drop=True), expected_df.reset_index(drop=True)
+    )
+
+    # Verify execute was called with correct queries
+    mock_cursor.execute.assert_any_call("show tables in database")
+    mock_cursor.execute.assert_any_call("show views in database")
