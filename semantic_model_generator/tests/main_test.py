@@ -7,6 +7,7 @@ import yaml
 from semantic_model_generator.data_processing import proto_utils
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.main import (
+    _to_snake_case,
     generate_base_semantic_context_from_snowflake,
     raw_schema_to_semantic_context,
 )
@@ -14,6 +15,12 @@ from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
 )
+
+
+def test_to_snake_case():
+    text = "Hello World-How are_you"
+
+    assert "hello_world_how_are_you" == _to_snake_case(text)
 
 
 @pytest.fixture
@@ -136,20 +143,21 @@ def mock_dependencies(mock_snowflake_connection):
 def test_raw_schema_to_semantic_context(
     mock_dependencies, mock_snowflake_connection, mock_snowflake_connection_env
 ):
-    want_yaml = "name: Test Db Schema Test\ntables:\n  - name: Alias\n    description: '  '\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  '\n        synonyms:\n          - '  '\n        description: '  '\n        expr: '  '\n    dimensions:\n      - name: Zip Code\n        synonyms:\n          - '  '\n        description: '  '\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: Bad Alias\n        synonyms:\n          - '  '\n        description: '  '\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: Area Code\n        synonyms:\n          - '  '\n        description: '  '\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: Cbsa\n        synonyms:\n          - '  '\n        description: '  '\n        expr: CBSA\n        data_type: NUMBER\n"
+    want_yaml = "name: this is the best semantic model ever\ntables:\n  - name: ALIAS\n    description: '  '\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  '\n        synonyms:\n          - '  '\n        description: '  '\n        expr: '  '\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  '\n        description: '  '\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  '\n        description: '  '\n        expr: CBSA\n        data_type: NUMBER\n"
 
     snowflake_account = "test_account"
     fqn_tables = ["test_db.schema_test.ALIAS"]
+    semantic_model_name = "this is the best semantic model ever"
 
-    semantic_model, unique_database_schemas = raw_schema_to_semantic_context(
-        fqn_tables=fqn_tables, snowflake_account=snowflake_account
+    semantic_model = raw_schema_to_semantic_context(
+        fqn_tables=fqn_tables,
+        snowflake_account=snowflake_account,
+        semantic_model_name=semantic_model_name,
     )
 
     # Assert the result as expected
     assert isinstance(semantic_model, semantic_model_pb2.SemanticModel)
-    assert isinstance(unique_database_schemas, str)
     assert len(semantic_model.tables) > 0
-    assert unique_database_schemas == "test_db_schema_test"
 
     result_yaml = proto_utils.proto_to_yaml(semantic_model)
     assert result_yaml == want_yaml
@@ -175,17 +183,19 @@ def test_generate_base_context_with_placeholder_comments(
     fqn_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
+    semantic_model_name = "my awesome semantic model"
 
     generate_base_semantic_context_from_snowflake(
         fqn_tables=fqn_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
+        semantic_model_name=semantic_model_name,
     )
 
     mock_file.assert_called_once_with(output_path, "w")
     # Assert file save called with placeholder comments added.
     mock_file().write.assert_called_once_with(
-        "name: Test Db Schema Test\ntables:\n  - name: Alias\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: Zip Code\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: Bad Alias\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: Area Code\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: Cbsa\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
+        "name: my awesome semantic model\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
     )
 
 
@@ -203,22 +213,24 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     ]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
+    semantic_model_name = "Another Incredible Semantic Model"
 
     generate_base_semantic_context_from_snowflake(
         fqn_tables=fqn_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
+        semantic_model_name=semantic_model_name,
     )
 
     mock_file.assert_called_once_with(output_path, "w")
     # Assert file save called with placeholder comments added along with sample values and cross-database
     mock_file().write.assert_called_once_with(
-        "name: Test Db Schema Test A Different Database A Different Schema\ntables:\n  - name: Alias\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: Zip Code\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: Bad Alias\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: Area Code\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: Cbsa\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: Products\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: a_different_database\n      schema: a_different_schema\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: Sku\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
+        "name: Another Incredible Semantic Model\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: PRODUCTS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: a_different_database\n      schema: a_different_schema\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: SKU\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
     )
 
 
 def test_semantic_model_to_yaml() -> None:
-    want_yaml = "name: transaction_ctx\ntables:\n  - name: transactions\n    description: A table containing data about financial transactions. Each row contains\n      details of a financial transaction.\n    base_table:\n      database: my_database\n      schema: my_schema\n      table: transactions\n    columns:\n      - name: transaction_id\n        description: A unique id for this transaction.\n        expr: transaction_id\n        data_type: BIGINT\n        kind: dimension\n        unique: true\n      - name: account_id\n        description: The account id that initialized this transaction.\n        expr: account_id\n        data_type: BIGINT\n        kind: dimension\n      - name: initiation_date\n        description: Timestamp when the transaction was initiated. In UTC.\n        expr: initiation_date\n        data_type: DATETIME\n        kind: time_dimension\n      - name: amount\n        description: The amount of this transaction.\n        expr: amount\n        data_type: DECIMAL\n        kind: measure\n        default_aggregation: sum\n"
+    want_yaml = "name: transaction_ctx\ntables:\n  - name: transactions\n    description: A table containing data about financial transactions. Each row contains\n      details of a financial transaction.\n    base_table:\n      database: my_database\n      schema: my_schema\n      table: transactions\n    dimensions:\n      - name: transaction_id\n        description: A unique id for this transaction.\n        expr: transaction_id\n        data_type: BIGINT\n        unique: true\n    time_dimensions:\n      - name: initiation_date\n        description: Timestamp when the transaction was initiated. In UTC.\n        expr: initiation_date\n        data_type: DATETIME\n    measures:\n      - name: amount\n        description: The amount of this transaction.\n        expr: amount\n        data_type: DECIMAL\n        default_aggregation: sum\n"
     got = semantic_model_pb2.SemanticModel(
         name="transaction_ctx",
         tables=[
@@ -230,39 +242,32 @@ def test_semantic_model_to_yaml() -> None:
                     schema="my_schema",
                     table="transactions",
                 ),
-                columns=[
-                    semantic_model_pb2.Column(
-                        name="transaction_id",
-                        kind=semantic_model_pb2.ColumnKind.dimension,
-                        description="A unique id for this transaction.",
-                        expr="transaction_id",
-                        data_type="BIGINT",
-                        unique=True,
-                    ),
-                    semantic_model_pb2.Column(
-                        name="account_id",
-                        kind=semantic_model_pb2.ColumnKind.dimension,
-                        description="The account id that initialized this transaction.",
-                        expr="account_id",
-                        data_type="BIGINT",
-                        unique=False,
-                    ),
-                    semantic_model_pb2.Column(
+                time_dimensions=[
+                    semantic_model_pb2.TimeDimension(
                         name="initiation_date",
-                        kind=semantic_model_pb2.ColumnKind.time_dimension,
                         description="Timestamp when the transaction was initiated. In UTC.",
                         expr="initiation_date",
                         data_type="DATETIME",
                         unique=False,
-                    ),
-                    semantic_model_pb2.Column(
+                    )
+                ],
+                measures=[
+                    semantic_model_pb2.Measure(
                         name="amount",
-                        kind=semantic_model_pb2.ColumnKind.measure,
                         description="The amount of this transaction.",
                         expr="amount",
                         data_type="DECIMAL",
                         default_aggregation=semantic_model_pb2.AggregationType.sum,
                     ),
+                ],
+                dimensions=[
+                    semantic_model_pb2.Dimension(
+                        name="transaction_id",
+                        description="A unique id for this transaction.",
+                        expr="transaction_id",
+                        data_type="BIGINT",
+                        unique=True,
+                    )
                 ],
             )
         ],

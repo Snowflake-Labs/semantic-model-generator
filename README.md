@@ -20,30 +20,41 @@ export SNOWFLAKE_HOST = "<your-snowflake-host>"
 
 ## Usage
 
-You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format.
+### Generation
+
+You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Every table should be a physical table present in your database.schema.
 
 All generated semantic models by default are saved under `semantic_model_generator/output_models`.
-
-**Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. In addition, if there are columns included that are not useful for your internal teams, please remove them from the semantic model.
 
 
 ```bash
 python -m semantic_model_generator.main \
-    --fqn_tables "['<your-database-name-1>.<your-schema-name-1>.<your-table-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-table-name-2>']" \
+    --fqn_tables "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-name-2>']" \
+    --semantic_model_name "<a-meaningful-semantic-name-for-your-team>" \
     --snowflake_account="<your-snowflake-account>"
 ```
+
+### Post-Generation
+
+**Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. In addition, if there are columns included that are not useful for your internal teams, please remove them from the semantic model.
+
+In addition, consider adding the following elements to your semantic model:
+
+1. Logical columns for a given table.
+    * Example: `col1 - col2` could be the `expr` for a logical col
+2. Synonyms. Any additional synonyms for column names.
+3. Metrics. Additional metrics with their relevant `expr`.
 
 ## Release
 
 In order to push a new build and release, follow the below steps.
 
-1. Checkout a new branch from main. Please name this branch `release-YYYY-MM-DD`. 
-2. Bump the poetry and github tags depending on if this is a patch, minor, or major version update:
-    * `export TYPE=patch make update-version`
-    * `export TYPE=minor make update-version`
-    * `export TYPE=major make update-version`
+1. Checkout a new branch from main. You must name this branch `release/vYYYY-MM-DD`. The `release/v` prefix is used to trigger a github workflow post-merge.
+2. Bump the poetry:
+    * `poetry version patch`
+    * `poetry version minor`
+    * `poetry version major`
 3. Update the `CHANGELOG.md` adding a relevant header for your version number along with a description of the changes made.
 4. Commit the updated `pyproject.toml` and `CHANGELOG.md` and push.
-5. Merge your branch.
-6. Push the updated tags to trigger the release workflow with `make release`.
+5. Merge your branch which will trigger the release workflow.
 

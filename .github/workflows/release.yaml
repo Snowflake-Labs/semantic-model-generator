@@ -2,11 +2,16 @@ name: Build and Attach Wheel to GitHub Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - 'main'
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - 'CHANGELOG.md'
 
 jobs:
   build:
+    if: contains(github.ref, 'refs/heads/release/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

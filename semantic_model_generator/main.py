@@ -1,4 +1,3 @@
-import string
 from datetime import datetime
 
 import jsonargparse
@@ -7,9 +6,9 @@ from loguru import logger
 from semantic_model_generator.data_processing import data_types, proto_utils
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    DIMENSION_DATATYPE_COMMON_NAME,
-    MEASURE_DATATYPE_COMMON_NAME,
-    TIME_MEASURE_DATATYPE_COMMON_NAME,
+    DIMENSION_DATATYPES,
+    MEASURE_DATATYPES,
+    TIME_MEASURE_DATATYPES,
     SnowflakeConnector,
     get_table_representation,
     get_valid_schemas_tables_columns_df,
@@ -18,12 +17,6 @@ from semantic_model_generator.snowflake_utils.utils import create_fqn_table
 
 _PLACEHOLDER_COMMENT = "  "
 _FILL_OUT_TOKEN = " # <FILL-OUT>"
-
-
-def _expr_to_name(expr: str) -> str:
-    return expr.translate(
-        expr.maketrans(string.punctuation, " " * len(string.punctuation))
-    ).title()
 
 
 def _get_placeholder_filter() -> list[semantic_model_pb2.NamedFilter]:
@@ -55,7 +48,7 @@ def _raw_table_to_semantic_context_table(
     populates them with sample values, and sets placeholders for descriptions and filters.
     """
 
-    # For each columns, decide if it is a TimeDimension, Measure, or Dimension column.
+    # For each column, decide if it is a TimeDimension, Measure, or Dimension column.
     # For now, we decide this based on datatype.
     # Any time datatype, is TimeDimension.
     # Any varchar/text is Dimension.
@@ -67,10 +60,10 @@ def _raw_table_to_semantic_context_table(
 
     for col in raw_table.columns:
 
-        if col.column_type == TIME_MEASURE_DATATYPE_COMMON_NAME:
+        if col.column_type in TIME_MEASURE_DATATYPES:
             time_dimensions.append(
                 semantic_model_pb2.TimeDimension(
-                    name=_expr_to_name(col.column_name),
+                    name=col.column_name,
                     expr=col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
@@ -79,10 +72,10 @@ def _raw_table_to_semantic_context_table(
                 )
             )
 
-        elif col.column_type == DIMENSION_DATATYPE_COMMON_NAME:
+        elif col.column_type in DIMENSION_DATATYPES:
             dimensions.append(
                 semantic_model_pb2.Dimension(
-                    name=_expr_to_name(col.column_name),
+                    name=col.column_name,
                     expr=col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
@@ -91,20 +84,24 @@ def _raw_table_to_semantic_context_table(
                 )
             )
 
-        elif col.column_type == MEASURE_DATATYPE_COMMON_NAME:
+        elif col.column_type in MEASURE_DATATYPES:
             measures.append(
                 semantic_model_pb2.Measure(
-                    name=_expr_to_name(col.column_name),
+                    name=col.column_name,
                     expr=col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=[_PLACEHOLDER_COMMENT],
                     description=_PLACEHOLDER_COMMENT,
                 )
+            )
+        else:
+            raise ValueError(
+                f"Column datatype does not map to a known datatype. Input was = {col.column_type}. If this is a new datatype, please update the constants in snwoflake_connector.py."
             )
 
     return semantic_model_pb2.Table(
-        name=_expr_to_name(raw_table.name),
+        name=raw_table.name,
         base_table=semantic_model_pb2.FullyQualifiedTable(
             database=database, schema=schema, table=raw_table.name
         ),
@@ -118,17 +115,18 @@ def _raw_table_to_semantic_context_table(
 
 
 def raw_schema_to_semantic_context(
-    fqn_tables: list[str], snowflake_account: str
-) -> tuple[semantic_model_pb2.SemanticModel, str]:
+    fqn_tables: list[str], snowflake_account: str, semantic_model_name: str
+) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
 
     Parameters:
     - fqn_tables (list[str]): Fully qualified table names to include in the semantic model.
     - snowflake_account (str): Snowflake account identifier.
+    - semantic_model_name (str): A meaningful semantic model name.
 
     Returns:
-    - tuple: A tuple containing the semantic model (semantic_model_pb2.SemanticModel) and the model name (str).
+    - The semantic model (semantic_model_pb2.SemanticModel).
 
     This function fetches metadata for the specified tables, performs schema validation, extracts key information,
     enriches metadata from the Snowflake database, and constructs a semantic model in protobuf format.
@@ -139,7 +137,7 @@ def raw_schema_to_semantic_context(
     """
     connector = SnowflakeConnector(
         account_name=snowflake_account,
-        ndv_per_column=3,  # number of sample values to pull per column.
+        ndv_per_column=10,  # number of sample values to pull per column.
         max_workers=1,
     )
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
@@ -183,11 +181,11 @@ def raw_schema_to_semantic_context(
                 raw_table=raw_table,
             )
             table_objects.append(table_object)
-    semantic_model_name = "_".join(unique_database_schema)
+    # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
     context = semantic_model_pb2.SemanticModel(
-        name=_expr_to_name(semantic_model_name), tables=table_objects
+        name=semantic_model_name, tables=table_objects
     )
-    return context, semantic_model_name
+    return context
 
 
 def append_comment_to_placeholders(yaml_str: str) -> str:
@@ -219,9 +217,31 @@ def append_comment_to_placeholders(yaml_str: str) -> str:
     return "\n".join(updated_yaml)
 
 
+def _to_snake_case(s: str) -> str:
+    """
+    Convert a string into snake case.
+
+    Parameters:
+    s (str): The string to convert.
+
+    Returns:
+    str: The snake case version of the string.
+    """
+    # Replace common delimiters with spaces
+    s = s.replace("-", " ").replace("_", " ")
+
+    words = s.split(" ")
+
+    # Convert each word to lowercase and join with underscores
+    snake_case_str = "_".join([word.lower() for word in words if word]).strip()
+
+    return snake_case_str
+
+
 def generate_base_semantic_context_from_snowflake(
     fqn_tables: list[str],
     snowflake_account: str,
+    semantic_model_name: str,
     output_yaml_path: str | None = None,
 ) -> None:
     """
@@ -230,15 +250,18 @@ def generate_base_semantic_context_from_snowflake(
     Args:
         fqn_tables: Fully qualified names of Snowflake tables to include in the semantic context.
         snowflake_account: Identifier of the Snowflake account.
+        semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
         output_yaml_path: Path for the output YAML file. If None, defaults to 'semantic_model_generator/output_models/YYYYMMDDHHMMSS_<semantic_model_name>.yaml'.
 
     Returns:
         None. Writes the semantic context to a YAML file.
     """
-    context, semantic_model_name = raw_schema_to_semantic_context(
+    context = raw_schema_to_semantic_context(
         fqn_tables=fqn_tables,
         snowflake_account=snowflake_account,
+        semantic_model_name=semantic_model_name,
     )
+
     yaml_str = proto_utils.proto_to_yaml(context)
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
@@ -249,7 +272,7 @@ def generate_base_semantic_context_from_snowflake(
 
         # Format the current date and time as "YYYY-MM-DD"
         formatted_datetime = current_datetime.strftime("%Y%m%d%H%M%S")
-        write_path = f"semantic_model_generator/output_models/{formatted_datetime}_{semantic_model_name}.yaml"
+        write_path = f"semantic_model_generator/output_models/{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
     with open(write_path, "w") as f:
         f.write(yaml_str)
     return None
@@ -273,6 +296,12 @@ if __name__ == "__main__":
         help="Your Snowflake account ID.",
     )
     parser.add_argument(
+        "--semantic_model_name",
+        type=str,
+        required=True,
+        help="What is the name of this semantic model? Examples could be (Churn Analysis, Marketing, Sales Prospects ...etc)",
+    )
+    parser.add_argument(
         "--output_yaml_path",
         type=str,
         required=False,
@@ -284,5 +313,6 @@ if __name__ == "__main__":
     generate_base_semantic_context_from_snowflake(
         fqn_tables=args.fqn_tables,
         snowflake_account=args.snowflake_account,
+        semantic_model_name=args.semantic_model_name,
         output_yaml_path=args.output_yaml_path,
     )

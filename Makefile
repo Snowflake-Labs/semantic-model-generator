@@ -49,11 +49,11 @@ test_github_workflow:
 update-version: ## Bump poetry and github version. TYPE should be `patch` `minor` or `major`
 	@echo "Updating Poetry version ($(TYPE)) and creating a Git tag..."
 	@poetry version $(TYPE)
-	@VERSION=$$(poetry version -s) && git add pyproject.toml && git commit -m "Bump version to $$VERSION" && git tag v$$VERSION
-	@echo "Version updated to $$VERSION. Merge your branch then run `make release`"
+	@VERSION=$$(poetry version -s)
+	@echo "Version updated to $$VERSION. Push your branch."
 
-release: ## Runs the release workflow.
-	git push && git push --tags
+
+
 
 help: ## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's

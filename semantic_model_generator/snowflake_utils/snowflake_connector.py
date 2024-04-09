@@ -25,7 +25,7 @@ _COLUMN_COMMENT_ALIAS = "COLUMN_COMMENT"
 _TABLE_COMMENT_COL = "TABLE_COMMENT"
 
 # https://docs.snowflake.com/en/sql-reference/data-types-datetime
-_TIME_MEASURE_DATATYPES = [
+TIME_MEASURE_DATATYPES = [
     "DATE",
     "DATETIME",
     "TIMESTAMP_LTZ",
@@ -34,9 +34,8 @@ _TIME_MEASURE_DATATYPES = [
     "TIMESTAMP",
     "TIME",
 ]
-TIME_MEASURE_DATATYPE_COMMON_NAME = "TIMESTAMP"
 # https://docs.snowflake.com/en/sql-reference/data-types-text
-_DIMENSION_DATATYPES = [
+DIMENSION_DATATYPES = [
     "VARCHAR",
     "CHAR",
     "CHARACTER",
@@ -46,13 +45,12 @@ _DIMENSION_DATATYPES = [
     "NVARCHAR",
     "NVARCHAR2",
     "CHAR VARYING",
-    " NCHAR VARYING",
+    "NCHAR VARYING",
     "BINARY",
     "VARBINARY",
 ]
-DIMENSION_DATATYPE_COMMON_NAME = "TEXT"
 # https://docs.snowflake.com/en/sql-reference/data-types-numeric
-_MEASURE_DATATYPES = [
+MEASURE_DATATYPES = [
     "NUMBER",
     "DECIMAL",
     "DEC",
@@ -70,24 +68,9 @@ _MEASURE_DATATYPES = [
     "DOUBLE PRECISION",
     "REAL",
 ]
-MEASURE_DATATYPE_COMMON_NAME = "NUMBER"
 
 
 _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
-
-
-def determine_col_datatype(snowflake_datatype: str) -> str:
-    # Takes in a snowflake datatype and returns the common datatype
-    if snowflake_datatype in _TIME_MEASURE_DATATYPES:
-        return TIME_MEASURE_DATATYPE_COMMON_NAME
-    elif snowflake_datatype in _DIMENSION_DATATYPES:
-        return DIMENSION_DATATYPE_COMMON_NAME
-    elif snowflake_datatype in _MEASURE_DATATYPES:
-        return MEASURE_DATATYPE_COMMON_NAME
-    else:
-        raise ValueError(
-            f"Input snowflake datatype {snowflake_datatype} not supported yet. Please add to either _TIME_MEASURE_DATATYPES, _DIMENSION_DATATYPES, or _MEASURE_DATATYPES"
-        )
 
 
 def get_table_representation(
@@ -171,7 +154,7 @@ def _get_column_representation(
         id_=column_index,
         column_name=column_name,
         comment=column_comment,
-        column_type=determine_col_datatype(column_datatype),
+        column_type=column_datatype,
         values=column_values,
     )
     return column
@@ -351,12 +334,16 @@ class SnowflakeConnector:
                 logger.debug(
                     f"There is no Warehouse assigned to Connection, setting it to config default ({warehouse})"
                 )
+                # TODO(jhilgart): Do we need to replace - with _?
+                # Snowflake docs suggest we need identifiers with _, https://docs.snowflake.com/en/sql-reference/identifiers-syntax,
+                # but unclear if we need this here.
                 connection.cursor().execute(
                     f'use warehouse {warehouse.replace("-", "_")}'
                 )
             cursor = connection.cursor(DictCursor)
             logger.info(f"Executing query = {query}")
             cursor_execute = cursor.execute(query)
+            # assert below for MyPy. Should always be true.
             assert cursor_execute, "cursor_execute should not be None here"
             result = cursor_execute.fetchall()
         except ProgrammingError as e:

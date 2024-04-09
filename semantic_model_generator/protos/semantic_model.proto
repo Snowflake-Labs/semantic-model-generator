@@ -19,49 +19,8 @@ enum AggregationType {
     count_distinct = 6;
 }
 
-// ColumnKind defines various kinds of columns, mainly categorized into
-// dimensions and measures.
-enum ColumnKind {
-    column_kind_unknown = 0;
-    // A column containing categorical values such as names, countries, dates.
-    dimension = 1;
-    // A column containing numerical values such as revenue, impressions, salary.
-    measure = 2;
-    // A column containing date/time data.
-    time_dimension = 3;
-}
-
-// Column is analogous to a database column and defines various semantic properties
-// of a column.  A column can either simply be a column in the base database schema
-// or it can be an arbitrary expression over the base schema, e.g.
-// `base_column1 + base_column2`.
-message Column {
-    // A descriptive name for this column.
-    string name = 1;
-    // A list of other terms/phrases used to refer to this column.
-    repeated string synonyms = 2;
-    // A brief description about this column, including things like what data this
-    // column has.
-    string description = 3;
-    // The SQL expression for this column. Could simply be a base table column name
-    // or an arbitrary SQL expression over one or more columns of the base table.
-    string expr = 4;
-    // The data type of this column.
-    string data_type = 5;
-    // The kind of this column - dimension or measure.
-    ColumnKind kind = 6;
-    // If true, assume that this column has unique values.
-    bool unique = 7;
-    // If no aggregation is specified, then this is the default aggregation
-    // applied to this column in context of a grouping.
-    AggregationType default_aggregation = 8;
-    // Sample values of this column.
-    repeated string sample_values = 9;
-}
-
 // Dimension columns contain categorical values (e.g. state, user_type, platform).
-// NOTE: If modifying this protobuf, make appropriate changes in to_column_format()
-// of snowpilot/semantic_context/utils/utils.py.
+// NOTE: If modifying this protobuf, make appropriate changes in to_column_format().
 message Dimension {
     // A descriptive name for this dimension.
     string name = 1;
@@ -82,8 +41,7 @@ message Dimension {
 }
 
 // Time dimension columns contain time values (e.g. sale_date, created_at, year).
-// NOTE: If modifying this protobuf, make appropriate changes in to_column_format()
-// of snowpilot/semantic_context/utils/utils.py.
+// NOTE: If modifying this protobuf, make appropriate changes in to_column_format().
 message TimeDimension {
     // A descriptive name for this time dimension.
     string name = 1;
@@ -105,8 +63,7 @@ message TimeDimension {
 }
 
 // Measure columns contain numerical values (e.g. revenue, impressions, salary).
-// NOTE: If modifying this protobuf, make appropriate changes in to_column_format()
-// of snowpilot/semantic_context/utils/utils.py.
+// NOTE: If modifying this protobuf, make appropriate changes in to_column_format().
 message Measure {
     // A descriptive name for this measure.
     string name = 1;
@@ -163,13 +120,8 @@ message Table {
     // Fully qualified name of the underlying base table.
     FullyQualifiedTable base_table = 4;
 
-    // We allow two formats for specifying logical columns of a table:
-    // 1. As a list of columns.
-    // 2. As three separate list of dimensions, time dimensions, and measures.
-    // For the external facing yaml specification, we have chosen to go with (2).
-    // However, for the time being we'll support both (1) and (2) and continue
-    // using (1) as the internal representation.
-    repeated Column columns = 5;
+    // Dimension, TimeDimension, and Measure are all types of Columns for a table.
+    // These may be logical or physical columns.
     repeated Dimension dimensions = 9;
     repeated TimeDimension time_dimensions = 10;
     repeated Measure measures = 11;
