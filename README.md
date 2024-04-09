@@ -24,7 +24,7 @@ You may generate a semantic model for a given list of fully qualified tables fol
 
 All generated semantic models by default are saved under `semantic_model_generator/output_models`.
 
-**Important**: After generation, your yamls will have a series lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. In addition, if there are columns included that are not useful for your internal teams, please remove them from the semantic model.
+**Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. In addition, if there are columns included that are not useful for your internal teams, please remove them from the semantic model.
 
 
 ```bash
