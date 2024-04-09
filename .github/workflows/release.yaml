@@ -1,0 +1,47 @@
+name: Build and Attach Wheel to GitHub Release
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - 'CHANGELOG.md'
+
+jobs:
+  build:
+    if: contains(github.ref, 'refs/heads/release/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Get the version from pyproject.toml
+        run: echo "VERSION=$(poetry version -s)" >> $GITHUB_ENV
+
+      - name: Build Wheel
+        run: poetry build -f wheel
+
+      - name: Extract Changelog for the Version
+        run: |
+          VERSION=${{ env.VERSION }}
+          CHANGELOG=$(awk '/^## \['"${VERSION//./\\.}"'\]/ {flag=1; next} /^## \[/ {flag=0} flag' CHANGELOG.md)
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Upload Wheel to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.whl
+          body: ${{ env.CHANGELOG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

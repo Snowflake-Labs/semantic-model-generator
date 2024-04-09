@@ -1,0 +1,144 @@
+// If you make changes to this file, you'll need to run protoc to updated the
+// generated files by running the following command:
+//
+// protoc -I=semantic_model_generator/protos/ --python_out=semantic_model_generator/protos/ --pyi_out=semantic_model_generator/protos/ semantic_model_generator/protos/semantic_model.proto
+
+syntax = "proto3";
+
+package semantic_model_generator;
+
+// AggregationType defines a list of various aggregations.
+enum AggregationType {
+    aggregation_type_unknown = 0;
+    sum = 1;
+    avg = 2;
+    median = 7;
+    min = 3;
+    max = 4;
+    count = 5;
+    count_distinct = 6;
+}
+
+// Dimension columns contain categorical values (e.g. state, user_type, platform).
+// NOTE: If modifying this protobuf, make appropriate changes in to_column_format().
+message Dimension {
+    // A descriptive name for this dimension.
+    string name = 1;
+    // A list of other terms/phrases used to refer to this dimension.
+    repeated string synonyms = 2;
+    // A brief description about this dimension, including things like
+    // what data this dimension has.
+    string description = 3;
+    // The SQL expression defining this dimension. Could simply be a physical column name
+    // or an arbitrary SQL expression over one or more columns of the physical table.
+    string expr = 4;
+    // The data type of this dimension.
+    string data_type = 5;
+    // If true, assume that this dimension has unique values.
+    bool unique = 6;
+    // Sample values of this column.
+    repeated string sample_values = 7;
+}
+
+// Time dimension columns contain time values (e.g. sale_date, created_at, year).
+// NOTE: If modifying this protobuf, make appropriate changes in to_column_format().
+message TimeDimension {
+    // A descriptive name for this time dimension.
+    string name = 1;
+    // A list of other terms/phrases used to refer to this time dimension.
+    repeated string synonyms = 2;
+    // A brief description about this time dimension, including things like
+    // what data it has, the timezone of values, etc.
+    string description = 3;
+    // The SQL expression defining this time dimension. Could simply be a physical
+    // column name or an arbitrary SQL expression over one or more columns of the
+    // physical table.
+    string expr = 4;
+    // The data type of this time dimension.
+    string data_type = 5;
+    // If true, assume that this time dimension has unique values.
+    bool unique = 6;
+    // Sample values of this time dimension.
+    repeated string sample_values = 7;
+}
+
+// Measure columns contain numerical values (e.g. revenue, impressions, salary).
+// NOTE: If modifying this protobuf, make appropriate changes in to_column_format().
+message Measure {
+    // A descriptive name for this measure.
+    string name = 1;
+    // A list of other terms/phrases used to refer to this measure.
+    repeated string synonyms = 2;
+    // A brief description about this measure, including things like what data
+    // it has.
+    string description = 3;
+    // The SQL expression defining this measure. Could simply be a physical column
+    // name or an arbitrary SQL expression over one or more physical columns of
+    // the underlying physical table.
+    string expr = 4;
+    // The data type of this measure.
+    string data_type = 5;
+    // If no aggregation is specified, then this is the default aggregation
+    // applied to this measure in contxt of a grouping.
+    AggregationType default_aggregation = 6;
+    // Sample values of this measure.
+    repeated string sample_values = 7;
+}
+
+// Filter represents a named SQL expression that's used for filtering.
+message NamedFilter {
+    // A descriptive name for this filter.
+    string name = 1;
+    // A list of other term/phrases used to refer to this column.
+    repeated string synonyms = 2;
+    // A brief description about this column, including details of what this filter
+    // is typically used for.
+    string description = 3;
+    // The SQL expression of this filter.
+    string expr = 4;
+}
+
+// FullyQualifiedTable is used to represent three part table names -
+// (database, schema, table).
+message FullyQualifiedTable {
+    string database = 1;
+    string schema = 2;
+    string table = 3;
+}
+
+// Table is analogous to a database table and provides a simple view over an
+// existing database table.  A table can leave out some columns from the base
+// table and/or introduce new derived columns.
+message Table {
+    // A descriptive name for this table.
+    string name = 1;
+    // A list of other term/phrases used to refer to this table.
+    repeated string synonyms = 2;
+    // A brief description of this table, including details of what kinds of
+    // analysis is it typically used for.
+    string description = 3;
+    // Fully qualified name of the underlying base table.
+    FullyQualifiedTable base_table = 4;
+
+    // Dimension, TimeDimension, and Measure are all types of Columns for a table.
+    // These may be logical or physical columns.
+    repeated Dimension dimensions = 9;
+    repeated TimeDimension time_dimensions = 10;
+    repeated Measure measures = 11;
+
+
+    // Predefined filters on this table, if any.
+    repeated NamedFilter filters = 8;
+    // NEXT_TAG: 12.
+}
+
+// The semantic context relevant to generating SQL for answering a data question.
+message SemanticModel {
+    // A descriptive name of the project.
+    string name = 1;
+    // A brief description of this project, including details of what kind of
+    // analysis does this project enable.
+    string description = 2;
+    // List of tables in this project.
+    repeated Table tables = 3;
+}

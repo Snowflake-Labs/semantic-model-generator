@@ -1,0 +1,37 @@
+# Local python environment
+pyvenv
+
+# Notebook intermediate state
+*.ipynb_checkpoints
+
+# Mypy
+.mypy_cache
+
+# Pytest
+.pytest_cache
+
+# pycache
+**/__pycache__
+
+# Python package builds
+*.egg-info
+
+# VSCode
+.vscode/settings.json
+.vscode/.ropeproject
+.vscode/*.log
+
+# Envs
+.env
+.venv
+.direnv
+.envrc
+
+# Output semantic models
+semantic_model_generator/output_models/*
+
+# Whls
+dist/
+
+# test coverage
+.coverage
