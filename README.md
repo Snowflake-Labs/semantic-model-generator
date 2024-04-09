@@ -22,32 +22,34 @@ export SNOWFLAKE_HOST = "<your-snowflake-host>"
 
 ### Generation
 
-You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Every table should be a physical table present in your database.schema.
+You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.
 
 All generated semantic models by default are saved under `semantic_model_generator/output_models`.
 
 
 ```bash
 python -m semantic_model_generator.main \
-    --fqn_tables "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-name-2>']" \
-    --semantic_model_name "<a-meaningful-semantic-name-for-your-team>" \
+    --fqn_tables "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
+    --semantic_model_name "<a-meaningful-semantic-model-name>" \
     --snowflake_account="<your-snowflake-account>"
 ```
 
 ### Post-Generation
 
-**Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. In addition, if there are columns included that are not useful for your internal teams, please remove them from the semantic model.
+**Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. 
+
+By default, the generated semantic model will contain all columns from the provided tables/views. However, it's highly encouraged to only keep relevant columns and drop any unwanted columns from the generated semantic model
 
 In addition, consider adding the following elements to your semantic model:
 
-1. Logical columns for a given table.
-    * Example: `col1 - col2` could be the `expr` for a logical col
+1. Logical columns for a given table/view that are expressions over physical columns.
+    * Example: `col1 - col2` could be the `expr` for a logical column.
 2. Synonyms. Any additional synonyms for column names.
-3. Metrics. Additional metrics with their relevant `expr`.
+3. Filters. Additional filters with their relevant `expr`.
 
 ## Release
 
-In order to push a new build and release, follow the below steps.
+In order to push a new build and release, follow the steps below.
 
 1. Checkout a new branch from main. You must name this branch `release/vYYYY-MM-DD`. The `release/v` prefix is used to trigger a github workflow post-merge.
 2. Bump the poetry:

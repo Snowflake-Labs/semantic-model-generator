@@ -97,7 +97,7 @@ def _raw_table_to_semantic_context_table(
             )
         else:
             raise ValueError(
-                f"Column datatype does not map to a known datatype. Input was = {col.column_type}. If this is a new datatype, please update the constants in snwoflake_connector.py."
+                f"Column datatype does not map to a known datatype. Input was = {col.column_type}. If this is a new datatype, please update the constants in snowflake_connector.py."
             )
 
     return semantic_model_pb2.Table(
@@ -193,7 +193,7 @@ def append_comment_to_placeholders(yaml_str: str) -> str:
     Finds all instances of a specified placeholder in a YAML string and appends a given text to these placeholders.
     This is the homework to fill out after your yaml is generated.
 
-    Args:
+    Parameters:
     - yaml_str (str): The YAML string to process.
 
     Returns:
@@ -247,7 +247,7 @@ def generate_base_semantic_context_from_snowflake(
     """
     Generates a base semantic context from specified Snowflake tables and exports it to a YAML file.
 
-    Args:
+    Parameters:
         fqn_tables: Fully qualified names of Snowflake tables to include in the semantic context.
         snowflake_account: Identifier of the Snowflake account.
         semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
