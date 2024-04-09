@@ -49,14 +49,13 @@ In addition, consider adding the following elements to your semantic model:
 
 ## Release
 
-In order to push a new build and release, follow the steps below.
+In order to push a new build and release, follow the steps below. Note, only admins are allowed to push `release/v` tags.
 
-1. Checkout a new branch from main. You must name this branch `release/vYYYY-MM-DD`. The `release/v` prefix is used to trigger a github workflow post-merge.
+1. Checkout a new branch from main. You should name this branch `release/vYYYY-MM-DD`.
 2. Bump the poetry:
     * `poetry version patch`
     * `poetry version minor`
     * `poetry version major`
 3. Update the `CHANGELOG.md` adding a relevant header for your version number along with a description of the changes made.
-4. Commit the updated `pyproject.toml` and `CHANGELOG.md` and push.
-5. Merge your branch which will trigger the release workflow.
+4. Run `make release` which will commit `CHANGELOG.md` and `pyproject.toml` and cut a new release.
 

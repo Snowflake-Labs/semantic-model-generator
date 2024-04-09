@@ -45,5 +45,16 @@ test: shell ## Run tests.
 test_github_workflow:  ## For use on github workflow.
 	python -m pytest -vvs semantic_model_generator
 
+# Release
+update-version: ## Bump poetry and github version. TYPE should be `patch` `minor` or `major`
+	@echo "Updating Poetry version ($(TYPE)) and creating a Git tag..."
+	@poetry version $(TYPE)
+	@echo "Version updated to $$VERSION. Update the CHANGELOG.md `make release`"
+
+release: ## Runs the release workflow.
+	@VERSION=$$(poetry version -s) && git add pyproject.toml && \
+	git add CHANGELOG.md &&  git commit -m "Bump version to $$VERSION" && git tag release/v$$VERSION && \
+ 	git push && git push --tags
+
 help: ## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's
