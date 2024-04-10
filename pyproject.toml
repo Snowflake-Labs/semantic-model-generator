@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "semantic-model-generator"
+version = "0.1.1"
+description = "Generate a Semantic Model from your Snowflake tables"
+authors = ["Jonathan Hilgart <jonathan.hilgart@snowflake.com>", "Nipun Sehrawat <nipun.sehrawat@snowflake.com>", "Renee Huang <renee.huang@snowflake.com>", "Nicole Limtiaco <nicole.limtiaco@snowflake.com>"]
+license = "Apache Software License; BSD License"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "^2.2.1"
+loguru = "^0.7.2"
+snowflake-connector-python = {extras = ["pandas"], version = "^3.7.1"}
+protobuf = "^5.26.1"
+pydantic = "^2.6.4"
+PyYAML = "^6.0.1"
+"ruamel.yaml" = "^0.18.6"
+jsonargparse = "^4.27.7"
+tqdm = "^4.66.2"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.9.0"
+black = "^24.3.0"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+pytest = "^8.1.1"
+types-pyyaml = "^6.0.12.20240311"
+types-protobuf = "^4.24.0.20240311"
+pip-licenses = "^4.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
