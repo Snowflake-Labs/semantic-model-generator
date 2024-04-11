@@ -26,7 +26,9 @@ You may generate a semantic model for a given list of fully qualified tables fol
 
 All generated semantic models by default are saved under `semantic_model_generator/output_models`.
 
+1. `poetry shell`
 
+2. 
 ```bash
 python -m semantic_model_generator.main \
     --fqn_tables "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
