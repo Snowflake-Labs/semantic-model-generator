@@ -14,4 +14,4 @@ You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to p
 
 ## [0.1.0] - 2024-04-08
 ### Released
-- Initial release of the project.
+- Initial release of the project
