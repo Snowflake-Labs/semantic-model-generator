@@ -1,7 +1,7 @@
 import concurrent.futures
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Generator, Optional, TypeVar
+from typing import Any, Dict, Generator, List, Optional, TypeVar
 
 import pandas as pd
 from loguru import logger
@@ -183,8 +183,8 @@ def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
 
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection,
-    table_schema: str | None = None,
-    table_names: list[str] | None = None,
+    table_schema: Optional[str] = None,
+    table_names: Optional[List[str]] = None,
 ) -> pd.DataFrame:
     if table_names and not table_schema:
         logger.warning(
@@ -257,7 +257,7 @@ class SnowflakeConnector:
             )
         return warehouse
 
-    def _get_host(self) -> str | None:
+    def _get_host(self) -> Optional[str]:
         host = env_vars.SNOWFLAKE_HOST
         if not host:
             logger.info(
@@ -328,7 +328,7 @@ class SnowflakeConnector:
         self,
         connection: SnowflakeConnection,
         query: str,
-    ) -> dict[str, list[Any]]:
+    ) -> Dict[str, List[Any]]:
         try:
             if connection.warehouse is None:
                 warehouse = self._get_warehouse()
