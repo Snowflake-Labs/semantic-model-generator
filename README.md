@@ -33,12 +33,39 @@ set SNOWFLAKE_HOST=<your-snowflake-host>
 
 ## Usage
 
-### Generation
-
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.
 
 All generated semantic models by default are saved under `semantic_model_generator/output_models`.
 
+### Generation - Python
+
+1. Ensure you have installed the python package. Note, the version below should be the latest version under the `dist/` directory.
+```bash
+pip install dist/semantic_model_generator-0.1.2-py3-none-any.whl
+```
+2. Activate python shell
+```bash
+python
+```
+3. Generate a semantic model
+```python
+from semantic_model_generator.generate_model import generate_base_semantic_context_from_snowflake
+
+PHYSICAL_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']
+SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
+SEMANTIC_MODEL_NAME = "<a-meaningful-semantic-model-name>"
+
+generate_base_semantic_context_from_snowflake(
+    physical_tables=PHYSICAL_TABLES,
+    snowflake_account=SNOWFLAKE_ACCOUNT,
+    semantic_model_name=SEMANTIC_MODEL_NAME
+)
+```
+
+
+### Generation - CLI
+
+This is the script version run on the command line.
 1. `poetry shell` . This will activate your virtual environment.
 
 2. 
