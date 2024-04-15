@@ -63,8 +63,13 @@ update-version: ## Bump poetry and github version. TYPE should be `patch` `minor
 
 release: ## Runs the release workflow.
 	@VERSION=$$(poetry version -s) && git add pyproject.toml && \
-	git add CHANGELOG.md &&  git commit -m "Bump version to $$VERSION" && git tag release/v$$VERSION && \
+	git add CHANGELOG.md && git add dist &&   git commit -m "Bump version to $$VERSION" && git tag release/v$$VERSION && \
  	git push && git push --tags
+
+build: ## Clean the dist dir and build the whl file
+	rm -rf dist
+	mkdir dist
+	poetry build
 
 help: ## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's

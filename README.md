@@ -72,5 +72,6 @@ In order to push a new build and release, follow the steps below. Note, only adm
     * `poetry version minor`
     * `poetry version major`
 3. Update the `CHANGELOG.md` adding a relevant header for your version number along with a description of the changes made.
-4. After approval, run `make release` which will commit `CHANGELOG.md` and `pyproject.toml` and cut a new release.
-5. Merge in your pr.
+4. Run `make build` to create a new .whl file.
+5. After approval, run `make release` which will commit `CHANGELOG.md` and `pyproject.toml` and cut a new release.
+6. Merge in your pr.

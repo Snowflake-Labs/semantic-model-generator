@@ -30,8 +30,5 @@ pyvenv
 # Output semantic models
 semantic_model_generator/output_models/*.yaml
 
-# Whls
-dist/
-
 # test coverage
 .coverage
