@@ -6,7 +6,7 @@ from pydantic.dataclasses import dataclass
 @dataclass
 class FQNParts:
     database: str
-    schema: str
+    schema_name: str
     table: str
 
     def __post_init__(self: Any) -> None:
@@ -19,7 +19,7 @@ class Column:
     id_: int
     column_name: str
     column_type: str
-    values: list[str] | None = None
+    values: Optional[List[str]] = None
     comment: Optional[str] = (
         None  # comment field's to save the column comment user specified on the column
     )
