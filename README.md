@@ -49,13 +49,13 @@ python
 ```
 3. Generate a semantic model
 ```python
-from semantic_model_generator.generate_model import generate_base_semantic_context_from_snowflake
+from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
 
 PHYSICAL_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']
 SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
 SEMANTIC_MODEL_NAME = "<a-meaningful-semantic-model-name>"
 
-generate_base_semantic_context_from_snowflake(
+generate_base_semantic_model_from_snowflake(
     physical_tables=PHYSICAL_TABLES,
     snowflake_account=SNOWFLAKE_ACCOUNT,
     semantic_model_name=SEMANTIC_MODEL_NAME

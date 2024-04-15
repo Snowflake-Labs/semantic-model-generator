@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 import jsonargparse
 from loguru import logger
@@ -20,7 +20,7 @@ _PLACEHOLDER_COMMENT = "  "
 _FILL_OUT_TOKEN = " # <FILL-OUT>"
 
 
-def _get_placeholder_filter() -> list[semantic_model_pb2.NamedFilter]:
+def _get_placeholder_filter() -> List[semantic_model_pb2.NamedFilter]:
     return [
         semantic_model_pb2.NamedFilter(
             name=_PLACEHOLDER_COMMENT,
@@ -97,8 +97,18 @@ def _raw_table_to_semantic_context_table(
                 )
             )
         else:
-            raise ValueError(
-                f"Column datatype does not map to a known datatype. Input was = {col.column_type}. If this is a new datatype, please update the constants in snowflake_connector.py."
+            logger.warning(
+                f"Column datatype does not map to a known datatype. Input was = {col.column_type}. We are going to place as a Dimension for now."
+            )
+            dimensions.append(
+                semantic_model_pb2.Dimension(
+                    name=col.column_name,
+                    expr=col.column_name,
+                    data_type=col.column_type,
+                    sample_values=col.values,
+                    synonyms=[_PLACEHOLDER_COMMENT],
+                    description=_PLACEHOLDER_COMMENT,
+                )
             )
 
     return semantic_model_pb2.Table(
@@ -116,7 +126,7 @@ def _raw_table_to_semantic_context_table(
 
 
 def raw_schema_to_semantic_context(
-    physical_tables: list[str], snowflake_account: str, semantic_model_name: str
+    physical_tables: List[str], snowflake_account: str, semantic_model_name: str
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -143,7 +153,7 @@ def raw_schema_to_semantic_context(
     )
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
     table_objects = []
-    unique_database_schema: list[str] = []
+    unique_database_schema: List[str] = []
     for table in physical_tables:
         # Verify this is a valid FQN table. For now, we check that the table follows the following format.
         # {database}.{schema}.{table}
@@ -241,8 +251,8 @@ def _to_snake_case(s: str) -> str:
     return snake_case_str
 
 
-def generate_base_semantic_context_from_snowflake(
-    physical_tables: list[str],
+def generate_base_semantic_model_from_snowflake(
+    physical_tables: List[str],
     snowflake_account: str,
     semantic_model_name: str,
     output_yaml_path: Optional[str] = None,
@@ -313,7 +323,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    generate_base_semantic_context_from_snowflake(
+    generate_base_semantic_model_from_snowflake(
         physical_tables=args.physical_tables,
         snowflake_account=args.snowflake_account,
         semantic_model_name=args.semantic_model_name,

@@ -27,7 +27,7 @@ def create_connection_parameters(
     schema: Optional[str] = None,
     authenticator: Optional[str] = None,
 ) -> Dict[str, str]:
-    connection_parameters: dict[str, str] = dict(
+    connection_parameters: Dict[str, str] = dict(
         user=user, password=password, account=account
     )
     if role:
@@ -45,7 +45,7 @@ def create_connection_parameters(
     return connection_parameters
 
 
-def _connection(connection_parameters: dict[str, str]) -> SnowflakeConnection:
+def _connection(connection_parameters: Dict[str, str]) -> SnowflakeConnection:
     # https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect
     return connect(**connection_parameters)
 
@@ -56,7 +56,7 @@ def snowflake_connection(
     account: str,
     role: str,
     warehouse: str,
-    host: str | None = None,
+    host: Optional[str] = None,
 ) -> SnowflakeConnection:
     """
     Returns a Snowflake Connection to the specified account.

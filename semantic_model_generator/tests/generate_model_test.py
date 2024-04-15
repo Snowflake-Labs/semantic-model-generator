@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, call, mock_open, patch
 
 import pandas as pd
 import pytest
@@ -8,7 +8,7 @@ from semantic_model_generator.data_processing import proto_utils
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.generate_model import (
     _to_snake_case,
-    generate_base_semantic_context_from_snowflake,
+    generate_base_semantic_model_from_snowflake,
     raw_schema_to_semantic_context,
 )
 from semantic_model_generator.protos import semantic_model_pb2
@@ -48,6 +48,43 @@ _CONVERTED_TABLE_ALIAS = Table(
             id_=1,
             column_name="AREA_CODE",
             column_type="NUMBER",
+            values=None,
+            comment=None,
+        ),
+        Column(
+            id_=2,
+            column_name="BAD_ALIAS",
+            column_type="TIMESTAMP",
+            values=None,
+            comment=None,
+        ),
+        Column(
+            id_=3,
+            column_name="CBSA",
+            column_type="NUMBER",
+            values=None,
+            comment=None,
+        ),
+    ],
+    comment=None,
+)
+
+
+_CONVERTED_TABLE_ALIAS_NEW_DTYPE = Table(
+    id_=0,
+    name="ALIAS",
+    columns=[
+        Column(
+            id_=0,
+            column_name="ZIP_CODE",
+            column_type="OBJECT",
+            values=None,
+            comment=None,
+        ),
+        Column(
+            id_=1,
+            column_name="AREA_CODE",
+            column_type="VARIANT",
             values=None,
             comment=None,
         ),
@@ -140,6 +177,40 @@ def mock_dependencies(mock_snowflake_connection):
         yield
 
 
+@pytest.fixture
+def mock_dependencies_new_dtype(mock_snowflake_connection):
+    valid_schemas_tables_columns_df_alias = pd.DataFrame(
+        {
+            "TABLE_NAME": ["ALIAS"] * 4,
+            "COLUMN_NAME": ["ZIP_CODE", "AREA_CODE", "BAD_ALIAS", "CBSA"],
+            "DATA_TYPE": ["VARCHAR", "INTEGER", "DATETIME", "DECIMAL"],
+        }
+    )
+    valid_schemas_tables_columns_df_zip_code = pd.DataFrame(
+        {
+            "TABLE_NAME": ["PRODUCTS"],
+            "COLUMN_NAME": ["SKU"],
+            "DATA_TYPE": ["NUMBER"],
+        }
+    )
+    valid_schemas_tables_representations = [
+        valid_schemas_tables_columns_df_alias,
+        valid_schemas_tables_columns_df_zip_code,
+    ]
+    table_representations = [
+        _CONVERTED_TABLE_ALIAS_NEW_DTYPE,  # Value returned on the first call.
+    ]
+
+    with patch(
+        "semantic_model_generator.generate_model.get_valid_schemas_tables_columns_df",
+        side_effect=valid_schemas_tables_representations,
+    ), patch(
+        "semantic_model_generator.generate_model.get_table_representation",
+        side_effect=table_representations,
+    ):
+        yield
+
+
 def test_raw_schema_to_semantic_context(
     mock_dependencies, mock_snowflake_connection, mock_snowflake_connection_env
 ):
@@ -185,7 +256,7 @@ def test_generate_base_context_with_placeholder_comments(
     output_path = "output_model_path.yaml"
     semantic_model_name = "my awesome semantic model"
 
-    generate_base_semantic_context_from_snowflake(
+    generate_base_semantic_model_from_snowflake(
         physical_tables=physical_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
@@ -215,7 +286,7 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     output_path = "output_model_path.yaml"
     semantic_model_name = "Another Incredible Semantic Model"
 
-    generate_base_semantic_context_from_snowflake(
+    generate_base_semantic_model_from_snowflake(
         physical_tables=physical_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
@@ -226,6 +297,47 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     # Assert file save called with placeholder comments added along with sample values and cross-database
     mock_file().write.assert_called_once_with(
         "name: Another Incredible Semantic Model\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: PRODUCTS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: a_different_database\n      schema: a_different_schema\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: SKU\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
+    )
+
+
+@patch("semantic_model_generator.generate_model.logger")
+@patch("builtins.open", new_callable=mock_open)
+def test_generate_base_context_with_placeholder_comments_missing_datatype(
+    mock_file,
+    mock_logger,
+    mock_dependencies_new_dtype,
+    mock_snowflake_connection,
+    mock_snowflake_connection_env,
+):
+
+    physical_tables = ["test_db.schema_test.ALIAS"]
+    snowflake_account = "test_account"
+    output_path = "output_model_path.yaml"
+    semantic_model_name = "Another Incredible Semantic Model with new dtypes"
+
+    generate_base_semantic_model_from_snowflake(
+        physical_tables=physical_tables,
+        snowflake_account=snowflake_account,
+        output_yaml_path=output_path,
+        semantic_model_name=semantic_model_name,
+    )
+
+    expected_calls = [
+        call(
+            "Column datatype does not map to a known datatype. Input was = OBJECT. We are going to place as a Dimension for now."
+        ),
+        call(
+            "Column datatype does not map to a known datatype. Input was = VARIANT. We are going to place as a Dimension for now."
+        ),
+    ]
+
+    # Assert that all expected calls were made in the exact order
+    mock_logger.warning.assert_has_calls(expected_calls, any_order=False)
+
+    mock_file.assert_called_once_with(output_path, "w")
+    # Assert file save called with placeholder comments added along with sample values and cross-database
+    mock_file().write.assert_called_once_with(
+        "name: Another Incredible Semantic Model with new dtypes\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: OBJECT\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: VARIANT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
     )
 
 
