@@ -9,7 +9,9 @@ def test_fqn_creation():
 
     fqn_parts = create_fqn_table(input_name)
 
-    assert fqn_parts == FQNParts(database="database", schema="schema", table="table")
+    assert fqn_parts == FQNParts(
+        database="database", schema_name="schema", table="table"
+    )
 
 
 def test_fqn_creation_invalid_name():
