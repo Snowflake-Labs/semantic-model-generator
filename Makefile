@@ -1,11 +1,24 @@
+install-poetry:
+	curl -sSL https://install.python-poetry.org | python3 -
 
+install-homebrew:
+	/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+install-pyenv:
+	@command -v brew >/dev/null 2>&1 || $(MAKE) install-homebrew
+	brew install pyenv
 
-check-deps: ## Check if poetry is installed on your system.
-	@command -v poetry >/dev/null 2>&1 || { echo >&2 "Poetry is required but it's not installed. Please install Poetry by following the instructions at: https://python-poetry.org/docs/#installation"; exit 1; }
-	@command -v pyenv >/dev/null 2>&1 || { echo >&2 "pyenv is recommended for managing Python versions but it's not installed. Install via `brew install pyenv`"; exit 1; }
-	@echo "Setting Python version to 3.10 using pyenv."
-	@pyenv local 3.10
+install-python-3.8:
+	@echo "Python 3.8 not found. Installing Python 3.8 using pyenv."
+	@pyenv install 3.8
+	@pyenv local 3.8
+	
+check-deps:
+	@command -v poetry >/dev/null 2>&1 || $(MAKE) install-poetry
+	@command -v pyenv >/dev/null 2>&1 || $(MAKE) install-pyenv
+	@echo "Setting Python version to 3.8 using pyenv."
+	-@pyenv local 3.8 || $(MAKE) install-python-3.8
+
 
 shell: check-deps ## Get into a poetry shell
 	poetry shell
