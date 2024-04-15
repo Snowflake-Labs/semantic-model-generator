@@ -7,16 +7,29 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 This project uses `poetry` to manage dependencies and we recommend `pyenv` for python version management.
 
 1. `make setup`
+* Make setup will install poetry if needed.
+* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. 
 
 Next, export your credentials as environment variables. Note, `host` is optional depending on your Snowflake deployment.
 
+2. On a Mac: 
 ```bash
-export SNOWFLAKE_ROLE = "<your-snowflake-role>"
-export SNOWFLAKE_WAREHOUSE =  "<your-snowflake-warehouse>"
-export SNOWFLAKE_USER =  "<your-snowflake-user>"
-export SNOWFLAKE_PASSWORD = "<your-snowflake-password>"
-export SNOWFLAKE_HOST = "<your-snowflake-host>"
+export SNOWFLAKE_ROLE="<your-snowflake-role>"
+export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
+export SNOWFLAKE_USER="<your-snowflake-user>"
+export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
+
+3. On a PC:
+```bash
+set SNOWFLAKE_ROLE=<your-snowflake-role>
+set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
+set SNOWFLAKE_USER=<your-snowflake-user>
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+set SNOWFLAKE_HOST=<your-snowflake-host>
+```
+
 
 ## Usage
 
@@ -26,12 +39,12 @@ You may generate a semantic model for a given list of fully qualified tables fol
 
 All generated semantic models by default are saved under `semantic_model_generator/output_models`.
 
-1. `poetry shell`
+1. `poetry shell` . This will activate your virtual environment.
 
 2. 
 ```bash
-python -m semantic_model_generator.main \
-    --fqn_tables "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
+python -m semantic_model_generator.generate_model \
+    --physical_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
     --semantic_model_name "<a-meaningful-semantic-model-name>" \
     --snowflake_account="<your-snowflake-account>"
 ```

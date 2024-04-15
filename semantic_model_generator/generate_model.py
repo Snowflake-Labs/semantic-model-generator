@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 import jsonargparse
 from loguru import logger
@@ -115,13 +116,13 @@ def _raw_table_to_semantic_context_table(
 
 
 def raw_schema_to_semantic_context(
-    fqn_tables: list[str], snowflake_account: str, semantic_model_name: str
+    physical_tables: list[str], snowflake_account: str, semantic_model_name: str
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
 
     Parameters:
-    - fqn_tables (list[str]): Fully qualified table names to include in the semantic model.
+        physical_tables  (list[str]): Fully qualified table names to include in the semantic model.
     - snowflake_account (str): Snowflake account identifier.
     - semantic_model_name (str): A meaningful semantic model name.
 
@@ -143,20 +144,22 @@ def raw_schema_to_semantic_context(
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
     table_objects = []
     unique_database_schema: list[str] = []
-    for table in fqn_tables:
+    for table in physical_tables:
         # Verify this is a valid FQN table. For now, we check that the table follows the following format.
         # {database}.{schema}.{table}
         fqn_table = create_fqn_table(table)
-        fqn_databse_schema = f"{fqn_table.database}_{fqn_table.schema}"
+        fqn_databse_schema = f"{fqn_table.database}_{fqn_table.schema_name}"
         if fqn_databse_schema not in unique_database_schema:
             unique_database_schema.append(fqn_databse_schema)
 
         with connector.connect(
-            db_name=fqn_table.database, schema_name=fqn_table.schema
+            db_name=fqn_table.database, schema_name=fqn_table.schema_name
         ) as conn:
             logger.info(f"Pulling column information from {fqn_table}")
             valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
-                conn=conn, table_schema=fqn_table.schema, table_names=[fqn_table.table]
+                conn=conn,
+                table_schema=fqn_table.schema_name,
+                table_names=[fqn_table.table],
             )
             assert not valid_schemas_tables_columns_df.empty
 
@@ -167,7 +170,7 @@ def raw_schema_to_semantic_context(
 
             raw_table = get_table_representation(
                 conn=conn,
-                schema_name=fqn_table.schema,
+                schema_name=fqn_table.schema_name,
                 table_name=fqn_table.table,
                 table_index=0,
                 ndv_per_column=10,  # number of sample values to pull per column.
@@ -177,7 +180,7 @@ def raw_schema_to_semantic_context(
 
             table_object = _raw_table_to_semantic_context_table(
                 database=fqn_table.database,
-                schema=fqn_table.schema,
+                schema=fqn_table.schema_name,
                 raw_table=raw_table,
             )
             table_objects.append(table_object)
@@ -239,16 +242,16 @@ def _to_snake_case(s: str) -> str:
 
 
 def generate_base_semantic_context_from_snowflake(
-    fqn_tables: list[str],
+    physical_tables: list[str],
     snowflake_account: str,
     semantic_model_name: str,
-    output_yaml_path: str | None = None,
+    output_yaml_path: Optional[str] = None,
 ) -> None:
     """
     Generates a base semantic context from specified Snowflake tables and exports it to a YAML file.
 
     Parameters:
-        fqn_tables: Fully qualified names of Snowflake tables to include in the semantic context.
+    physical_tables : Fully qualified names of Snowflake tables to include in the semantic context.
         snowflake_account: Identifier of the Snowflake account.
         semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
         output_yaml_path: Path for the output YAML file. If None, defaults to 'semantic_model_generator/output_models/YYYYMMDDHHMMSS_<semantic_model_name>.yaml'.
@@ -257,7 +260,7 @@ def generate_base_semantic_context_from_snowflake(
         None. Writes the semantic context to a YAML file.
     """
     context = raw_schema_to_semantic_context(
-        fqn_tables=fqn_tables,
+        physical_tables,
         snowflake_account=snowflake_account,
         semantic_model_name=semantic_model_name,
     )
@@ -284,7 +287,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--fqn_tables",
+        "--physical_tables ",
         type=list,
         required=True,
         help="The list of fully qualified table names all following the format {database_name}.{schema_name}{table_name}",
@@ -311,7 +314,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     generate_base_semantic_context_from_snowflake(
-        fqn_tables=args.fqn_tables,
+        physical_tables=args.physical_tables,
         snowflake_account=args.snowflake_account,
         semantic_model_name=args.semantic_model_name,
         output_yaml_path=args.output_yaml_path,

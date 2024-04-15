@@ -28,7 +28,7 @@ pyvenv
 .envrc
 
 # Output semantic models
-semantic_model_generator/output_models/*
+semantic_model_generator/output_models/*.yaml
 
 # Whls
 dist/

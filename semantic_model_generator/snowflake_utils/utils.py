@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
@@ -13,19 +13,19 @@ def create_fqn_table(fqn_str: str) -> FQNParts:
             + f"Instead found {fqn_str}"
         )
     database, schema, table = fqn_str.split(".")
-    return FQNParts(database=database, schema=schema, table=table)
+    return FQNParts(database=database, schema_name=schema, table=table)
 
 
 def create_connection_parameters(
     user: str,
     password: str,
     account: str,
-    host: str | None = None,
-    role: str | None = None,
-    warehouse: str | None = None,
-    database: str | None = None,
-    schema: str | None = None,
-    authenticator: str | None = None,
+    host: Optional[str] = None,
+    role: Optional[str] = None,
+    warehouse: Optional[str] = None,
+    database: Optional[str] = None,
+    schema: Optional[str] = None,
+    authenticator: Optional[str] = None,
 ) -> Dict[str, str]:
     connection_parameters: dict[str, str] = dict(
         user=user, password=password, account=account
