@@ -2,6 +2,12 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.2] - 2024-04-15b
+### Updates
+- Fix 3.8 typing
+- Some function renaming
+- Support all Snowflake datatypes
+
 ## [0.1.2] - 2024-04-15
 ### Updates
 - Downgrade to python 3.8 and resolve typing issues with optional.
