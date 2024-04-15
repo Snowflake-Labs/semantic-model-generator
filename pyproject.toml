@@ -7,8 +7,8 @@ license = "Apache Software License; BSD License"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-pandas = "^2.2.1"
+python = "^3.8.1"
+pandas = "^2.0.1"
 loguru = "^0.7.2"
 snowflake-connector-python = {extras = ["pandas"], version = "^3.7.1"}
 protobuf = "^5.26.1"
