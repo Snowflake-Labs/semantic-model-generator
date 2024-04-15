@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.2] - 2024-04-15c
+### Updates
+- Spacing typo
+
 ## [0.1.2] - 2024-04-15b
 ### Updates
 - Fix 3.8 typing
