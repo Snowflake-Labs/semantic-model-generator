@@ -297,7 +297,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--physical_tables ",
+        "--physical_tables",
         type=list,
         required=True,
         help="The list of fully qualified table names all following the format {database_name}.{schema_name}{table_name}",
