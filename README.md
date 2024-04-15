@@ -7,8 +7,8 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 This project uses `poetry` to manage dependencies and we recommend `pyenv` for python version management.
 
 1. `make setup`
-* make setup will install poetry if needed.
-* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-brew`. 
+* Make setup will install poetry if needed.
+* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. 
 
 Next, export your credentials as environment variables. Note, `host` is optional depending on your Snowflake deployment.
 
