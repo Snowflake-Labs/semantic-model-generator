@@ -12,12 +12,9 @@ install-python-3.8:
 	@echo "Python 3.8 not found. Installing Python 3.8 using pyenv."
 	@pyenv install 3.8
 	@pyenv local 3.8
-	
+
 check-deps:
 	@command -v poetry >/dev/null 2>&1 || $(MAKE) install-poetry
-	@command -v pyenv >/dev/null 2>&1 || $(MAKE) install-pyenv
-	@echo "Setting Python version to 3.8 using pyenv."
-	-@pyenv local 3.8 || $(MAKE) install-python-3.8
 
 
 shell: check-deps ## Get into a poetry shell
