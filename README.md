@@ -103,6 +103,8 @@ In addition, consider adding the following elements to your semantic model:
 
 #### Validating Yaml Updates
 
+After you've edited your semantic model, you can validate this file before uploading.
+
 1. Using Python. Ensure you've installed the package.
 
 ```python
