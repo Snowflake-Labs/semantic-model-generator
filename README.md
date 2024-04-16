@@ -24,6 +24,17 @@ set SNOWFLAKE_PASSWORD=<your-snowflake-password>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
+3. To set these within a python environment:
+```python
+import os
+
+# Setting environment variables
+os.environ['SNOWFLAKE_ROLE'] = '<your-snowflake-role>'
+os.environ['SNOWFLAKE_WAREHOUSE'] = '<your-snowflake-warehouse>'
+os.environ['SNOWFLAKE_USER'] = '<your-snowflake-user>'
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
+```
 ## Usage
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.
