@@ -4,15 +4,9 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 
 ## Setup
 
-This project uses `poetry` to manage dependencies and we recommend `pyenv` for python version management.
+We currently leverage credentials saved as environment variables. Note, `host` is optional depending on your Snowflake deployment.
 
-1. `make setup`
-* Make setup will install poetry if needed.
-* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. 
-
-Next, export your credentials as environment variables. Note, `host` is optional depending on your Snowflake deployment.
-
-2. On a Mac: 
+1. To set these on Mac OS/Linux: 
 ```bash
 export SNOWFLAKE_ROLE="<your-snowflake-role>"
 export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
@@ -21,7 +15,7 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-3. On a PC:
+2. To set these on windows:
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
 set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
@@ -29,7 +23,6 @@ set SNOWFLAKE_USER=<your-snowflake-user>
 set SNOWFLAKE_PASSWORD=<your-snowflake-password>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
-
 
 ## Usage
 
@@ -65,10 +58,16 @@ generate_base_semantic_model_from_snowflake(
 
 ### Generation - CLI
 
+
+1. `make setup`
+* Make setup will install poetry if needed.
+* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. 
+
+
 This is the script version run on the command line.
 1. `poetry shell` . This will activate your virtual environment.
 
-2. 
+2. Run on your command line.
 ```bash
 python -m semantic_model_generator.generate_model \
     --physical_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
@@ -92,6 +91,8 @@ In addition, consider adding the following elements to your semantic model:
 ## Release
 
 In order to push a new build and release, follow the steps below. Note, only admins are allowed to push `release/v` tags.
+
+You should follow the setup commands from usage-cli to install poetry and create your environment.
 
 1. Checkout a new branch from main. You should name this branch `release/vYYYY-MM-DD`.
 2. Bump the poetry:
