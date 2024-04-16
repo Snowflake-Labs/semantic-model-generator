@@ -134,7 +134,7 @@ You should follow the setup commands from usage-cli to install poetry and create
     * `poetry version minor`
     * `poetry version major`
 3. Update the `CHANGELOG.md` adding a relevant header for your version number along with a description of the changes made.
-4. Run `make build` to create a new .whl file.
+4. Run `make build` to create a new .whl file. Update the package to install under [Python Generation](#generation-python).
 5. Push your files for approval.
 6. After approval, run `make release` which will cut a new release and attach the .whl file.
 7. Merge in your pr.
