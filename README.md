@@ -15,7 +15,7 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-2. To set these on a PC:
+2. To set these on windows:
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
 set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
