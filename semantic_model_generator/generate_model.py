@@ -1,3 +1,7 @@
+# from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
+# PHYSICAL_TABLES = ["AUTOSQL_DATASET_BIRD_V2.ADDRESS.alias","AUTOSQL_DATASET_BIRD_V2.ADDRESS.area_code"]
+# SNOWFLAKE_ACCOUNT = 'ML_DATA'
+# SEMANTIC_MODEL_NAME = 'my test semantic model'
 from datetime import datetime
 from typing import List, Optional
 
