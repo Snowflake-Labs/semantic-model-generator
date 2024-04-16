@@ -6,7 +6,7 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 
 We currently leverage credentials saved as environment variables. Note, `host` is optional depending on your Snowflake deployment.
 
-1. To set these on a Mac: 
+1. To set these on Mac OS/Linux: 
 ```bash
 export SNOWFLAKE_ROLE="<your-snowflake-role>"
 export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
