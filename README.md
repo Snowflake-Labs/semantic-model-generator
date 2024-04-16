@@ -88,6 +88,8 @@ python -m semantic_model_generator.generate_model \
 
 ### Post-Generation
 
+#### Additional Fields to Fill Out
+
 **Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. 
 
 By default, the generated semantic model will contain all columns from the provided tables/views. However, it's highly encouraged to only keep relevant columns and drop any unwanted columns from the generated semantic model.
@@ -98,6 +100,27 @@ In addition, consider adding the following elements to your semantic model:
     * Example: `col1 - col2` could be the `expr` for a logical column.
 2. Synonyms. Any additional synonyms for column names.
 3. Filters. Additional filters with their relevant `expr`.
+
+#### Validating Yaml Updates
+
+After you've edited your semantic model, you can validate this file before uploading.
+
+1. Using Python. Ensure you've installed the package.
+
+```python
+from semantic_model_generator.validate_model import validate
+
+YAML_PATH="/path/to/your/model_yaml.yaml"
+
+validate(yaml_path=YAML_PATH)
+
+```
+
+2. Using the command line. Ensure `poetry shell` is activated.
+
+```bash
+python -m semantic_model_generator.validate_model --yaml_path="/path/to/your/model_yaml.yaml"
+```
 
 ## Release
 
