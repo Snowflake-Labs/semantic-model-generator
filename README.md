@@ -57,11 +57,11 @@ generate_base_semantic_model_from_snowflake(
 
 
 ### Generation - CLI
-
+Unlike the python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for python versions.
 
 1. `make setup`
 * Make setup will install poetry if needed.
-* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. 
+* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. You can also install python 3.8 with `make install-python-3.8` once `pyenv` is installed.
 
 
 This is the script version run on the command line.
