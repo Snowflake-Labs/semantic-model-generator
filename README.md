@@ -69,16 +69,17 @@ generate_base_semantic_model_from_snowflake(
 
 ### Generation - CLI
 Unlike the python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for python versions.
+This has only been tested on Mas OS/Linux.
 
-1. `make setup`
-* Make setup will install poetry if needed.
-* For optional dependencies, brew and pyenv, you can install `make install-pyenv` and `make install-homebrew` but this is not required. You can also install python 3.8 with `make install-python-3.8` once `pyenv` is installed.
+1. If you need brew, `make install-homebrew`.
+2. If you need pyenv, `make install-pyenv` and `make install-python-3.8`.
+3. `make setup` Make setup will install poetry if needed.
 
 
 This is the script version run on the command line.
 1. `poetry shell` . This will activate your virtual environment.
-
-2. Run on your command line.
+2. 
+3. Run on your command line.
 ```bash
 python -m semantic_model_generator.generate_model \
     --physical_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
