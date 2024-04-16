@@ -101,7 +101,7 @@ In addition, consider adding the following elements to your semantic model:
 2. Synonyms. Any additional synonyms for column names.
 3. Filters. Additional filters with their relevant `expr`.
 
-#### Validating yaml updates
+#### Validating Yaml Updates
 
 1. Using Python. Ensure you've installed the package.
 
