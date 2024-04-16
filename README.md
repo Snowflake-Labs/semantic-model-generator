@@ -78,8 +78,7 @@ This has only been tested on Mas OS/Linux.
 
 This is the script version run on the command line.
 1. `poetry shell` . This will activate your virtual environment.
-2. 
-3. Run on your command line.
+2. Run on your command line.
 ```bash
 python -m semantic_model_generator.generate_model \
     --physical_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
