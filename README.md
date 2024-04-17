@@ -13,6 +13,7 @@ SELECT CURRENT_ACCOUNT_NAME();
 ```
 
 B. To find the host for your account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
+* Typically, the account name follows the following format: `https://<orgname>-<account_name>.snowflakecomputing.com`
 
 
 1. To set these on Mac OS/Linux: 
