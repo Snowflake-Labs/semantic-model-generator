@@ -5,7 +5,7 @@ from semantic_model_generator.data_processing.proto_utils import yaml_to_semanti
 from semantic_model_generator.sqlgen.generate_sql import generate_select_with_all_cols
 
 
-def validate(yaml_path: str, snowflake_account: str) -> None:
+def validate(yaml_path: str) -> None:
     """
     For now, validate just ensures that the yaml is correctly formatted and we can parse into our protos.
 
