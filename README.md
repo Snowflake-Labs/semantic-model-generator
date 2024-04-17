@@ -2,6 +2,13 @@
 
 The `Semantic Model Generator` is used to generate a semantic model for use in your Snowflake account.
 
+Your workflow should be:
+1. [Setup](#setup) to set credentials.
+2. [Generation](#usage) to create a model in either Python 3.8 or command line.
+3. [Post Generation](#post-generation) to fill out the rest of your semantic model.
+4. [Validating your final Semantic Model](#validation-yaml-updates) to ensure any changes you've made are valid.
+
+
 ## Setup
 
 We currently leverage credentials saved as environment variables. Note, `host` is optional depending on your Snowflake deployment.
