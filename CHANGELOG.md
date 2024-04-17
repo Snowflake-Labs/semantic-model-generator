@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.6] - 2024-04-16
+### Updates
+- First yaml validation included.
+
 ## [0.1.5] - 2024-04-15d
 ### Updates
 - Downgrade pyarrow

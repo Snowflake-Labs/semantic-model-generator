@@ -45,7 +45,7 @@ All generated semantic models by default are saved under `semantic_model_generat
 
 1. Ensure you have installed the python package. Note, the version below should be the latest version under the `dist/` directory.
 ```bash
-pip install dist/semantic_model_generator-0.1.5-py3-none-any.whl
+pip install dist/semantic_model_generator-0.1.6-py3-none-any.whl
 ```
 2. Activate python shell
 ```bash
@@ -134,7 +134,7 @@ You should follow the setup commands from usage-cli to install poetry and create
     * `poetry version minor`
     * `poetry version major`
 3. Update the `CHANGELOG.md` adding a relevant header for your version number along with a description of the changes made.
-4. Run `make build` to create a new .whl file.
+4. Run `make build` to create a new .whl file. Update the package to install under [Python Generation](#generation-python).
 5. Push your files for approval.
 6. After approval, run `make release` which will cut a new release and attach the .whl file.
 7. Merge in your pr.
