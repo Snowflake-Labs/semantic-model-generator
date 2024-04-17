@@ -9,7 +9,7 @@ We currently leverage credentials saved as environment variables. Note, `host` i
 A. To find your Account Name, [follow these instructions](https://docs.snowflake.com/en/sql-reference/functions/current_account_name), or execute the following sql command in your account.
 
 ```sql
-SELECT CURRENT_ACCOUNT_NAME()
+SELECT CURRENT_ACCOUNT_NAME();
 ```
 
 B. To find the host for your account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
