@@ -4,10 +4,11 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 
 Your workflow should be:
 1. [Setup](#setup) to set credentials.
-2. [Generation - Python](#generation---python) and [Generation - CLI](#generation---cli) to create a model either through Python or command line.
+2. [Usage](#usage) to create a model either through Python or command line.
 3. [Post Generation](#post-generation) to fill out the rest of your semantic model.
 4. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
 
+Or, if you want to see what a semantic model looks like, skip to [Examples](#examples).
 
 ## Setup
 
@@ -32,7 +33,7 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-2. To set these on windows:
+2. To set these on Windows:
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
 set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
@@ -41,7 +42,7 @@ set SNOWFLAKE_PASSWORD=<your-snowflake-password>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
-3. To set these within a python environment:
+3. To set these within a Python environment:
 ```python
 import os
 
@@ -60,11 +61,11 @@ All generated semantic models by default are saved under `semantic_model_generat
 
 ### Generation - Python
 
-1. Ensure you have installed the python package. Note, the version below should be the latest version under the `dist/` directory.
+1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
 ```bash
-pip install dist/semantic_model_generator-0.1.6-py3-none-any.whl
+pip install dist/semantic_model_generator-0.1.7-py3-none-any.whl
 ```
-2. Activate python shell
+2. Activate Python shell
 ```bash
 python
 ```
@@ -85,7 +86,7 @@ generate_base_semantic_model_from_snowflake(
 
 
 ### Generation - CLI
-Unlike the python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for python versions.
+Unlike the Python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for Python versions.
 This has only been tested on Mas OS/Linux.
 
 1. If you need brew, `make install-homebrew`.
@@ -137,6 +138,110 @@ validate(yaml_path=YAML_PATH)
 
 ```bash
 python -m semantic_model_generator.validate_model --yaml_path="/path/to/your/model_yaml.yaml"
+```
+
+## Examples
+
+If you have an example table in your account with the following DDL statements.
+
+```sql
+CREATE TABLE sales.public.sd_data (
+    id SERIAL PRIMARY KEY,
+    dt DATETIME,
+    cat VARCHAR(255),
+    loc VARCHAR(255),
+    cntry VARCHAR(255)
+    chn VARCHAR(50),
+    amt DECIMAL(10, 2),
+    unts INT,
+    cst DECIMAL(10, 2)
+);
+```
+
+Here is an example semantic model, with data elements automatically generated from this repo and filled out by a user.
+
+```yaml
+# Name of the Semantic Model.
+name: Sales Data
+description: This semantic model can be used for asking questions over the sales data.
+
+# A semantic model can contain one or more tables.
+tables:
+
+  # Table 1: A logical table over the 'sd_data' physical table.
+  - name: sales_data
+
+    # A description of the logical table.
+    description: A logical table capturing daily sales information across different store locations and product categories.
+
+    # The fully qualified name of the underlying physical table.
+    physical_table:
+      database: sales
+      schema: public
+      table: sd_data
+
+    dimensions:
+      - name: product_category
+        # Synonyms should be unique across the entire semantic model.
+        synonyms: ["item_category", "product_type"]
+        description: The category of the product sold.
+        expr: cat
+        unique: false
+
+      - name: store_country
+        description: The country where the sale took place.
+        expr: cntry
+        unique: false
+
+      - name: sales_channel
+        synonyms: ["channel", "distribution_channel"]
+        description: The channel through which the sale was made.
+        expr: chn
+        unique: false
+
+    time_dimensions:
+      - name: sale_timestamp
+        synonyms: ["time_of_sale", "transaction_time"]
+        description: The time when the sale occurred. In UTC.
+        expr: dt
+        unique: false
+
+    measures:
+      - name: sales_amount
+        synonyms: ["revenue", "total_sales"]
+        description: The total amount of money generated from the sale.
+        expr: amt
+        default_aggregation: sum
+
+      - name: sales_tax
+        description: The sales tax paid for this sale.
+        expr: amt * 0.0975
+        default_aggregation: sum
+
+      - name: units_sold
+        synonyms: ["quantity_sold", "number_of_units"]
+        description: The number of units sold in the transaction.
+        expr: unts
+        default_aggregation: sum
+
+      - name: cost
+        description: The cost of the product sold.
+        expr: cst
+        default_aggregation: sum
+
+      - name: profit
+        synonyms: ["earnings", "net income"]
+        description: The profit generated from a sale.
+        expr: amt - cst
+        default_aggregation: sum
+
+
+    # A table can define commonly used filters over it. These filters can then be referenced in user questions directly.
+    filters:
+      - name: north_america
+        synonyms: ["North America", "N.A.", "NA"]
+        description: "A filter to restrict only to north american countries"
+        expr: cntry IN ('canada', 'mexico', 'usa')
 ```
 
 ## Release
