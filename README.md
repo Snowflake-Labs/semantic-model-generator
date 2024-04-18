@@ -10,7 +10,6 @@ Your workflow should be:
 
 Or, if you want to see what a semantic model looks like, skip to [Examples](#examples).
 
-
 ## Setup
 
 We currently leverage credentials saved as environment variables. Note, `host` is optional depending on your Snowflake deployment.
