@@ -140,7 +140,9 @@ validate(
 2. Using the command line. Ensure `poetry shell` is activated.
 
 ```bash
-python -m semantic_model_generator.validate_model --yaml_path="/path/to/your/model_yaml.yaml --snowflake_account="<your-account-name>"
+python -m semantic_model_generator.validate_model \
+    --yaml_path="/path/to/your/model_yaml.yaml \
+    --snowflake_account="<your-account-name>"
 ```
 
 ## Release
