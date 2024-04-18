@@ -18,6 +18,7 @@ PyYAML = "^6.0.1"
 jsonargparse = "^4.27.7"
 tqdm = "^4.66.2"
 pyarrow = ">=10.0.1,<10.1.0" 
+sqlglot = "^23.10.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"
