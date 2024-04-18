@@ -33,7 +33,7 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-2. To set these on windows:
+2. To set these on Windows:
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
 set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
@@ -42,7 +42,7 @@ set SNOWFLAKE_PASSWORD=<your-snowflake-password>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
-3. To set these within a python environment:
+3. To set these within a Python environment:
 ```python
 import os
 
@@ -61,11 +61,11 @@ All generated semantic models by default are saved under `semantic_model_generat
 
 ### Generation - Python
 
-1. Ensure you have installed the python package. Note, the version below should be the latest version under the `dist/` directory.
+1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
 ```bash
 pip install dist/semantic_model_generator-0.1.7-py3-none-any.whl
 ```
-2. Activate python shell
+2. Activate Python shell
 ```bash
 python
 ```
@@ -86,7 +86,7 @@ generate_base_semantic_model_from_snowflake(
 
 
 ### Generation - CLI
-Unlike the python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for python versions.
+Unlike the Python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for Python versions.
 This has only been tested on Mas OS/Linux.
 
 1. If you need brew, `make install-homebrew`.
