@@ -1,4 +1,4 @@
-from typing import Optional, Set, Union
+from typing import Optional, Union
 
 import sqlglot
 from sqlglot.dialects.snowflake import Snowflake
@@ -42,15 +42,17 @@ def _convert_to_snowflake_sql(sql: str) -> str:
     return expression.sql()
 
 
-def _create_select_statement(table: Table, cols: Set[str], limit: int) -> str:
+def _create_select_statement(table: Table, limit: int) -> str:
     def _return_col_or_expr(
-        col: Union[TimeDimension, Dimension, Measure], cols: Set[str]
+        col: Union[TimeDimension, Dimension, Measure]
     ) -> Optional[str]:
         # TODO(jhilgart): Handle quoted names properly.
-        if col.name.lower() not in cols:
-            return None
+        if " " in col.name:
+            raise ValueError(
+                f"Column names should not have spaces in them. Passed = {col.name}"
+            )
         expr = (
-            f'{col.expr} as "{col.name}"'
+            f"{col.expr} as {col.name}"
             if col.expr.lower() != col.name.lower()
             else f"{col.expr}"
         )
@@ -60,11 +62,11 @@ def _create_select_statement(table: Table, cols: Set[str], limit: int) -> str:
 
     columns = []
     for dim_col in table.dimensions:
-        columns.append(_return_col_or_expr(dim_col, cols))
+        columns.append(_return_col_or_expr(dim_col))
     for time_col in table.measures:
-        columns.append(_return_col_or_expr(time_col, cols))
+        columns.append(_return_col_or_expr(time_col))
     for time_dim_col in table.time_dimensions:
-        columns.append(_return_col_or_expr(time_dim_col, cols))
+        columns.append(_return_col_or_expr(time_dim_col))
 
     filtered_columns = [item for item in columns if item is not None]
     if len(filtered_columns) == 0:
@@ -89,15 +91,7 @@ def generate_select_with_all_cols(table: Table, limit: int) -> str:
     Returns:
         str: A SQL statement formatted for Snowflake.
     """
-    cols = []
-    for time_dim_col in table.time_dimensions:
-        cols.append(time_dim_col.name.lower())
-    for dim_col in table.dimensions:
-        cols.append(dim_col.name.lower())
-    for meausre_col in table.measures:
-        cols.append(meausre_col.name.lower())
 
-    col_set = set(cols)
-    select = _create_select_statement(table, col_set, limit)
+    select = _create_select_statement(table, limit)
 
     return _convert_to_snowflake_sql(select)
