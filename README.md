@@ -4,9 +4,9 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 
 Your workflow should be:
 1. [Setup](#setup) to set credentials.
-2. [Generation](#usage) to create a model in either Python 3.8 or command line.
+2. [Generation - Python](#generation---python) and [Generation - CLI](#generation---cli) to create a model either through Python or command line.
 3. [Post Generation](#post-generation) to fill out the rest of your semantic model.
-4. [Validating your final Semantic Model](#validation-yaml-updates) to ensure any changes you've made are valid.
+4. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
 
 
 ## Setup
