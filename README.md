@@ -129,15 +129,21 @@ After you've edited your semantic model, you can validate this file before uploa
 from semantic_model_generator.validate_model import validate
 
 YAML_PATH="/path/to/your/model_yaml.yaml"
+SNOWFLAKE_ACCOUNT="<your-snowflake-account>"
 
-validate(yaml_path=YAML_PATH)
+validate(
+    yaml_path=YAML_PATH,
+    snowflake_account=SNOWFLAKE_ACCOUNT
+)
 
 ```
 
 2. Using the command line. Ensure `poetry shell` is activated.
 
 ```bash
-python -m semantic_model_generator.validate_model --yaml_path="/path/to/your/model_yaml.yaml"
+python -m semantic_model_generator.validate_model \
+    --yaml_path="/path/to/your/model_yaml.yaml \
+    --snowflake_account="<your-account-name>"
 ```
 
 ## Examples

@@ -1,9 +1,19 @@
 import tempfile
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from semantic_model_generator.validate_model import validate
+
+
+@pytest.fixture
+def mock_snowflake_connection():
+    """Fixture to mock the snowflake_connection function."""
+    with patch("semantic_model_generator.validate_model.SnowflakeConnector") as mock:
+        mock.return_value = MagicMock()
+        yield mock
+
 
 _VALID_YAML = """name: my test semantic model
 tables:
@@ -113,20 +123,46 @@ def temp_invalid_yaml_formatting_file():
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
-def test_valid_yaml(mock_logger, temp_valid_yaml_file):
+def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection):
+    account_name = "snowflake test"
 
-    _ = validate(temp_valid_yaml_file)
+    validate(temp_valid_yaml_file, account_name)
 
-    expected_log_call = mock.call.info(f"Successfully validated {temp_valid_yaml_file}")
+    expected_log_call_1 = mock.call.info(
+        f"Successfully validated {temp_valid_yaml_file}"
+    )
+    expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
+    expected_log_call_3 = mock.call.info("Validated logical table: ALIAS")
     assert (
-        expected_log_call in mock_logger.mock_calls
+        expected_log_call_1 in mock_logger.mock_calls
     ), "Expected log message not found in logger calls"
+    assert (
+        expected_log_call_2 in mock_logger.mock_calls
+    ), "Expected log message not found in logger calls"
+    assert (
+        expected_log_call_3 in mock_logger.mock_calls
+    ), "Expected log message not found in logger calls"
+    snowflake_query_one = (
+        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
+    )
+    snowflake_query_two = (
+        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
+    )
+    assert any(
+        snowflake_query_one in str(call)
+        for call in mock_snowflake_connection.mock_calls
+    ), "Query not executed"
+    assert any(
+        snowflake_query_two in str(call)
+        for call in mock_snowflake_connection.mock_calls
+    ), "Query not executed"
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file):
+    account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
-        validate(temp_invalid_yaml_formatting_file)
+        validate(temp_invalid_yaml_formatting_file, account_name)
 
     expected_error_fragment = (
         "Failed to parse tables field: "
