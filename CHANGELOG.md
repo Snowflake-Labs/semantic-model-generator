@@ -4,7 +4,7 @@ You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to p
 
 ## [0.1.8] - 2024-04-23
 ### Updates
-- run select against given cols for validation
+- run select against given cols in semantic model for validation
 
 ## [0.1.7] - 2024-04-18
 ### Updates
