@@ -23,7 +23,6 @@ def validate(yaml_path: str, snowflake_account: str) -> None:
 
     connector = SnowflakeConnector(
         account_name=snowflake_account,
-        ndv_per_column=10,  # number of sample values to pull per column.
         max_workers=1,
     )
 
