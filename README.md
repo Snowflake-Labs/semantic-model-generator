@@ -63,7 +63,7 @@ All generated semantic models by default are saved under `semantic_model_generat
 
 1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
 ```bash
-pip install dist/semantic_model_generator-0.1.7-py3-none-any.whl
+pip install dist/semantic_model_generator-0.1.8-py3-none-any.whl
 ```
 2. Activate Python shell
 ```bash
