@@ -189,7 +189,9 @@ tables:
     dimensions:
       - name: product_category
         # Synonyms should be unique across the entire semantic model.
-        synonyms: ["item_category", "product_type"]
+        synonyms: 
+            - "item_category"
+            - "product_type"
         description: The category of the product sold.
         expr: cat
         unique: false
@@ -200,21 +202,27 @@ tables:
         unique: false
 
       - name: sales_channel
-        synonyms: ["channel", "distribution_channel"]
+        synonyms: 
+            - "channel"
+            - "distribution_channel"
         description: The channel through which the sale was made.
         expr: chn
         unique: false
 
     time_dimensions:
       - name: sale_timestamp
-        synonyms: ["time_of_sale", "transaction_time"]
+        synonyms: 
+            - "time_of_sale"
+            - "transaction_time"
         description: The time when the sale occurred. In UTC.
         expr: dt
         unique: false
 
     measures:
       - name: sales_amount
-        synonyms: ["revenue", "total_sales"]
+        synonyms: 
+            - "revenue"
+            - "total_sales"
         description: The total amount of money generated from the sale.
         expr: amt
         default_aggregation: sum
@@ -225,7 +233,9 @@ tables:
         default_aggregation: sum
 
       - name: units_sold
-        synonyms: ["quantity_sold", "number_of_units"]
+        synonyms: 
+            - "quantity_sold"
+            -  "number_of_units"
         description: The number of units sold in the transaction.
         expr: unts
         default_aggregation: sum
@@ -236,7 +246,9 @@ tables:
         default_aggregation: sum
 
       - name: profit
-        synonyms: ["earnings", "net income"]
+        synonyms: 
+            - "earnings"
+            - "net income"
         description: The profit generated from a sale.
         expr: amt - cst
         default_aggregation: sum
@@ -245,7 +257,10 @@ tables:
     # A table can define commonly used filters over it. These filters can then be referenced in user questions directly.
     filters:
       - name: north_america
-        synonyms: ["North America", "N.A.", "NA"]
+        synonyms: 
+            - "North America"
+            - "N.A."
+            - "NA"
         description: "A filter to restrict only to north american countries"
         expr: cntry IN ('canada', 'mexico', 'usa')
 ```
