@@ -305,7 +305,7 @@ def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
 
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_invalid_yaml_missing_quote(
-    mock_logger, temp_invalid_yaml_unmatched_quote_file
+    mock_logger, temp_invalid_yaml_unmatched_quote_file, mock_snowflake_connection
 ):
     account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
