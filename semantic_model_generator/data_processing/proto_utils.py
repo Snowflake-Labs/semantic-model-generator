@@ -72,12 +72,9 @@ def yaml_to_proto(yaml_str: str, proto_type: Type[ProtoMsg]) -> ProtoMsg:
         msg = proto_type()
         return json_format.ParseDict(parsed_yaml, msg)
     except yaml.YAMLError as e:
-        if hasattr(e, 'problem_mark'):
-            mark = e.problem_mark
-            error_message = f"Error parsing YAML at line {mark.line + 1}, column {mark.column + 1}: {e}"
-        else:
-            error_message = f"Error parsing YAML: {e}"
-        raise ValueError(error_message)
+        raise ValueError(
+            f"Unable to parse input yaml. Error: {e}. Please make sure spacing is correct."
+        )
     except json_format.ParseError as e:
         raise ValueError(f"Unable to parse yaml to protobuf. Error: {e}")
     except Exception as e:
