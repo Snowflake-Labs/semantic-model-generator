@@ -51,6 +51,10 @@ def _create_select_statement(table: Table, limit: int) -> str:
             raise ValueError(
                 f"Column names should not have spaces in them. Passed = {col.name}"
             )
+        if col.name.count('"') % 2 != 0:  # Odd number of quotes indicates an issue
+            raise ValueError(
+                f"Invalid column name '{col.name}'. Mismatched quotes detected."
+            )
         expr = (
             f"{col.expr} as {col.name}"
             if col.expr.lower() != col.name.lower()
@@ -63,8 +67,8 @@ def _create_select_statement(table: Table, limit: int) -> str:
     columns = []
     for dim_col in table.dimensions:
         columns.append(_return_col_or_expr(dim_col))
-    for time_col in table.measures:
-        columns.append(_return_col_or_expr(time_col))
+    for measure_col in table.measures:
+        columns.append(_return_col_or_expr(measure_col))
     for time_dim_col in table.time_dimensions:
         columns.append(_return_col_or_expr(time_dim_col))
 
