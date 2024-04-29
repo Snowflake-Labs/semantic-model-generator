@@ -128,8 +128,8 @@ After you've edited your semantic model, you can validate this file before uploa
 ```python
 from semantic_model_generator.validate_model import validate
 
-YAML_PATH="semantic_model_generator/output_models/20240415164416_my_test_semantic_model.yaml" #"/path/to/your/model_yaml.yaml"
-SNOWFLAKE_ACCOUNT="ML_DATA" #"<your-snowflake-account>"
+YAML_PATH="/path/to/your/model_yaml.yaml"
+SNOWFLAKE_ACCOUNT="<your-snowflake-account>"
 
 validate(
     yaml_path=YAML_PATH,
