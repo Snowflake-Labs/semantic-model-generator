@@ -104,6 +104,96 @@ tables:
 """
 
 
+_INVALID_YAML_UPPERCASE_DEFAULT_AGG = """name: my test semantic model
+tables:
+  - name: ALIAS
+    base_table:
+      database: AUTOSQL_DATASET_BIRD_V2
+      schema: ADDRESS
+      table: ALIAS
+    dimensions:
+      - name: ALIAS
+        synonyms:
+            - 'an alias for something'
+        expr: ALIAS
+        data_type: TEXT
+        sample_values:
+          - Holtsville
+          - Adjuntas
+          - Boqueron
+    measures:
+      - name: ZIP_CODE
+        synonyms:
+            - 'another synonym'
+        expr: ZIP_CODE
+        data_type: NUMBER
+        sample_values:
+          - '501'
+        default_aggregation: AVG
+  - name: AREA_CODE
+    base_table:
+      database: AUTOSQL_DATASET_BIRD_V2
+      schema: ADDRESS
+      table: AREA_CODE
+    measures:
+      - name: ZIP_CODE
+        expr: ZIP_CODE
+        data_type: NUMBER
+        sample_values:
+          - '501'
+          - '544'
+      - name: AREA_CODE
+        expr: AREA_CODE
+        data_type: NUMBER
+        sample_values:
+          - '631'
+"""
+
+_INVALID_YAML_UNMATCHED_QUOTE = """name: my test semantic model
+tables:
+  - name: ALIAS
+    base_table:
+      database: AUTOSQL_DATASET_BIRD_V2
+      schema: ADDRESS
+      table: ALIAS
+    dimensions:
+      - name: ALIAS
+        synonyms:
+            - 'an alias for something'
+        expr: ALIAS
+        data_type: TEXT
+        sample_values:
+          - Holtsville
+          - Adjuntas
+          - Boqueron
+    measures:
+      - name: ZIP_CODE
+        synonyms:
+            - 'another synonym'
+        expr: ZIP_CODE
+        data_type: NUMBER
+        sample_values:
+          - '501'
+  - name: AREA_CODE
+    base_table:
+      database: AUTOSQL_DATASET_BIRD_V2
+      schema: ADDRESS
+      table: AREA_CODE
+    measures:
+      - name: ZIP_CODE"
+        expr: ZIP_CODE
+        data_type: NUMBER
+        sample_values:
+          - '501'
+          - '544'
+      - name: AREA_CODE
+        expr: AREA_CODE
+        data_type: NUMBER
+        sample_values:
+          - '631'
+"""
+
+
 @pytest.fixture
 def temp_valid_yaml_file():
     """Create a temporary YAML file with the test data."""
@@ -118,6 +208,24 @@ def temp_invalid_yaml_formatting_file():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
         tmp.write(_INVALID_YAML_FORMATTING)
+        tmp.flush()
+        yield tmp.name
+
+
+@pytest.fixture
+def temp_invalid_yaml_uppercase_file():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(_INVALID_YAML_UPPERCASE_DEFAULT_AGG)
+        tmp.flush()
+        yield tmp.name
+
+
+@pytest.fixture
+def temp_invalid_yaml_unmatched_quote_file():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(_INVALID_YAML_UNMATCHED_QUOTE)
         tmp.flush()
         yield tmp.name
 
@@ -173,6 +281,44 @@ def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file)
     expected_log_call = mock.call.info(
         f"Successfully validated {temp_invalid_yaml_formatting_file}"
     )
+    assert (
+        expected_log_call not in mock_logger.mock_calls
+    ), "Unexpected log message found in logger calls"
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
+    account_name = "snowflake test"
+    with pytest.raises(ValueError) as exc_info:
+        validate(temp_invalid_yaml_uppercase_file, account_name)
+
+    expected_error_fragment = "Unable to parse yaml to protobuf. Error: Failed to parse tables field: Failed to parse measures field: Failed to parse default_aggregation field: Invalid enum value AVG for enum type semantic_model_generator.AggregationType at SemanticModel.tables[0].measures[0].default_aggregation..."
+    assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
+
+    expected_log_call = mock.call.info(
+        f"Successfully validated {temp_invalid_yaml_uppercase_file}"
+    )
+    assert (
+        expected_log_call not in mock_logger.mock_calls
+    ), "Unexpected log message found in logger calls"
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_invalid_yaml_missing_quote(
+    mock_logger, temp_invalid_yaml_unmatched_quote_file
+):
+    account_name = "snowflake test"
+    with pytest.raises(ValueError) as exc_info:
+        validate(temp_invalid_yaml_unmatched_quote_file, account_name)
+
+    expected_error_fragment = "Unable to execute query with your logical table against physical tables on Snowflake. Query = SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
+
+    assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
+
+    expected_log_call = mock.call.info(
+        f"Successfully validated {temp_invalid_yaml_unmatched_quote_file}"
+    )
+
     assert (
         expected_log_call not in mock_logger.mock_calls
     ), "Unexpected log message found in logger calls"
