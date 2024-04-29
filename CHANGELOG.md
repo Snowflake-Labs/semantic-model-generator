@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.9] - 2024-04-29
+### Updates
+- Add additional validation for mismatched quotes. Test incorrect enums.
+
 ## [0.1.8] - 2024-04-23
 ### Updates
 - run select against given cols in semantic model for validation
