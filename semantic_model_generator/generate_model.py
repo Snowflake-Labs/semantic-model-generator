@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 
@@ -271,7 +272,13 @@ def generate_base_semantic_model_from_snowflake(
     """
     formatted_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
     if not output_yaml_path:
-        output_yaml_path = f"semantic_model_generator/output_models/{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
+        file_name = f"{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
+        if os.path.exists("semantic_model_generator/output_models"):
+            output_yaml_path = f"semantic_model_generator/output_models/{file_name}"
+        else:
+            output_yaml_path = f"./{file_name}"
+    else:  # Assume user gives correct path.
+        write_path = output_yaml_path
     context = raw_schema_to_semantic_context(
         physical_tables,
         snowflake_account=snowflake_account,
@@ -281,13 +288,6 @@ def generate_base_semantic_model_from_snowflake(
     yaml_str = proto_utils.proto_to_yaml(context)
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
-
-    if output_yaml_path:  # Assume user gives us correct path.
-        write_path = output_yaml_path
-    else:
-        # If the output path is not specified or the directory does not exist,
-        # save in the current directory with a formatted name.
-        write_path = f"{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
 
     with open(write_path, "w") as f:
         f.write(yaml_str)
