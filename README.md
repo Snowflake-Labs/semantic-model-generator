@@ -57,7 +57,7 @@ os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.
 
-All generated semantic models by default are saved under `semantic_model_generator/output_models`.
+All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from the root of this project or the current directory you're in.
 
 ### Generation - Python
 
@@ -69,7 +69,7 @@ pip install dist/semantic_model_generator-0.1.9-py3-none-any.whl
 ```bash
 python
 ```
-3. Generate a semantic model
+3. Generate a semantic model.
 ```python
 from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
 

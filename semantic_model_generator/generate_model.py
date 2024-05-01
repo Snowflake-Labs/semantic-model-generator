@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 
@@ -286,8 +287,17 @@ def generate_base_semantic_model_from_snowflake(
         # Format the current date and time as "YYYY-MM-DD"
         formatted_datetime = current_datetime.strftime("%Y%m%d%H%M%S")
         write_path = f"semantic_model_generator/output_models/{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
+    if output_yaml_path and os.path.isdir(os.path.dirname(output_yaml_path)):
+        write_path = output_yaml_path
+    else:
+        # If the output path is not specified or the directory does not exist,
+        # save in the current directory with a formatted name.
+        formatted_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
+        write_path = f"{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
+
     with open(write_path, "w") as f:
         f.write(yaml_str)
+    logger.info(f"Semantic model saved to {write_path}")
     return None
 
 
