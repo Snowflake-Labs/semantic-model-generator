@@ -270,6 +270,8 @@ def generate_base_semantic_model_from_snowflake(
     Returns:
         None. Writes the semantic context to a YAML file.
     """
+    if not output_yaml_path:
+        output_yaml_path = f"semantic_model_generator/output_models/{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
     context = raw_schema_to_semantic_context(
         physical_tables,
         snowflake_account=snowflake_account,
@@ -279,15 +281,8 @@ def generate_base_semantic_model_from_snowflake(
     yaml_str = proto_utils.proto_to_yaml(context)
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
-    if output_yaml_path:
-        write_path = output_yaml_path
-    else:
-        current_datetime = datetime.now()
-
-        # Format the current date and time as "YYYY-MM-DD"
-        formatted_datetime = current_datetime.strftime("%Y%m%d%H%M%S")
-        write_path = f"semantic_model_generator/output_models/{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
-    if output_yaml_path and os.path.isdir(os.path.dirname(output_yaml_path)):
+        
+    if output_yaml_path: # Assume user gives us correct path.
         write_path = output_yaml_path
     else:
         # If the output path is not specified or the directory does not exist,
