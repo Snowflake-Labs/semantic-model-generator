@@ -127,13 +127,13 @@ def _raw_table_to_semantic_context_table(
 
 
 def raw_schema_to_semantic_context(
-    physical_tables: List[str], snowflake_account: str, semantic_model_name: str
+    base_tables: List[str], snowflake_account: str, semantic_model_name: str
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
 
     Parameters:
-        physical_tables  (list[str]): Fully qualified table names to include in the semantic model.
+        base_tables  (list[str]): Fully qualified table names to include in the semantic model.
     - snowflake_account (str): Snowflake account identifier.
     - semantic_model_name (str): A meaningful semantic model name.
 
@@ -155,7 +155,7 @@ def raw_schema_to_semantic_context(
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
     table_objects = []
     unique_database_schema: List[str] = []
-    for table in physical_tables:
+    for table in base_tables:
         # Verify this is a valid FQN table. For now, we check that the table follows the following format.
         # {database}.{schema}.{table}
         fqn_table = create_fqn_table(table)
@@ -253,7 +253,7 @@ def _to_snake_case(s: str) -> str:
 
 
 def generate_base_semantic_model_from_snowflake(
-    physical_tables: List[str],
+    base_tables: List[str],
     snowflake_account: str,
     semantic_model_name: str,
     output_yaml_path: Optional[str] = None,
@@ -262,7 +262,7 @@ def generate_base_semantic_model_from_snowflake(
     Generates a base semantic context from specified Snowflake tables and exports it to a YAML file.
 
     Parameters:
-    physical_tables : Fully qualified names of Snowflake tables to include in the semantic context.
+        base_tables : Fully qualified names of Snowflake tables to include in the semantic context.
         snowflake_account: Identifier of the Snowflake account.
         semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
         output_yaml_path: Path for the output YAML file. If None, defaults to 'semantic_model_generator/output_models/YYYYMMDDHHMMSS_<semantic_model_name>.yaml'.
@@ -280,7 +280,7 @@ def generate_base_semantic_model_from_snowflake(
     else:  # Assume user gives correct path.
         write_path = output_yaml_path
     context = raw_schema_to_semantic_context(
-        physical_tables,
+        base_tables,
         snowflake_account=snowflake_account,
         semantic_model_name=semantic_model_name,
     )
@@ -301,10 +301,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--physical_tables",
+        "--base_tables",
         type=list,
         required=True,
-        help="The list of fully qualified table names all following the format {database_name}.{schema_name}{table_name}",
+        help="The list of fully qualified table names all following the format {database_name}.{schema_name}.{table_name}",
     )
     parser.add_argument(
         "--snowflake_account",
@@ -328,7 +328,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     generate_base_semantic_model_from_snowflake(
-        physical_tables=args.physical_tables,
+        base_tables=args.base_tables,
         snowflake_account=args.snowflake_account,
         semantic_model_name=args.semantic_model_name,
         output_yaml_path=args.output_yaml_path,

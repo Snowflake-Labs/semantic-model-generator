@@ -217,11 +217,11 @@ def test_raw_schema_to_semantic_context(
     want_yaml = "name: this is the best semantic model ever\ntables:\n  - name: ALIAS\n    description: '  '\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  '\n        synonyms:\n          - '  '\n        description: '  '\n        expr: '  '\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  '\n        description: '  '\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  '\n        description: '  '\n        expr: CBSA\n        data_type: NUMBER\n"
 
     snowflake_account = "test_account"
-    physical_tables = ["test_db.schema_test.ALIAS"]
+    base_tables = ["test_db.schema_test.ALIAS"]
     semantic_model_name = "this is the best semantic model ever"
 
     semantic_model = raw_schema_to_semantic_context(
-        physical_tables=physical_tables,
+        base_tables=base_tables,
         snowflake_account=snowflake_account,
         semantic_model_name=semantic_model_name,
     )
@@ -251,13 +251,13 @@ def test_generate_base_context_with_placeholder_comments(
     mock_snowflake_connection_env,
 ):
 
-    physical_tables = ["test_db.schema_test.ALIAS"]
+    base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
     semantic_model_name = "my awesome semantic model"
 
     generate_base_semantic_model_from_snowflake(
-        physical_tables=physical_tables,
+        base_tables=base_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
         semantic_model_name=semantic_model_name,
@@ -278,7 +278,7 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     mock_snowflake_connection_env,
 ):
 
-    physical_tables = [
+    base_tables = [
         "test_db.schema_test.ALIAS",
         "a_different_database.a_different_schema.PRODUCTS",
     ]
@@ -287,7 +287,7 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     semantic_model_name = "Another Incredible Semantic Model"
 
     generate_base_semantic_model_from_snowflake(
-        physical_tables=physical_tables,
+        base_tables=base_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
         semantic_model_name=semantic_model_name,
@@ -310,13 +310,13 @@ def test_generate_base_context_with_placeholder_comments_missing_datatype(
     mock_snowflake_connection_env,
 ):
 
-    physical_tables = ["test_db.schema_test.ALIAS"]
+    base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
     semantic_model_name = "Another Incredible Semantic Model with new dtypes"
 
     generate_base_semantic_model_from_snowflake(
-        physical_tables=physical_tables,
+        base_tables=base_tables,
         snowflake_account=snowflake_account,
         output_yaml_path=output_path,
         semantic_model_name=semantic_model_name,
