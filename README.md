@@ -196,7 +196,7 @@ tables:
         expr: cat
         unique: false
         data_type: NUMBER
-        sample_values:
+        sample_values: # sample values need to be json serializable so should be warpped in quotes.
           - '501'
           - '544'
 
