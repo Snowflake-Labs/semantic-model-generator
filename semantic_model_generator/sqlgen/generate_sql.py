@@ -10,6 +10,7 @@ from semantic_model_generator.protos.semantic_model_pb2 import (
     Table,
     TimeDimension,
 )
+_AGGREGATION_FUNCTIONS = ["sum","avg","min", "max","count", "stdev", "var", "percentile_cont"]
 
 
 def _fully_qualified_table_name(table: FullyQualifiedTable) -> str:
@@ -62,6 +63,11 @@ def _create_select_statement(table: Table, limit: int) -> str:
         )
         if expr == "":
             return None
+        # Validate no aggregations in cols.
+        for agg in _AGGREGATION_FUNCTIONS:
+            if agg.lower() in expr.lower():
+                raise ValueError(f"Aggregations aren't allowed in columns yet. Please remove from {expr}.")
+        
         return expr
 
     columns = []
