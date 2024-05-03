@@ -121,6 +121,7 @@ _TEST_TABLE_INVALID_SUM_IN_COL = Table(
     measures=[measure_example_invalid_expr_sum],
 )
 
+
 def test_valid_table_sql_with_expr():
     want = "SELECT region_code AS Region, sales_amount - sales_total AS Total_Sales, transaction_date AS Date FROM SalesDB.public.transactions LIMIT 100"
     generated_sql = generate_select_with_all_cols(_TEST_VALID_TABLE, 100)
@@ -143,6 +144,7 @@ def test_table_invalid_col_name():
         str(excinfo.value)
         == "Column names should not have spaces in them. Passed = Regions In The World"
     )
+
 
 def test_table_invalid_col_count_expr():
     with pytest.raises(ValueError) as excinfo:
