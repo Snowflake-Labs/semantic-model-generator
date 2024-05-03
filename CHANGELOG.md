@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.11] - 2024-05-01
+### Updates
+- Save path location
+
 ## [0.1.10] - 2024-05-01
 ### Updates
 - Save path location
