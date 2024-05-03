@@ -274,9 +274,9 @@ def generate_base_semantic_model_from_snowflake(
     if not output_yaml_path:
         file_name = f"{formatted_datetime}_{_to_snake_case(semantic_model_name)}.yaml"
         if os.path.exists("semantic_model_generator/output_models"):
-            output_yaml_path = f"semantic_model_generator/output_models/{file_name}"
+            write_path = f"semantic_model_generator/output_models/{file_name}"
         else:
-            output_yaml_path = f"./{file_name}"
+            write_path = f"./{file_name}"
     else:  # Assume user gives correct path.
         write_path = output_yaml_path
     context = raw_schema_to_semantic_context(
