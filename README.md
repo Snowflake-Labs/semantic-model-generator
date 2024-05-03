@@ -193,6 +193,7 @@ tables:
             - "item_category"
             - "product_type"
         description: The category of the product sold.
+        # Note: expr can not contain aggregations functions.
         expr: cat
         unique: false
 
@@ -206,6 +207,7 @@ tables:
             - "channel"
             - "distribution_channel"
         description: The channel through which the sale was made.
+        # Note: expr can not contain aggregations functions.
         expr: chn
         unique: false
 
