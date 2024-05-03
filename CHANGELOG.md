@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.12] - 2024-05-03
+### Updates
+- Naming
+- Validate no expressions in cols in yaml
+
 ## [0.1.11] - 2024-05-01
 ### Updates
 - Save path location
