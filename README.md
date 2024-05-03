@@ -73,12 +73,12 @@ python
 ```python
 from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
 
-PHYSICAL_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']
+BASE_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']
 SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
 SEMANTIC_MODEL_NAME = "<a-meaningful-semantic-model-name>"
 
 generate_base_semantic_model_from_snowflake(
-    physical_tables=PHYSICAL_TABLES,
+    base_tables=BASE_TABLES,
     snowflake_account=SNOWFLAKE_ACCOUNT,
     semantic_model_name=SEMANTIC_MODEL_NAME
 )
@@ -99,7 +99,7 @@ This is the script version run on the command line.
 2. Run on your command line.
 ```bash
 python -m semantic_model_generator.generate_model \
-    --physical_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-physical-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-physical-table-or-view-name-2>']" \
+    --base_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']" \
     --semantic_model_name "<a-meaningful-semantic-model-name>" \
     --snowflake_account="<your-snowflake-account>"
 ```
@@ -181,7 +181,7 @@ tables:
     description: A logical table capturing daily sales information across different store locations and product categories.
 
     # The fully qualified name of the underlying physical table.
-    physical_table:
+    base_table:
       database: sales
       schema: public
       table: sd_data
@@ -196,11 +196,19 @@ tables:
         # Note: expr can not contain aggregations functions.
         expr: cat
         unique: false
+        data_type: NUMBER
+        sample_values: # sample values need to be json serializable so should be warpped in quotes.
+          - '501'
+          - '544'
 
       - name: store_country
         description: The country where the sale took place.
         expr: cntry
         unique: false
+        data_type: TEXT
+        sample_values:
+          - 'USA'
+          - 'GBR'
 
       - name: sales_channel
         synonyms: 
@@ -210,6 +218,10 @@ tables:
         # Note: expr can not contain aggregations functions.
         expr: chn
         unique: false
+        data_type: TEXT
+        sample_values:
+          - 'FB'
+          - 'GOOGLE'
 
     time_dimensions:
       - name: sale_timestamp
@@ -219,6 +231,11 @@ tables:
         description: The time when the sale occurred. In UTC.
         expr: dt
         unique: false
+        data_type: TIMESTAMP
+        sample_values:
+          - '2016-09-01 07:30:00'
+          - '2016-09-01 14:16:00'
+          - '2016-09-04 09:20:00'
 
     measures:
       - name: sales_amount
@@ -228,11 +245,19 @@ tables:
         description: The total amount of money generated from the sale.
         expr: amt
         default_aggregation: sum
+        data_type: NUMBER
+        sample_values:
+          - '11.650000'
+          - '50.880000'
 
       - name: sales_tax
         description: The sales tax paid for this sale.
         expr: amt * 0.0975
         default_aggregation: sum
+        data_type: NUMBER
+        sample_values:
+          - '51.650000'
+          - '57.800'
 
       - name: units_sold
         synonyms: 
@@ -241,11 +266,19 @@ tables:
         description: The number of units sold in the transaction.
         expr: unts
         default_aggregation: sum
+        data_type: NUMBER
+        sample_values:
+          - '1'
+          - '3'
 
       - name: cost
         description: The cost of the product sold.
         expr: cst
         default_aggregation: sum
+        data_type: NUMBER
+        sample_values:
+          - '10'
+          - '33'
 
       - name: profit
         synonyms: 
@@ -254,6 +287,10 @@ tables:
         description: The profit generated from a sale.
         expr: amt - cst
         default_aggregation: sum
+        data_type: NUMBER
+        sample_values:
+          - '15'
+          - '37'
 
 
     # A table can define commonly used filters over it. These filters can then be referenced in user questions directly.
