@@ -35,6 +35,24 @@ dimension_example_invalid_name = Dimension(
     sample_values=["North", "South", "East", "West"],
 )
 
+measure_example_invalid_expr_count = Measure(
+    name="Total_Sales",
+    synonyms=["Sales", "Revenue"],
+    description="Total sales amount",
+    expr="COUNT(distinct sales_amount)",
+    data_type="float",
+    sample_values=["1000.50", "2000.75", "1500.00"],
+)
+
+measure_example_invalid_expr_sum = Measure(
+    name="Total_Sales",
+    synonyms=["Sales", "Revenue"],
+    description="Total sales amount",
+    expr="SUM(sales_amount)",
+    data_type="float",
+    sample_values=["1000.50", "2000.75", "1500.00"],
+)
+
 time_dimension_example = TimeDimension(
     name="Date",
     synonyms=["Time"],
@@ -87,6 +105,22 @@ _TEST_TABLE_INVALID_NAME = Table(
     dimensions=[dimension_example_invalid_name],
 )
 
+_TEST_TABLE_INVALID_COUNT_IN_COL = Table(
+    name="Transactions",
+    synonyms=["Transaction Records"],
+    description="Table containing transaction records",
+    base_table=fully_qualified_table_example,
+    measures=[measure_example_invalid_expr_count],
+)
+
+_TEST_TABLE_INVALID_SUM_IN_COL = Table(
+    name="Transactions",
+    synonyms=["Transaction Records"],
+    description="Table containing transaction records",
+    base_table=fully_qualified_table_example,
+    measures=[measure_example_invalid_expr_sum],
+)
+
 
 def test_valid_table_sql_with_expr():
     want = "SELECT region_code AS Region, sales_amount - sales_total AS Total_Sales, transaction_date AS Date FROM SalesDB.public.transactions LIMIT 100"
@@ -109,4 +143,22 @@ def test_table_invalid_col_name():
     assert (
         str(excinfo.value)
         == "Column names should not have spaces in them. Passed = Regions In The World"
+    )
+
+
+def test_table_invalid_col_count_expr():
+    with pytest.raises(ValueError) as excinfo:
+        _ = generate_select_with_all_cols(_TEST_TABLE_INVALID_COUNT_IN_COL, 100)
+    assert (
+        str(excinfo.value)
+        == "Aggregations aren't allowed in columns yet. Please remove from COUNT(distinct sales_amount) as Total_Sales."
+    )
+
+
+def test_table_invalid_col_expr():
+    with pytest.raises(ValueError) as excinfo:
+        _ = generate_select_with_all_cols(_TEST_TABLE_INVALID_SUM_IN_COL, 100)
+    assert (
+        str(excinfo.value)
+        == "Aggregations aren't allowed in columns yet. Please remove from SUM(sales_amount) as Total_Sales."
     )
