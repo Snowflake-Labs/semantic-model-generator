@@ -84,7 +84,7 @@ _CONVERTED_TABLE_ALIAS_NEW_DTYPE = Table(
         Column(
             id_=1,
             column_name="AREA_CODE",
-            column_type="VARIANT",
+            column_type="ANOTHER_DATATYPE",
             values=None,
             comment=None,
         ),
@@ -374,10 +374,10 @@ def test_generate_base_context_with_placeholder_comments_missing_datatype(
 
     expected_calls = [
         call(
-            "Column datatype does not map to a known datatype. Input was = OBJECT. We are going to place as a Dimension for now."
+            "We don't currently support OBJECT as an input column datatype to the Semantic Model. We are skipping column ZIP_CODE for now."
         ),
         call(
-            "Column datatype does not map to a known datatype. Input was = VARIANT. We are going to place as a Dimension for now."
+            "Column datatype does not map to a known datatype. Input was = ANOTHER_DATATYPE. We are going to place as a Dimension for now."
         ),
     ]
 
@@ -385,9 +385,10 @@ def test_generate_base_context_with_placeholder_comments_missing_datatype(
     mock_logger.warning.assert_has_calls(expected_calls, any_order=False)
 
     mock_file.assert_called_once_with(output_path, "w")
+
     # Assert file save called with placeholder comments added along with sample values and cross-database
     mock_file().write.assert_called_once_with(
-        "name: Another Incredible Semantic Model with new dtypes\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: OBJECT\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: VARIANT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
+        "name: Another Incredible Semantic Model with new dtypes\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: test_db\n      schema: schema_test\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: ANOTHER_DATATYPE\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
     )
 
 
