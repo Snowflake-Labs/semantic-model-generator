@@ -10,6 +10,7 @@ from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     DIMENSION_DATATYPES,
     MEASURE_DATATYPES,
+    OBJECT_DATATYPES,
     TIME_MEASURE_DATATYPES,
     SnowflakeConnector,
     get_table_representation,
@@ -97,6 +98,11 @@ def _raw_table_to_semantic_context_table(
                     description=_PLACEHOLDER_COMMENT,
                 )
             )
+        elif col.column_type in OBJECT_DATATYPES:
+            logger.warning(
+                f"""We don't currently support {col.column_type} as an input column datatype to the Semantic Model. We are skipping column {col.column_name} for now."""
+            )
+            continue
         else:
             logger.warning(
                 f"Column datatype does not map to a known datatype. Input was = {col.column_type}. We are going to place as a Dimension for now."
@@ -111,6 +117,10 @@ def _raw_table_to_semantic_context_table(
                     description=_PLACEHOLDER_COMMENT,
                 )
             )
+    if len(time_dimensions) + len(dimensions) + len(measures) == 0:
+        raise ValueError(
+            f"No valid columns found for table {raw_table.name}. Please verify that you have entered this table name correctly."
+        )
 
     return semantic_model_pb2.Table(
         name=raw_table.name,
@@ -133,7 +143,7 @@ def raw_schema_to_semantic_context(
     Converts a list of fully qualified Snowflake table names into a semantic model.
 
     Parameters:
-        base_tables  (list[str]): Fully qualified table names to include in the semantic model.
+    - base_tables  (list[str]): Fully qualified table names to include in the semantic model.
     - snowflake_account (str): Snowflake account identifier.
     - semantic_model_name (str): A meaningful semantic model name.
 
