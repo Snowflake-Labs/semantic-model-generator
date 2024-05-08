@@ -63,7 +63,7 @@ def _raw_table_to_semantic_context_table(
 
     for col in raw_table.columns:
 
-        if col.column_type in TIME_MEASURE_DATATYPES:
+        if col.column_type.upper() in TIME_MEASURE_DATATYPES:
             time_dimensions.append(
                 semantic_model_pb2.TimeDimension(
                     name=col.column_name,
@@ -75,7 +75,7 @@ def _raw_table_to_semantic_context_table(
                 )
             )
 
-        elif col.column_type in DIMENSION_DATATYPES:
+        elif col.column_type.upper() in DIMENSION_DATATYPES:
             dimensions.append(
                 semantic_model_pb2.Dimension(
                     name=col.column_name,
@@ -87,7 +87,7 @@ def _raw_table_to_semantic_context_table(
                 )
             )
 
-        elif col.column_type in MEASURE_DATATYPES:
+        elif col.column_type.upper() in MEASURE_DATATYPES:
             measures.append(
                 semantic_model_pb2.Measure(
                     name=col.column_name,
@@ -98,7 +98,7 @@ def _raw_table_to_semantic_context_table(
                     description=_PLACEHOLDER_COMMENT,
                 )
             )
-        elif col.column_type in OBJECT_DATATYPES:
+        elif col.column_type.upper() in OBJECT_DATATYPES:
             logger.warning(
                 f"""We don't currently support {col.column_type} as an input column datatype to the Semantic Model. We are skipping column {col.column_name} for now."""
             )
