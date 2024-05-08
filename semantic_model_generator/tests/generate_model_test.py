@@ -14,7 +14,7 @@ from semantic_model_generator.generate_model import (
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
-    OBJECT_DATATYPES
+    OBJECT_DATATYPES,
 )
 
 
