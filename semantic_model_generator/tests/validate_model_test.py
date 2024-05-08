@@ -348,7 +348,7 @@ def test_invalid_yaml_missing_quote(
     with pytest.raises(ValueError) as exc_info:
         validate(temp_invalid_yaml_unmatched_quote_file, account_name)
 
-    expected_error_fragment = "Unable to execute query with your logical table against physical tables on Snowflake. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
+    expected_error_fragment = "Unable to execute query with your base table against physical tables on Snowflake. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
 
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
@@ -369,6 +369,6 @@ def test_invalid_yaml_incorrect_datatype(
     with pytest.raises(ValueError) as exc_info:
         validate(temp_invalid_yaml_incorrect_dtype, account_name)
 
-    expected_error = "Unable to execute query with your logical table against physical tables on Snowflake. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model."
+    expected_error = "Unable to execute query with your base table against physical tables on Snowflake. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model."
 
     assert expected_error in str(exc_info.value), "Unexpected error message"
