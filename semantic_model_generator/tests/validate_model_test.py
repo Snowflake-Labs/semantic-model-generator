@@ -194,6 +194,34 @@ tables:
 """
 
 
+_INVALID_YAML_INCORRECT_DATA_TYPE = """name: my test semantic model
+tables:
+  - name: ALIAS
+    base_table:
+      database: AUTOSQL_DATASET_BIRD_V2
+      schema: ADDRESS
+      table: ALIAS
+    dimensions:
+      - name: ALIAS
+        synonyms:
+            - 'an alias for something'
+        expr: ALIAS
+        data_type: TEXT
+        sample_values:
+          - Holtsville
+          - Adjuntas
+          - Boqueron
+    measures:
+      - name: ZIP_CODE
+        synonyms:
+            - 'another synonym'
+        expr: ZIP_CODE
+        data_type: OBJECT
+        sample_values:
+          - '{1:2}'
+"""
+
+
 @pytest.fixture
 def temp_valid_yaml_file():
     """Create a temporary YAML file with the test data."""
@@ -226,6 +254,15 @@ def temp_invalid_yaml_unmatched_quote_file():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
         tmp.write(_INVALID_YAML_UNMATCHED_QUOTE)
+        tmp.flush()
+        yield tmp.name
+
+
+@pytest.fixture
+def temp_invalid_yaml_incorrect_dtype():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(_INVALID_YAML_INCORRECT_DATA_TYPE)
         tmp.flush()
         yield tmp.name
 
@@ -311,7 +348,7 @@ def test_invalid_yaml_missing_quote(
     with pytest.raises(ValueError) as exc_info:
         validate(temp_invalid_yaml_unmatched_quote_file, account_name)
 
-    expected_error_fragment = "Unable to execute query with your logical table against physical tables on Snowflake. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
+    expected_error_fragment = "Unable to execute query with your logical table against base tables on Snowflake. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
 
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
@@ -322,3 +359,16 @@ def test_invalid_yaml_missing_quote(
     assert (
         expected_log_call not in mock_logger.mock_calls
     ), "Unexpected log message found in logger calls"
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_invalid_yaml_incorrect_datatype(
+    mock_logger, temp_invalid_yaml_incorrect_dtype, mock_snowflake_connection
+):
+    account_name = "snowflake test"
+    with pytest.raises(ValueError) as exc_info:
+        validate(temp_invalid_yaml_incorrect_dtype, account_name)
+
+    expected_error = "Unable to execute query with your logical table against base tables on Snowflake. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model."
+
+    assert expected_error in str(exc_info.value), "Unexpected error message"

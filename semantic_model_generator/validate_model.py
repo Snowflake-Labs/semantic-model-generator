@@ -39,7 +39,7 @@ def validate(yaml_path: str, snowflake_account: str) -> None:
                 _ = conn.cursor().execute(select)
             except Exception as e:
                 raise ValueError(
-                    f"Unable to execute query with your logical table against physical tables on Snowflake. Error = {e}"
+                    f"Unable to execute query with your logical table against base tables on Snowflake. Error = {e}"
                 )
             logger.info(f"Validated logical table: {table.name}")
 
