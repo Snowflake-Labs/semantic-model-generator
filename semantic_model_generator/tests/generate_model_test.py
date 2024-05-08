@@ -138,6 +138,21 @@ _TABLE_WITH_OBJECT_COL = Table(
     comment=None,
 )
 
+_TABLE_WITH_THAT_EXCEEDS_CONTEXT = Table(
+    id_=0,
+    name="PRODUCTS",
+    columns=[
+        Column(
+            id_=0,
+            column_name="SKU",
+            column_type="NUMBER",
+            values=["1", "2", "3"] * 3000,
+            comment=None,
+        ),
+    ],
+    comment=None,
+)
+
 
 @pytest.fixture
 def mock_snowflake_connection_env(monkeypatch):
@@ -250,6 +265,40 @@ def mock_dependencies_object_dtype(mock_snowflake_connection):
     ]
     table_representations = [
         _TABLE_WITH_OBJECT_COL,  # Value returned on the first call.
+    ]
+
+    with patch(
+        "semantic_model_generator.generate_model.get_valid_schemas_tables_columns_df",
+        side_effect=valid_schemas_tables_representations,
+    ), patch(
+        "semantic_model_generator.generate_model.get_table_representation",
+        side_effect=table_representations,
+    ):
+        yield
+
+
+@pytest.fixture
+def mock_dependencies_exceed_context(mock_snowflake_connection):
+    valid_schemas_tables_columns_df_alias = pd.DataFrame(
+        {
+            "TABLE_NAME": ["PRODUCTS"],
+            "COLUMN_NAME": ["SKU"],
+            "DATA_TYPE": ["OBJECT"],
+        }
+    )
+    valid_schemas_tables_columns_df_zip_code = pd.DataFrame(
+        {
+            "TABLE_NAME": ["PRODUCTS"],
+            "COLUMN_NAME": ["SKU"],
+            "DATA_TYPE": ["NUMBER"],
+        }
+    )
+    valid_schemas_tables_representations = [
+        valid_schemas_tables_columns_df_alias,
+        valid_schemas_tables_columns_df_zip_code,
+    ]
+    table_representations = [
+        _TABLE_WITH_THAT_EXCEEDS_CONTEXT,  # Value returned on the first call.
     ]
 
     with patch(
@@ -406,7 +455,7 @@ def test_generate_base_context_from_table_that_has_not_supported_dtype(
     base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
-    semantic_model_name = "Another Incredible Semantic Model with new dtypes"
+    semantic_model_name = "Another Incredible Semantic Model with unsupported dtypes"
 
     with pytest.raises(ValueError) as excinfo:
         generate_base_semantic_model_from_snowflake(
@@ -428,6 +477,37 @@ def test_generate_base_context_from_table_that_has_not_supported_dtype(
 
     # Assert that all expected calls were made in the exact order
     mock_logger.warning.assert_has_calls(expected_calls, any_order=False)
+
+    mock_file().write.assert_not_called()
+
+
+@patch("semantic_model_generator.generate_model.logger")
+@patch("builtins.open", new_callable=mock_open)
+def test_generate_base_context_from_table_that_has_too_long_context(
+    mock_file,
+    mock_logger,
+    mock_dependencies_exceed_context,
+    mock_snowflake_connection,
+    mock_snowflake_connection_env,
+):
+
+    base_tables = ["test_db.schema_test.ALIAS"]
+    snowflake_account = "test_account"
+    output_path = "output_model_path.yaml"
+    semantic_model_name = "Another Incredible Semantic Model with long context"
+
+    with pytest.raises(ValueError) as excinfo:
+        generate_base_semantic_model_from_snowflake(
+            base_tables=base_tables,
+            snowflake_account=snowflake_account,
+            output_yaml_path=output_path,
+            semantic_model_name=semantic_model_name,
+        )
+
+    assert (
+        str(excinfo.value)
+        == "Your semantic model is too large. Passed size is 144558 characters. We need you to remove 116556 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
+    )
 
     mock_file().write.assert_not_called()
 

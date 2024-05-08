@@ -17,6 +17,7 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     get_valid_schemas_tables_columns_df,
 )
 from semantic_model_generator.snowflake_utils.utils import create_fqn_table
+from semantic_model_generator.validate.context_length import validate_context_length
 
 _PLACEHOLDER_COMMENT = "  "
 _FILL_OUT_TOKEN = " # <FILL-OUT>"
@@ -298,6 +299,10 @@ def generate_base_semantic_model_from_snowflake(
     yaml_str = proto_utils.proto_to_yaml(context)
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
+
+    # Validate the generated yaml is within context limits
+
+    validate_context_length(yaml_str)
 
     with open(write_path, "w") as f:
         f.write(yaml_str)

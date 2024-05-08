@@ -6,6 +6,7 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
 )
 from semantic_model_generator.sqlgen.generate_sql import generate_select_with_all_cols
+from semantic_model_generator.validate.context_length import validate_context_length
 
 
 def validate(yaml_path: str, snowflake_account: str) -> None:
@@ -19,6 +20,8 @@ def validate(yaml_path: str, snowflake_account: str) -> None:
     """
     with open(yaml_path) as f:
         yaml_str = f.read()
+    # Validate the context length doesn't exceed max we can support.
+    validate_context_length(yaml_str)
     model = yaml_to_semantic_model(yaml_str)
 
     connector = SnowflakeConnector(
@@ -38,9 +41,7 @@ def validate(yaml_path: str, snowflake_account: str) -> None:
                 # Run the query
                 _ = conn.cursor().execute(select)
             except Exception as e:
-                raise ValueError(
-                    f"Unable to execute query with your logical table against base tables on Snowflake. Error = {e}"
-                )
+                raise ValueError(f"Unable to validate your semantic model. Error = {e}")
             logger.info(f"Validated logical table: {table.name}")
 
     logger.info(f"Successfully validated {yaml_path}")
