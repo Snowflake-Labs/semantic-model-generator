@@ -301,7 +301,7 @@ tables:
             - "N.A."
             - "NA"
         description: "A filter to restrict only to north american countries"
-        expr: cntry IN ('canada', 'mexico', 'usa')
+        expr: country IN ('canada', 'mexico', 'usa')
 ```
 
 ## Release
