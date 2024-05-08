@@ -119,7 +119,7 @@ def _raw_table_to_semantic_context_table(
             )
     if len(time_dimensions) + len(dimensions) + len(measures) == 0:
         raise ValueError(
-            f"No valid columns found for table {raw_table.name}. Please verify that you have entered this table name correctly."
+            f"No valid columns found for table {raw_table.name}. Please verify that this table contains column's datatypes not in {OBJECT_DATATYPES}."
         )
 
     return semantic_model_pb2.Table(

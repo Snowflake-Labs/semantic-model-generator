@@ -14,6 +14,7 @@ from semantic_model_generator.generate_model import (
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
+    OBJECT_DATATYPES
 )
 
 
@@ -416,7 +417,7 @@ def test_generate_base_context_from_table_that_has_not_supported_dtype(
         )
     assert (
         str(excinfo.value)
-        == "No valid columns found for table PRODUCTS. Please verify that you have entered this table name correctly."
+        == f"No valid columns found for table PRODUCTS. Please verify that this table contains column's datatypes not in {OBJECT_DATATYPES}."
     )
 
     expected_calls = [
