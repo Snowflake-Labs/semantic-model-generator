@@ -10,6 +10,9 @@ from semantic_model_generator.protos.semantic_model_pb2 import (
     Table,
     TimeDimension,
 )
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    OBJECT_DATATYPES,
+)
 
 _AGGREGATION_FUNCTIONS = [
     "sum",
@@ -79,6 +82,10 @@ def _create_select_statement(table: Table, limit: int) -> str:
                 raise ValueError(
                     f"Aggregations aren't allowed in columns yet. Please remove from {expr}."
                 )
+        if col.data_type.upper() in OBJECT_DATATYPES:
+            raise ValueError(
+                f"We do not support object datatypes in the semantic model. Col {col.name} has data type {col.data_type}. Please remove this column from your semantic model."
+            )
 
         return expr
 
