@@ -506,7 +506,7 @@ def test_generate_base_context_from_table_that_has_too_long_context(
 
     assert (
         str(excinfo.value)
-        == "Your semantic model is too large. Passed size is 144558 characters. We need you to remove 116556 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
+        == "Your semantic model is too large. Passed size is 144558 characters. We need you to remove 116636 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
     )
 
     mock_file().write.assert_not_called()
