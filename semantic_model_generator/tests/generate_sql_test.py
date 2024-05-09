@@ -53,7 +53,7 @@ measure_example_invalid_expr_sum = Measure(
     sample_values=["1000.50", "2000.75", "1500.00"],
 )
 
-measure_example_no_data_type= Measure(
+measure_example_no_data_type = Measure(
     name="Total_Sales",
     synonyms=["Sales", "Revenue"],
     description="Total sales amount",
@@ -181,6 +181,7 @@ def test_table_invalid_col_expr():
         == "Aggregations aren't allowed in columns yet. Please remove from SUM(sales_amount) as Total_Sales."
     )
 
+
 def test_table_missing_datatype():
     with pytest.raises(ValueError) as excinfo:
         _ = generate_select_with_all_cols(_TEST_TABLE_MISSING_DATATYPE, 100)
@@ -189,5 +190,3 @@ def test_table_missing_datatype():
         str(excinfo.value)
         == "Your Semantic Model contains a col Total_Sales that does not have the `data_type` field. Please add."
     )
-
-
