@@ -438,6 +438,6 @@ def test_valid_yaml_too_long_context(
     with pytest.raises(ValueError) as exc_info:
         validate(temp_valid_yaml_too_long_context, account_name)
 
-    expected_error = 'Your semantic model is too large. Passed size is 37216 characters. We need you to remove 9296 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values.'
+    expected_error = "Your semantic model is too large. Passed size is 37216 characters. We need you to remove 9296 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
 
     assert expected_error in str(exc_info.value), "Unexpected error message"
