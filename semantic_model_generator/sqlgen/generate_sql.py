@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import sqlglot
 from sqlglot.dialects.snowflake import Snowflake
-
+from semantic_model_generator.validate.fields import validate_contains_datatype_for_each_col
 from semantic_model_generator.protos.semantic_model_pb2 import (
     Dimension,
     FullyQualifiedTable,
@@ -120,7 +120,10 @@ def generate_select_with_all_cols(table: Table, limit: int) -> str:
     Returns:
         str: A SQL statement formatted for Snowflake.
     """
+    
 
     select = _create_select_statement(table, limit)
+    
+    validate_contains_datatype_for_each_col(table)
 
     return _convert_to_snowflake_sql(select)
