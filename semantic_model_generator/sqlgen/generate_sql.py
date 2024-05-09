@@ -13,6 +13,9 @@ from semantic_model_generator.protos.semantic_model_pb2 import (
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     OBJECT_DATATYPES,
 )
+from semantic_model_generator.validate.fields import (
+    validate_contains_datatype_for_each_col,
+)
 
 _AGGREGATION_FUNCTIONS = [
     "sum",
@@ -122,5 +125,7 @@ def generate_select_with_all_cols(table: Table, limit: int) -> str:
     """
 
     select = _create_select_statement(table, limit)
+
+    validate_contains_datatype_for_each_col(table)
 
     return _convert_to_snowflake_sql(select)

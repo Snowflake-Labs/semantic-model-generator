@@ -53,6 +53,15 @@ measure_example_invalid_expr_sum = Measure(
     sample_values=["1000.50", "2000.75", "1500.00"],
 )
 
+measure_example_no_data_type = Measure(
+    name="Total_Sales",
+    synonyms=["Sales", "Revenue"],
+    description="Total sales amount",
+    expr="sales_amount",
+    sample_values=["1000.50", "2000.75", "1500.00"],
+)
+
+
 time_dimension_example = TimeDimension(
     name="Date",
     synonyms=["Time"],
@@ -122,6 +131,15 @@ _TEST_TABLE_INVALID_SUM_IN_COL = Table(
 )
 
 
+_TEST_TABLE_MISSING_DATATYPE = Table(
+    name="Transactions",
+    synonyms=["Transaction Records"],
+    description="Table containing transaction records",
+    base_table=fully_qualified_table_example,
+    measures=[measure_example_no_data_type],
+)
+
+
 def test_valid_table_sql_with_expr():
     want = "SELECT region_code AS Region, sales_amount - sales_total AS Total_Sales, transaction_date AS Date FROM SalesDB.public.transactions LIMIT 100"
     generated_sql = generate_select_with_all_cols(_TEST_VALID_TABLE, 100)
@@ -161,4 +179,14 @@ def test_table_invalid_col_expr():
     assert (
         str(excinfo.value)
         == "Aggregations aren't allowed in columns yet. Please remove from SUM(sales_amount) as Total_Sales."
+    )
+
+
+def test_table_missing_datatype():
+    with pytest.raises(ValueError) as excinfo:
+        _ = generate_select_with_all_cols(_TEST_TABLE_MISSING_DATATYPE, 100)
+
+    assert (
+        str(excinfo.value)
+        == "Your Semantic Model contains a col Total_Sales that does not have the `data_type` field. Please add."
     )
