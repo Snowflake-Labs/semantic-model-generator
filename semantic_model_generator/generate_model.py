@@ -297,11 +297,13 @@ def generate_base_semantic_model_from_snowflake(
     )
 
     yaml_str = proto_utils.proto_to_yaml(context)
+    # Update sample_values to surround them with single quotes
+    yaml_str = proto_utils.ensure_sample_values_wrapped_in_quotes(yaml_str)
+
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
 
     # Validate the generated yaml is within context limits
-
     validate_context_length(yaml_str)
 
     with open(write_path, "w") as f:

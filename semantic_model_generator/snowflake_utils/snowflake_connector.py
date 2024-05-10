@@ -136,10 +136,6 @@ def _get_column_representation(
             )
             assert cursor_execute is not None, "cursor_execute should not be none "
             res = cursor_execute.fetchall()
-            # Cast all values to string to ensure the list is json serializable.
-            # A better solution would be to identify the possible types that are not
-            # json serializable (e.g. datetime objects) and apply the appropriate casting
-            # in just those cases.
             if len(res) > 0:
                 if isinstance(res[0], dict):
                     col_key = [k for k in res[0].keys()][0]

@@ -24,3 +24,30 @@ def validate_contains_datatype_for_each_col(table: Table) -> None:
             raise ValueError(
                 f"Your Semantic Model contains a col {time_dim_col.name} that does not have the `data_type` field. Please add."
             )
+
+
+def validate_sample_values_are_quoted(yaml_str: str) -> None:
+    """
+    Validate that all sample_values in the provided YAML data are wrapped in quotes.
+
+    """
+    inside_sample_values = False
+    for line in yaml_str.split("\n"):
+        line = line.strip()
+        if len(line) == 0:
+            continue
+
+        if "sample_values" in line:
+            inside_sample_values = True
+            continue
+        # Check if we are still in the list of sample values, or if we moved to another block element or a new table.
+        if inside_sample_values and (line[0] != "-" or "- name:" in line):  # reset
+            inside_sample_values = False
+            continue
+        if inside_sample_values:
+            # ensure all quoted.
+            # count single and double quotes.
+            if line.count("'") != 2 and line.count('"') != 2:
+                raise ValueError(
+                    f"You need to have all sample_values: surrounded by quotes. Please fix the value {line}."
+                )

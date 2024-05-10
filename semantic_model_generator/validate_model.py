@@ -7,6 +7,7 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
 )
 from semantic_model_generator.sqlgen.generate_sql import generate_select_with_all_cols
 from semantic_model_generator.validate.context_length import validate_context_length
+from semantic_model_generator.validate.fields import validate_sample_values_are_quoted
 
 
 def validate(yaml_path: str, snowflake_account: str) -> None:
@@ -22,6 +23,8 @@ def validate(yaml_path: str, snowflake_account: str) -> None:
         yaml_str = f.read()
     # Validate the context length doesn't exceed max we can support.
     validate_context_length(yaml_str)
+    validate_sample_values_are_quoted(yaml_str)
+
     model = yaml_to_semantic_model(yaml_str)
 
     connector = SnowflakeConnector(

@@ -1,7 +1,7 @@
 import datetime
 import io
 import json
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar, Union
 
 import ruamel.yaml
 import yaml
@@ -11,6 +11,57 @@ from google.protobuf.message import Message
 from semantic_model_generator.protos import semantic_model_pb2
 
 ProtoMsg = TypeVar("ProtoMsg", bound=Message)
+
+
+def ensure_sample_values_wrapped_in_quotes(yaml_str: str) -> str:
+    # Using ruamel.yaml package to preserve message order.
+    yaml = ruamel.yaml.YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.preserve_quotes = True
+
+    # Load YAML string
+    data = yaml.load(yaml_str)
+
+    # Function to recursively ensure sample values are wrapped in quotes
+    def ensure_quotes(obj: Union[Dict[str, Any], List[Any]]) -> None:
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if isinstance(value, (str, bool, int, float)):
+                    obj[key] = f'"{value}"'
+                elif isinstance(value, dict) or isinstance(value, list):
+                    ensure_quotes(value)
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                if isinstance(item, (str, bool, int, float)):
+                    obj[i] = f'"{item}"'
+                elif isinstance(item, dict) or isinstance(item, list):
+                    ensure_quotes(item)
+
+    # Ensure sample values are wrapped in quotes
+    for table in data["tables"]:
+        for column_type in ["dimensions", "measures", "time_dimensions"]:
+            if column_type in table:
+                for column in table[column_type]:
+                    if "sample_values" in column:
+                        column["sample_values"] = [
+                            f"'{value}'"
+                            for value in column["sample_values"]
+                            if "'" not in str(value)
+                        ]
+
+    # Dump data back to YAML string
+    with io.StringIO() as stream:
+        yaml.dump(data, stream)
+        # Ensure multiline strings are preserved in block style
+        output = stream.getvalue()
+        output = output.replace(
+            "'''\n", "|-\n"
+        )  # Replace triple single quotes with block style indicator
+        output = output.replace(
+            "'''", "'"
+        )  # Replace any remaining triple single quotes with single quotes
+        output = output.replace("\"'", "'").replace("'\"", "'")
+        return output
 
 
 def proto_to_yaml(message: ProtoMsg) -> str:
