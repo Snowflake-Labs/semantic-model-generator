@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "semantic-model-generator"
-version = "0.1.13"
+version = "0.1.14"
 description = "Generate a Semantic Model from your Snowflake tables"
 authors = ["Jonathan Hilgart <jonathan.hilgart@snowflake.com>", "Nipun Sehrawat <nipun.sehrawat@snowflake.com>", "Renee Huang <renee.huang@snowflake.com>", "Nicole Limtiaco <nicole.limtiaco@snowflake.com>"]
 license = "Apache Software License; BSD License"
