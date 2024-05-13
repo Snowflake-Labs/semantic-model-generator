@@ -18,14 +18,14 @@ from semantic_model_generator.validate.fields import (
 )
 
 _AGGREGATION_FUNCTIONS = [
-    "sum",
-    "avg",
-    "min",
-    "max",
-    "count",
-    "stdev",
-    "var",
-    "percentile_cont",
+    "sum(",
+    "avg(",
+    "min(",
+    "max(",
+    "count(",
+    "stdev()",
+    "var(",
+    "percentile_cont(",
 ]
 
 
