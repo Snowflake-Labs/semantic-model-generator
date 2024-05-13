@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.14] - 2024-05-13
+### Updates
+- Fix aggregations
+- Context limit
+
 ## [0.1.13] - 2024-05-08
 ### Updates
 - Object types not supported in generation or validation.
