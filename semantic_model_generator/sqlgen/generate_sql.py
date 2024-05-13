@@ -23,7 +23,7 @@ _AGGREGATION_FUNCTIONS = [
     "min(",
     "max(",
     "count(",
-    "stdev()",
+    "stdev(",
     "var(",
     "percentile_cont(",
 ]
