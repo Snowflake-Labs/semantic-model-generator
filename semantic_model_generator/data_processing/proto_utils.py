@@ -1,13 +1,11 @@
-import datetime
 import io
 import json
-from typing import Any, Dict, Type, TypeVar
+from typing import TypeVar
 
 import ruamel.yaml
-import yaml
 from google.protobuf import json_format
 from google.protobuf.message import Message
-from strictyaml import YAMLError, load
+from strictyaml import load
 
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.validate.schema import SCHEMA

@@ -16,7 +16,7 @@ def test_success():
 
 def test_missing_required_field():
     with pytest.raises(
-        YAMLValidationError, match=r"aaa.*required key.*data_type.*not found.*"
+        YAMLValidationError, match=r".*required key.*data_type.*not found.*"
     ):
         this_dir = os.path.dirname(os.path.realpath(__file__))
         yaml_path = os.path.join(this_dir, "samples/jaffle_shop_missing_required.yaml")
