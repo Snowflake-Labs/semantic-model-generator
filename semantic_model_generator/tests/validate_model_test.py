@@ -363,7 +363,7 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file):
     account_name = "snowflake test"
-    with pytest.raises(DuplicateKeysDisallowed) as exc_info:
+    with pytest.raises(DuplicateKeysDisallowed):
         validate(temp_invalid_yaml_formatting_file, account_name)
 
     expected_log_call = mock.call.info(
@@ -379,7 +379,7 @@ def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
     account_name = "snowflake test"
     with pytest.raises(
         YAMLValidationError, match=".*when expecting one of: aggregation_type_unknown.*"
-    ) as exc_info:
+    ):
         validate(temp_invalid_yaml_uppercase_file, account_name)
 
     expected_log_call = mock.call.info(
