@@ -1,4 +1,9 @@
-from semantic_model_generator.protos.semantic_model_pb2 import Table
+from semantic_model_generator.protos.semantic_model_pb2 import SemanticModel, Table
+
+
+def validate_contains_datatype_in_all_tables(model: SemanticModel) -> None:
+    for table in model.tables:
+        validate_contains_datatype_for_each_col(table)
 
 
 def validate_contains_datatype_for_each_col(table: Table) -> None:

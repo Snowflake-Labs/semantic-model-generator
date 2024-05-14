@@ -21,6 +21,9 @@ pyvenv
 .vscode/.ropeproject
 .vscode/*.log
 
+# Jetbrains
+.idea/*
+
 # Envs
 .env
 .venv

@@ -125,7 +125,5 @@ def generate_select_with_all_cols(table: Table, limit: int) -> str:
     """
 
     select = _create_select_statement(table, limit)
-
     validate_contains_datatype_for_each_col(table)
-
     return _convert_to_snowflake_sql(select)
