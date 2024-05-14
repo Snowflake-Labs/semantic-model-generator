@@ -9,6 +9,8 @@ import "google/protobuf/descriptor.proto";
 
 package semantic_model_generator;
 
+// We are using proto FieldOptions to validate the YAMLs match the expected schema.
+// Any fields with the `optional` option, are not required during YAML validation.
 extend google.protobuf.FieldOptions {
   optional bool optional = 51234;
 }
