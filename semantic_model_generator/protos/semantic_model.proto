@@ -5,7 +5,15 @@
 
 syntax = "proto3";
 
+import "google/protobuf/descriptor.proto";
+
 package semantic_model_generator;
+
+// We are using proto FieldOptions to validate the YAMLs match the expected schema.
+// Any fields with the `optional` option, are not required during YAML validation.
+extend google.protobuf.FieldOptions {
+  optional bool optional = 51234;
+}
 
 // AggregationType defines a list of various aggregations.
 enum AggregationType {
@@ -25,19 +33,19 @@ message Dimension {
     // A descriptive name for this dimension.
     string name = 1;
     // A list of other terms/phrases used to refer to this dimension.
-    repeated string synonyms = 2;
+    repeated string synonyms = 2 [(optional) = true];
     // A brief description about this dimension, including things like
     // what data this dimension has.
-    string description = 3;
+    string description = 3 [(optional) = true];
     // The SQL expression defining this dimension. Could simply be a physical column name
     // or an arbitrary SQL expression over one or more columns of the physical table.
     string expr = 4;
     // The data type of this dimension.
     string data_type = 5;
     // If true, assume that this dimension has unique values.
-    bool unique = 6;
+    bool unique = 6 [(optional) = true];
     // Sample values of this column.
-    repeated string sample_values = 7;
+    repeated string sample_values = 7 [(optional) = true];
 }
 
 // Time dimension columns contain time values (e.g. sale_date, created_at, year).
@@ -46,10 +54,10 @@ message TimeDimension {
     // A descriptive name for this time dimension.
     string name = 1;
     // A list of other terms/phrases used to refer to this time dimension.
-    repeated string synonyms = 2;
+    repeated string synonyms = 2 [(optional) = true];
     // A brief description about this time dimension, including things like
     // what data it has, the timezone of values, etc.
-    string description = 3;
+    string description = 3 [(optional) = true];
     // The SQL expression defining this time dimension. Could simply be a physical
     // column name or an arbitrary SQL expression over one or more columns of the
     // physical table.
@@ -57,9 +65,9 @@ message TimeDimension {
     // The data type of this time dimension.
     string data_type = 5;
     // If true, assume that this time dimension has unique values.
-    bool unique = 6;
+    bool unique = 6 [(optional) = true];
     // Sample values of this time dimension.
-    repeated string sample_values = 7;
+    repeated string sample_values = 7 [(optional) = true];
 }
 
 // Measure columns contain numerical values (e.g. revenue, impressions, salary).
@@ -68,10 +76,10 @@ message Measure {
     // A descriptive name for this measure.
     string name = 1;
     // A list of other terms/phrases used to refer to this measure.
-    repeated string synonyms = 2;
+    repeated string synonyms = 2 [(optional) = true];
     // A brief description about this measure, including things like what data
     // it has.
-    string description = 3;
+    string description = 3 [(optional) = true];
     // The SQL expression defining this measure. Could simply be a physical column
     // name or an arbitrary SQL expression over one or more physical columns of
     // the underlying physical table.
@@ -80,9 +88,9 @@ message Measure {
     string data_type = 5;
     // If no aggregation is specified, then this is the default aggregation
     // applied to this measure in contxt of a grouping.
-    AggregationType default_aggregation = 6;
+    AggregationType default_aggregation = 6 [(optional) = true];
     // Sample values of this measure.
-    repeated string sample_values = 7;
+    repeated string sample_values = 7 [(optional) = true];
 }
 
 // Filter represents a named SQL expression that's used for filtering.
@@ -90,10 +98,10 @@ message NamedFilter {
     // A descriptive name for this filter.
     string name = 1;
     // A list of other term/phrases used to refer to this column.
-    repeated string synonyms = 2;
+    repeated string synonyms = 2 [(optional) = true];
     // A brief description about this column, including details of what this filter
     // is typically used for.
-    string description = 3;
+    string description = 3 [(optional) = true];
     // The SQL expression of this filter.
     string expr = 4;
 }
@@ -113,22 +121,22 @@ message Table {
     // A descriptive name for this table.
     string name = 1;
     // A list of other term/phrases used to refer to this table.
-    repeated string synonyms = 2;
+    repeated string synonyms = 2 [(optional) = true];
     // A brief description of this table, including details of what kinds of
     // analysis is it typically used for.
-    string description = 3;
+    string description = 3 [(optional) = true];
     // Fully qualified name of the underlying base table.
     FullyQualifiedTable base_table = 4;
 
     // Dimension, TimeDimension, and Measure are all types of Columns for a table.
     // These may be logical or physical columns.
-    repeated Dimension dimensions = 9;
-    repeated TimeDimension time_dimensions = 10;
-    repeated Measure measures = 11;
+    repeated Dimension dimensions = 9 [(optional) = true];
+    repeated TimeDimension time_dimensions = 10 [(optional) = true];
+    repeated Measure measures = 11 [(optional) = true];
 
 
     // Predefined filters on this table, if any.
-    repeated NamedFilter filters = 8;
+    repeated NamedFilter filters = 8 [(optional) = true];
     // NEXT_TAG: 12.
 }
 
@@ -138,7 +146,7 @@ message SemanticModel {
     string name = 1;
     // A brief description of this project, including details of what kind of
     // analysis does this project enable.
-    string description = 2;
+    string description = 2 [(optional) = true];
     // List of tables in this project.
     repeated Table tables = 3;
 }

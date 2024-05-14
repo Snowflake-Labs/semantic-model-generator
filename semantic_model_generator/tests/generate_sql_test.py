@@ -180,13 +180,3 @@ def test_table_invalid_col_expr():
         str(excinfo.value)
         == "Aggregations aren't allowed in columns yet. Please remove from SUM(sales_amount) as Total_Sales."
     )
-
-
-def test_table_missing_datatype():
-    with pytest.raises(ValueError) as excinfo:
-        _ = generate_select_with_all_cols(_TEST_TABLE_MISSING_DATATYPE, 100)
-
-    assert (
-        str(excinfo.value)
-        == "Your Semantic Model contains a col Total_Sales that does not have the `data_type` field. Please add."
-    )

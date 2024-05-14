@@ -3,6 +3,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
+from strictyaml import DuplicateKeysDisallowed, YAMLValidationError
 
 from semantic_model_generator.validate_model import validate
 
@@ -362,14 +363,8 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file):
     account_name = "snowflake test"
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(DuplicateKeysDisallowed):
         validate(temp_invalid_yaml_formatting_file, account_name)
-
-    expected_error_fragment = (
-        "Failed to parse tables field: "
-        'Message type "semantic_model_generator.Table" has no field named "expr" at "SemanticModel.tables[0]".'
-    )
-    assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
     expected_log_call = mock.call.info(
         f"Successfully validated {temp_invalid_yaml_formatting_file}"
@@ -382,11 +377,10 @@ def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file)
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
     account_name = "snowflake test"
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(
+        YAMLValidationError, match=".*when expecting one of: aggregation_type_unknown.*"
+    ):
         validate(temp_invalid_yaml_uppercase_file, account_name)
-
-    expected_error_fragment = "Unable to parse yaml to protobuf. Error: Failed to parse tables field: Failed to parse measures field: Failed to parse default_aggregation field: Invalid enum value AVG for enum type semantic_model_generator.AggregationType at SemanticModel.tables[0].measures[0].default_aggregation..."
-    assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
     expected_log_call = mock.call.info(
         f"Successfully validated {temp_invalid_yaml_uppercase_file}"

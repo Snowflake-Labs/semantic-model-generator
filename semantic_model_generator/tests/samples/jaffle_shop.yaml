@@ -1,0 +1,416 @@
+name: jaffle_shop
+tables:
+  - name: orders
+    description: Order overview data mart, offering key details for each order including
+      if it's a customer's first order and a food vs. drink item breakdown. One row
+      per order.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: orders
+    dimensions:
+      - name: order_id
+        expr: order_id
+        data_type: TEXT
+        unique: true
+        sample_values:
+          - 4b5918fb-d718-46a0-a057-c811a738669b
+          - 63a8a47c-84bb-4e8f-8836-46daae865daf
+          - d116b575-bbcd-41c1-90e4-0efe662cd67e
+      - name: location_id
+        expr: location_id
+        data_type: TEXT
+        sample_values:
+          - 08d44615-06d3-4086-a5d7-21395a1d975e
+          - 7f790ed7-0fc4-4de2-a1b0-cce72e657fc4
+      - name: customer_id
+        expr: customer_id
+        data_type: TEXT
+        sample_values:
+          - 93e5b426-cb5b-46cc-8da6-e7f76da226f5
+          - c8a08d27-3ce7-4164-b650-e80a0b3ab3c1
+          - e0ee412b-6cc2-4b32-9f09-781ba33ec201
+      - name: is_food_order
+        synonyms:
+          - non drink orders
+          - food
+          - meal
+        expr: is_food_order
+        data_type: BOOLEAN
+        sample_values:
+          - 'False'
+          - None
+          - 'True'
+      - name: is_drink_order
+        expr: is_drink_order
+        data_type: BOOLEAN
+        sample_values:
+          - 'False'
+          - None
+          - 'True'
+    time_dimensions:
+      - name: ordered_at
+        description: order timestamp
+        expr: ordered_at
+        data_type: TIMESTAMP
+        sample_values:
+          - '2016-09-01 07:30:00'
+          - '2016-09-01 14:16:00'
+          - '2016-09-04 09:20:00'
+    measures:
+      - name: order_total
+        synonyms:
+          - sales
+          - income
+        description: The total amount for each order including taxes.
+        expr: order_total
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '11.650000'
+          - '50.880000'
+          - '6.360000'
+      - name: order_cost
+        description: The cost for each order item. Cost is calculated as a sum of
+          the supply cost for each order item.
+        expr: order_cost
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '1.540000'
+          - '18.910000'
+          - '7.030000'
+      - name: tax_paid
+        description: The total tax paid on each order.
+        expr: tax_paid
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '0.360000'
+          - '1.020000'
+          - '5.340000'
+      - name: count_order_items
+        expr: count_order_items
+        data_type: NUMBER
+        default_aggregation: avg
+        sample_values:
+          - '1'
+          - '2'
+          - '5'
+    filters:
+      - name: large_order
+        synonyms:
+          - sizable orders
+        expr: order_total >= 20
+  - name: order_items
+    description: Items contatined in each order. The grain of the table is one row
+      per order item.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: order_items
+    dimensions:
+      - name: order_item_id
+        expr: order_item_id
+        data_type: TEXT
+        unique: true
+        sample_values:
+          - 2052cefc-c26b-4774-b84c-ba99736c41bc
+          - 3f8b6d6a-c77a-46eb-8eb0-48f80acb9708
+          - b1dd5b39-f6ab-44c1-a8c1-7117e9be0dc0
+      - name: order_id
+        expr: order_id
+        data_type: TEXT
+        sample_values:
+          - 3d12eb16-1bbb-47ad-a732-bf156c322fa6
+          - e25b685e-d266-4689-9ee5-ecb8896d4a45
+          - f12a614e-d915-460d-8d85-0bf2d1302779
+      - name: product_id
+        expr: product_id
+        data_type: TEXT
+        sample_values:
+          - BEV-002
+          - JAF-001
+          - JAF-002
+      - name: is_food_item
+        expr: is_food_item
+        data_type: NUMBER
+        sample_values:
+          - '0'
+          - '1'
+      - name: is_drink_item
+        expr: is_drink_item
+        data_type: NUMBER
+        sample_values:
+          - '0'
+          - '1'
+    time_dimensions:
+      - name: ordered_at
+        description: order timestamp
+        expr: ordered_at
+        data_type: TIMESTAMP
+        sample_values:
+          - '2017-08-21 12:30:00'
+          - '2017-08-22 07:22:00'
+          - '2017-08-22 08:40:00'
+    measures:
+      - name: product_price
+        description: The revenue generated for each order item
+        expr: product_price
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '14.000000'
+          - '6.000000'
+          - '7.000000'
+      - name: supply_cost
+        expr: supply_cost
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '1.210000'
+          - '1.540000'
+          - '2.510000'
+  - name: customers
+    description: Customer overview data mart, offering key details for each unique
+      customer. One row per customer.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: customers
+    dimensions:
+      - name: customer_id
+        expr: customer_id
+        data_type: TEXT
+        unique: true
+        sample_values:
+          - 7cd5e7f3-39c8-48ce-950a-1b70449e7829
+          - 96c8937f-d99c-4515-acec-db24d07768f9
+          - dd3b89f6-3929-46fc-91cb-d62cee594688
+      - name: customer_name
+        expr: customer_name
+        data_type: TEXT
+        sample_values:
+          - Brandon Lindsey
+          - Gerald Odom
+          - Rebecca Torres
+      - name: customer_type
+        description: Options are 'new' or 'returning', indicating if a customer has
+          ordered more than once or has only placed their first order to date.
+        expr: customer_type
+        data_type: TEXT
+        sample_values:
+          - new
+          - returning
+      - name: customer_gender
+        expr: customer_gender
+        data_type: TEXT
+        sample_values:
+          - Female
+          - Male
+    time_dimensions:
+      - name: customer_birthday
+        expr: customer_birthday
+        data_type: DATE
+        sample_values:
+          - '1990-07-21'
+          - '1990-12-15'
+          - '1993-05-05'
+      - name: first_ordered_at
+        expr: first_ordered_at
+        data_type: TIMESTAMP
+        sample_values:
+          - '2016-09-01 07:30:00'
+          - '2016-09-01 09:35:00'
+          - '2016-09-01 19:58:00'
+      - name: last_ordered_at
+        expr: last_ordered_at
+        data_type: TIMESTAMP
+        sample_values:
+          - '2017-08-31 08:02:00'
+          - '2017-08-31 12:43:00'
+          - '2017-08-31 14:40:00'
+    measures:
+      - name: count_lifetime_orders
+        description: Total count of orders per customer.
+        expr: count_lifetime_orders
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '120'
+          - '159'
+          - '218'
+      - name: lifetime_spend_pretax
+        description: Customer lifetime spend before taxes.
+        expr: lifetime_spend_pretax
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '1240.000000'
+          - '1844.000000'
+          - '2858.000000'
+      - name: lifetime_spend
+        description: Gross customer lifetime spend inclusive of taxes.
+        expr: lifetime_spend
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '10177.720000'
+          - '1314.400000'
+          - '3958.850000'
+    filters:
+      - name: female customers
+        expr: customer_gender = 'Female'
+      - name: male customers
+        expr: customer_gender = 'Male'
+  - name: stg_locations
+    description: List of open locations with basic cleaning and transformation applied,
+      one row per location.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: stg_locations
+    dimensions:
+      - name: location_id
+        expr: location_id
+        data_type: TEXT
+        unique: true
+        sample_values:
+          - 08d44615-06d3-4086-a5d7-21395a1d975e
+          - 7f790ed7-0fc4-4de2-a1b0-cce72e657fc4
+          - f6f2bd97-becb-4e1c-a611-20c7cf579841
+      - name: location_name
+        expr: location_name
+        data_type: TEXT
+        sample_values:
+          - Brooklyn
+          - Chicago
+          - Philadelphia
+    time_dimensions:
+      - name: opened_at
+        expr: opened_at
+        data_type: TIMESTAMP
+        sample_values:
+          - '2016-09-01 00:00:00'
+          - '2017-03-12 00:00:00'
+          - '2018-04-29 00:00:00'
+    measures:
+      - name: tax_rate
+        expr: tax_rate
+        data_type: FLOAT
+        default_aggregation: avg
+        sample_values:
+          - '0.04'
+          - '0.06'
+          - '0.0625'
+      - name: cnt_employee
+        expr: cnt_employee
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '1'
+          - '2'
+          - '3'
+  - name: stg_products
+    description: Product (food and drink items that can be ordered) data with basic
+      cleaning and transformation applied, one row per product.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: stg_products
+    dimensions:
+      - name: product_id
+        expr: product_id
+        data_type: TEXT
+        unique: true
+        sample_values:
+          - JAF-001
+          - JAF-002
+          - JAF-003
+      - name: product_name
+        expr: product_name
+        data_type: TEXT
+        sample_values:
+          - doctor stew
+          - nutellaphone who dis?
+          - the krautback
+      - name: product_type
+        expr: product_type
+        data_type: TEXT
+        sample_values:
+          - beverage
+          - jaffle
+      - name: product_description
+        expr: product_description
+        data_type: TEXT
+        sample_values:
+          - house-made beef stew jaffle
+          - lamb and pork bratwurst with house-pickled cabbage sauerkraut and mustard
+          - nutella and banana jaffle
+      - name: is_food_item
+        expr: is_food_item
+        data_type: NUMBER
+        sample_values:
+          - '0'
+          - '1'
+      - name: is_drink_item
+        expr: is_drink_item
+        data_type: NUMBER
+        sample_values:
+          - '0'
+          - '1'
+      - name: product_price
+        expr: product_price
+        data_type: NUMBER
+        sample_values:
+          - '11.000000'
+          - '12.000000'
+          - '14.000000'
+  - name: stg_supplies
+    description: "List of our supply expenses data with basic cleaning and transformation\
+      \ applied.\nOne row per supply cost, not per supply. As supply costs fluctuate\
+      \ they receive a new row with a new UUID. Thus there can be multiple rows per\
+      \ supply_id.\n"
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: stg_supplies
+    dimensions:
+      - name: supply_uuid
+        expr: supply_uuid
+        data_type: TEXT
+        unique: true
+        sample_values:
+          - 0c1009250b32f19a8c96b44ba55d3cb3
+          - 1a9db79a0dffc7f7d9a4d44306cddbd3
+          - df0b5eb60008c8458493b56369126201
+      - name: product_id
+        expr: product_id
+        data_type: TEXT
+        sample_values:
+          - JAF-001
+          - JAF-002
+          - JAF-003
+      - name: supply_name
+        expr: supply_name
+        data_type: TEXT
+        sample_values:
+          - compostable cutlery - knife
+          - cutlery - fork
+          - serving boat
+      - name: is_perishable_supply
+        description: A boolean indicating if the supply is perishable.
+        expr: is_perishable_supply
+        data_type: BOOLEAN
+        sample_values:
+          - 'False'
+          - 'True'
+    measures:
+      - name: supply_cost
+        expr: supply_cost
+        data_type: NUMBER
+        default_aggregation: sum
+        sample_values:
+          - '0.040000'
+          - '0.070000'
+          - '0.110000'
