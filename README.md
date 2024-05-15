@@ -167,141 +167,119 @@ CREATE TABLE sales.public.sd_data (
 Here is an example semantic model, with data elements automatically generated from this repo and filled out by a user.
 
 ```yaml
-# Name of the Semantic Model.
+# Name and description of the semantic model.
 name: Sales Data
 description: This semantic model can be used for asking questions over the sales data.
 
 # A semantic model can contain one or more tables.
 tables:
 
-  # Table 1: A logical table over the 'sd_data' physical table.
+  # A logical table on top of the 'sd_data' base table.
   - name: sales_data
-
-    # A description of the logical table.
     description: A logical table capturing daily sales information across different store locations and product categories.
 
-    # The fully qualified name of the underlying physical table.
+    # The fully qualified name of the base table.
     base_table:
       database: sales
       schema: public
       table: sd_data
 
+    # Dimension columns in the logical table.
     dimensions:
       - name: product_category
-        # Synonyms should be unique across the entire semantic model.
-        synonyms: 
-            - "item_category"
-            - "product_type"
+        synonyms:
+          - "item_category"
+          - "product_type"
         description: The category of the product sold.
-        # Note: expr can not contain aggregations functions.
         expr: cat
-        unique: false
         data_type: NUMBER
-        sample_values: # sample values need to be json serializable so should be warpped in quotes.
-          - '501'
-          - '544'
+        unique: false
+        sample_values:
+          - "501"
+          - "544"
 
       - name: store_country
         description: The country where the sale took place.
         expr: cntry
-        unique: false
         data_type: TEXT
+        unique: false
         sample_values:
-          - 'USA'
-          - 'GBR'
+          - "USA"
+          - "GBR"
 
       - name: sales_channel
-        synonyms: 
-            - "channel"
-            - "distribution_channel"
+        synonyms:
+          - "channel"
+          - "distribution_channel"
         description: The channel through which the sale was made.
-        # Note: expr can not contain aggregations functions.
         expr: chn
-        unique: false
         data_type: TEXT
+        unique: false
         sample_values:
-          - 'FB'
-          - 'GOOGLE'
+          - "FB"
+          - "GOOGLE"
 
+    # Time dimension columns in the logical table.
     time_dimensions:
       - name: sale_timestamp
-        synonyms: 
-            - "time_of_sale"
-            - "transaction_time"
+        synonyms:
+          - "time_of_sale"
+          - "transaction_time"
         description: The time when the sale occurred. In UTC.
         expr: dt
-        unique: false
         data_type: TIMESTAMP
-        sample_values:
-          - '2016-09-01 07:30:00'
-          - '2016-09-01 14:16:00'
-          - '2016-09-04 09:20:00'
+        unique: false
 
+    # Measure columns in the logical table.
     measures:
       - name: sales_amount
-        synonyms: 
-            - "revenue"
-            - "total_sales"
+        synonyms:
+          - "revenue"
+          - "total_sales"
         description: The total amount of money generated from the sale.
         expr: amt
-        default_aggregation: sum
         data_type: NUMBER
-        sample_values:
-          - '11.650000'
-          - '50.880000'
+        default_aggregation: sum
 
       - name: sales_tax
         description: The sales tax paid for this sale.
         expr: amt * 0.0975
-        default_aggregation: sum
         data_type: NUMBER
-        sample_values:
-          - '51.650000'
-          - '57.800'
+        default_aggregation: sum
 
       - name: units_sold
-        synonyms: 
-            - "quantity_sold"
-            -  "number_of_units"
+        synonyms:
+          - "quantity_sold"
+          - "number_of_units"
         description: The number of units sold in the transaction.
         expr: unts
-        default_aggregation: sum
         data_type: NUMBER
-        sample_values:
-          - '1'
-          - '3'
+        default_aggregation: sum
 
       - name: cost
         description: The cost of the product sold.
         expr: cst
-        default_aggregation: sum
         data_type: NUMBER
-        sample_values:
-          - '10'
-          - '33'
+        default_aggregation: sum
 
       - name: profit
-        synonyms: 
-            - "earnings"
-            - "net income"
+        synonyms:
+          - "earnings"
+          - "net income"
         description: The profit generated from a sale.
         expr: amt - cst
-        default_aggregation: sum
         data_type: NUMBER
-        sample_values:
-          - '15'
-          - '37'
-
+        default_aggregation: sum
 
     # A table can define commonly used filters over it. These filters can then be referenced in user questions directly.
     filters:
       - name: north_america
-        synonyms: 
-            - "North America"
-            - "N.A."
-            - "NA"
+        synonyms:
+          - "North America"
+          - "N.A."
+          - "NA"
         description: "A filter to restrict only to north american countries"
-        expr: country IN ('canada', 'mexico', 'usa')
+        expr: cntry IN ('canada', 'mexico', 'usa')
 ```
 
 ## Release

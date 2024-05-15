@@ -10,7 +10,7 @@ def test_fqn_creation():
     fqn_parts = create_fqn_table(input_name)
 
     assert fqn_parts == FQNParts(
-        database="database", schema_name="schema", table="table"
+        database="DATABASE", schema_name="SCHEMA", table="table"
     )
 
 
