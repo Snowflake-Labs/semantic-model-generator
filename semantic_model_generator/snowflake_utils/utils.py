@@ -13,7 +13,9 @@ def create_fqn_table(fqn_str: str) -> FQNParts:
             + f"Instead found {fqn_str}"
         )
     database, schema, table = fqn_str.split(".")
-    return FQNParts(database=database, schema_name=schema, table=table)
+    return FQNParts(
+        database=database.upper(), schema_name=schema.upper(), table=table.upper()
+    )
 
 
 def create_connection_parameters(

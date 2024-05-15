@@ -300,13 +300,12 @@ def generate_base_semantic_model_from_snowflake(
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
 
-    # Validate the generated yaml is within context limits
-
-    validate_context_length(yaml_str)
-
     with open(write_path, "w") as f:
         f.write(yaml_str)
     logger.info(f"Semantic model saved to {write_path}")
+
+    # Validate the generated yaml is within context limits
+    validate_context_length(yaml_str)
     return None
 
 
