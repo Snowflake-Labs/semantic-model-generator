@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.15] - 2024-05-14
+### Updates
+- Use strictyaml to validate the semantic model yaml matches the expected schema and has all required fields
+
 ## [0.1.14] - 2024-05-13
 ### Updates
 - Fix aggregations
