@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.16] - 2024-05-15
+### Updates
+- Remove validation of context length to after save.
+- Uppercase db/schema/table(s)
+
 ## [0.1.15] - 2024-05-14
 ### Updates
 - Use strictyaml to validate the semantic model yaml matches the expected schema and has all required fields
