@@ -269,6 +269,30 @@ tables:
 
 """
 
+_VALID_YAML_FLOW_STYLE = """name: my test semantic model
+tables:
+  - name: ALIAS
+    base_table:
+      database: AUTOSQL_DATASET_BIRD_V2
+      schema: ADDRESS
+      table: ALIAS
+    dimensions:
+      - name: ALIAS
+        synonyms: ['an alias for something']
+        expr: ALIAS
+        data_type: TEXT
+        sample_values: ['Holtsville', 'Adjuntas', 'Boqueron']
+"""
+
+
+@pytest.fixture
+def temp_valid_yaml_file_flow_style():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(_VALID_YAML_FLOW_STYLE)
+        tmp.flush()  # Ensure all data is written to the file
+        yield tmp.name
+
 
 @pytest.fixture
 def temp_valid_yaml_file():
@@ -322,6 +346,14 @@ def temp_valid_yaml_too_long_context():
         tmp.write(_VALID_YAML_TOO_LONG_CONTEXT)
         tmp.flush()
         yield tmp.name
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_valid_yaml_flow_style(
+    mock_logger, temp_valid_yaml_file_flow_style, mock_snowflake_connection
+):
+    account_name = "snowflake test"
+    validate(temp_valid_yaml_file_flow_style, account_name)
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
