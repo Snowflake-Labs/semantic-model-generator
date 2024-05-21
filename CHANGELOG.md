@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.17] - 2024-05-21
+### Updates
+- Allow flow style in yaml validation
+
 ## [0.1.16] - 2024-05-15
 ### Updates
 - Remove validation of context length to after save.
