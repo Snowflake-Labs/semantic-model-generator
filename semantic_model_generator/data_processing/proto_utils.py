@@ -5,7 +5,7 @@ from typing import TypeVar
 import ruamel.yaml
 from google.protobuf import json_format
 from google.protobuf.message import Message
-from strictyaml import load
+from strictyaml import dirty_load
 
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.validate.schema import SCHEMA
@@ -54,6 +54,10 @@ def yaml_to_semantic_model(yaml_str: str) -> semantic_model_pb2.SemanticModel:
         The deserialized SemanticModel protobuf message
     """
 
-    parsed_yaml = load(yaml_str, SCHEMA)
+    # strictyaml is very opinionated on the style of yaml, and rejects yamls that use flow style (e.g. lists with []
+    # or {}. See https://hitchdev.com/strictyaml/why/flow-style-removed/. This is purely a style preference
+    # and those yamls are still parsable. To allow such yamls, we use dirty_load here, which behaves exactly as the
+    # load method but allows flow style.
+    parsed_yaml = dirty_load(yaml_str, SCHEMA, label="semantic model", allow_flow_style=True)
     msg = semantic_model_pb2.SemanticModel()
     return json_format.ParseDict(parsed_yaml.data, msg)
