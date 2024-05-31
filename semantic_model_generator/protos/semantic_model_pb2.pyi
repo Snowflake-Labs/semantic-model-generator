@@ -138,14 +138,16 @@ class Table(_message.Message):
     def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., base_table: _Optional[_Union[FullyQualifiedTable, _Mapping]] = ..., columns: _Optional[_Iterable[_Union[Column, _Mapping]]] = ..., dimensions: _Optional[_Iterable[_Union[Dimension, _Mapping]]] = ..., time_dimensions: _Optional[_Iterable[_Union[TimeDimension, _Mapping]]] = ..., measures: _Optional[_Iterable[_Union[Measure, _Mapping]]] = ..., filters: _Optional[_Iterable[_Union[NamedFilter, _Mapping]]] = ...) -> None: ...
 
 class SemanticModel(_message.Message):
-    __slots__ = ("name", "description", "tables")
+    __slots__ = ("name", "description", "tables", "verified_queries")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     TABLES_FIELD_NUMBER: _ClassVar[int]
+    VERIFIED_QUERIES_FIELD_NUMBER: _ClassVar[int]
     name: str
     description: str
     tables: _containers.RepeatedCompositeFieldContainer[Table]
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ...) -> None: ...
+    verified_queries: _containers.RepeatedCompositeFieldContainer[VerifiedQuery]
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ...) -> None: ...
 
 class Column(_message.Message):
     __slots__ = ("name", "synonyms", "description", "expr", "data_type", "kind", "unique", "default_aggregation", "sample_values")
@@ -184,9 +186,3 @@ class VerifiedQuery(_message.Message):
     verified_at: int
     verified_by: str
     def __init__(self, name: _Optional[str] = ..., semantic_model_name: _Optional[str] = ..., question: _Optional[str] = ..., sql: _Optional[str] = ..., verified_at: _Optional[int] = ..., verified_by: _Optional[str] = ...) -> None: ...
-
-class VerifiedQueryRepository(_message.Message):
-    __slots__ = ("verified_queries",)
-    VERIFIED_QUERIES_FIELD_NUMBER: _ClassVar[int]
-    verified_queries: _containers.RepeatedCompositeFieldContainer[VerifiedQuery]
-    def __init__(self, verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ...) -> None: ...

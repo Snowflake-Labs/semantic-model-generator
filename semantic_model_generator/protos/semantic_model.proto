@@ -150,6 +150,7 @@ message SemanticModel {
     string description = 2 [(optional) = true];
     // List of tables in this project.
     repeated Table tables = 3;
+    repeated VerifiedQuery verified_queries = 6 [(optional) = true];
 }
 
 // ColumnKind defines various kinds of columns, mainly categorized into
@@ -198,7 +199,7 @@ message Column {
 // (e.g. by an analyst) to be correct.
 message VerifiedQuery {
     // A name for this verified query. Mainly used for display purposes.
-    string name = 1;
+    string name = 1 [(optional) = true];
     // The name of the semantic model on which this verified query is based off.
     string semantic_model_name = 2 [(optional) = true];
     // The question being answered.
@@ -209,9 +210,4 @@ message VerifiedQuery {
     int64 verified_at = 5 [(optional) = true];
     // Name of the person who verified this query.
     string verified_by = 6 [(optional) = true];
-}
-
-// VerifiedQueryRepository is a simply a collection of verified queries.
-message VerifiedQueryRepository {
-    repeated VerifiedQuery verified_queries = 1;
 }
