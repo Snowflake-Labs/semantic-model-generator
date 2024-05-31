@@ -350,7 +350,6 @@ def test_generate_base_context_with_placeholder_comments(
     mock_snowflake_connection,
     mock_snowflake_connection_env,
 ):
-
     base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
@@ -377,7 +376,6 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     mock_snowflake_connection,
     mock_snowflake_connection_env,
 ):
-
     base_tables = [
         "test_db.schema_test.ALIAS",
         "a_different_database.a_different_schema.PRODUCTS",
@@ -410,7 +408,6 @@ def test_generate_base_context_with_placeholder_comments_missing_datatype(
     mock_snowflake_connection,
     mock_snowflake_connection_env,
 ):
-
     base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
@@ -445,7 +442,6 @@ def test_generate_base_context_from_table_that_has_not_supported_dtype(
     mock_snowflake_connection,
     mock_snowflake_connection_env,
 ):
-
     base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
@@ -484,7 +480,6 @@ def test_generate_base_context_from_table_that_has_too_long_context(
     mock_snowflake_connection,
     mock_snowflake_connection_env,
 ):
-
     base_tables = ["test_db.schema_test.ALIAS"]
     snowflake_account = "test_account"
     output_path = "output_model_path.yaml"
