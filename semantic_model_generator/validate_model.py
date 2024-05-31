@@ -57,12 +57,12 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
 
 
 def validate_from_local_path(yaml_path: str, snowflake_account: str) -> None:
-    model = load_yaml(yaml_path)
-    validate(model, snowflake_account)
+    yaml_str = load_yaml(yaml_path)
+    validate(yaml_str, snowflake_account)
 
 
 if __name__ == "__main__":
     jsonargparse.CLI(
-        validate,
+        validate_from_local_path,
         as_positional=False,
     )
