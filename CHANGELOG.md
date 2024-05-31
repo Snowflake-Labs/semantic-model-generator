@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.19] - 2024-05-31
+### Updates
+- Fix protobuf version to be compatible with streamlit
+- Small refactor in validation file
+
 ## [0.1.18] - 2024-05-31
 ### Updates
 - Add proto definition for verified queries; also add proto for Column (for backward compatibility only)
