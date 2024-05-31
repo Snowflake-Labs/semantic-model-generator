@@ -130,6 +130,7 @@ message Table {
 
     // Dimension, TimeDimension, and Measure are all types of Columns for a table.
     // These may be logical or physical columns.
+    repeated Column columns = 5 [(optional) = true];
     repeated Dimension dimensions = 9 [(optional) = true];
     repeated TimeDimension time_dimensions = 10 [(optional) = true];
     repeated Measure measures = 11 [(optional) = true];
@@ -149,4 +150,68 @@ message SemanticModel {
     string description = 2 [(optional) = true];
     // List of tables in this project.
     repeated Table tables = 3;
+}
+
+// ColumnKind defines various kinds of columns, mainly categorized into
+// dimensions and measures.
+enum ColumnKind {
+    column_kind_unknown = 0;
+    // A column containing categorical values such as names, countries, dates.
+    dimension = 1;
+    // A column containing numerical values such as revenue, impressions, salary.
+    measure = 2;
+    // A column containing date/time data.
+    time_dimension = 3;
+}
+
+// Column is analogous to a database column and defines various semantic properties
+// of a column.  A column can either simply be a column in the base database schema
+// or it can be an arbitrary expression over the base schema, e.g.
+// `base_column1 + base_column2`.
+message Column {
+    // A descriptive name for this column.
+    string name = 1;
+    // A list of other terms/phrases used to refer to this column.
+    repeated string synonyms = 2 [(optional) = true];
+    // A brief description about this column, including things like what data this
+    // column has.
+    string description = 3 [(optional) = true];
+    // The SQL expression for this column. Could simply be a base table column name
+    // or an arbitrary SQL expression over one or more columns of the base table.
+    string expr = 4;
+    // The data type of this column.
+    // TODO(nsehrawat): Consider creating an enum instead, with all snowflake support data types.
+    string data_type = 5;
+    // The kind of this column - dimension or measure.
+    ColumnKind kind = 6;
+    // If true, assume that this column has unique values.
+    bool unique = 7 [(optional) = true];
+    // If no aggregation is specified, then this is the default aggregation
+    // applied to this column in contxt of a grouping.
+    AggregationType default_aggregation = 8 [(optional) = true];
+    // Sample values of this column.
+    repeated string sample_values = 9 [(optional) = true];
+}
+
+
+// VerifiedQuery represents a (question, sql) pair that has been manually verified
+// (e.g. by an analyst) to be correct.
+message VerifiedQuery {
+    // A name for this verified query. Mainly used for display purposes.
+    string name = 1;
+    // The name of the semantic model on which this verified query is based off.
+    string semantic_model_name = 2 [(optional) = true];
+    // The question being answered.
+    string question = 3;
+    // The correct SQL query for answering the question.
+    string sql = 4;
+    // Timestamp at which the query was last verified - measures in seconds since epoch, in UTC.
+    int64 verified_at = 5 [(optional) = true];
+    // Name of the person who verified this query.
+    string verified_by = 6 [(optional) = true];
+}
+
+// VerifiedQueryRepository is a simply a collection of verified queries.
+message VerifiedQueryRepository {
+    repeated VerifiedQuery verified_queries = 1;
 }

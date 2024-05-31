@@ -124,7 +124,6 @@ def _get_column_representation(
     column_datatype: str,
     ndv: int,
 ) -> Column:
-
     column_values = None
     if ndv > 0:
         # Pull sample values.

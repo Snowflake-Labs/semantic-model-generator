@@ -63,7 +63,6 @@ def _raw_table_to_semantic_context_table(
     measures = []
 
     for col in raw_table.columns:
-
         if col.column_type.upper() in TIME_MEASURE_DATATYPES:
             time_dimensions.append(
                 semantic_model_pb2.TimeDimension(
