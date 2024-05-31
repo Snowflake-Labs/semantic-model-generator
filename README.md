@@ -126,12 +126,12 @@ After you've edited your semantic model, you can validate this file before uploa
 1. Using Python. Ensure you've installed the package.
 
 ```python
-from semantic_model_generator.validate_model import validate
+from semantic_model_generator.validate_model import validate_from_local_path
 
 YAML_PATH="/path/to/your/model_yaml.yaml"
 SNOWFLAKE_ACCOUNT="<your-snowflake-account>"
 
-validate(
+validate_from_local_path(
     yaml_path=YAML_PATH,
     snowflake_account=SNOWFLAKE_ACCOUNT
 )
