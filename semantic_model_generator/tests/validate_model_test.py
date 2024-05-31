@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from strictyaml import DuplicateKeysDisallowed, YAMLValidationError
 
-from semantic_model_generator.validate_model import validate
+from semantic_model_generator.validate_model import validate_from_local_path
 
 
 @pytest.fixture
@@ -353,17 +353,17 @@ def test_valid_yaml_flow_style(
     mock_logger, temp_valid_yaml_file_flow_style, mock_snowflake_connection
 ):
     account_name = "snowflake test"
-    validate(temp_valid_yaml_file_flow_style, account_name)
+    validate_from_local_path(temp_valid_yaml_file_flow_style, account_name)
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection):
     account_name = "snowflake test"
 
-    validate(temp_valid_yaml_file, account_name)
+    validate_from_local_path(temp_valid_yaml_file, account_name)
 
     expected_log_call_1 = mock.call.info(
-        f"Successfully validated {temp_valid_yaml_file}"
+        "Successfully validated!"
     )
     expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
     expected_log_call_3 = mock.call.info("Validated logical table: ALIAS")
@@ -396,10 +396,10 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
 def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file):
     account_name = "snowflake test"
     with pytest.raises(DuplicateKeysDisallowed):
-        validate(temp_invalid_yaml_formatting_file, account_name)
+        validate_from_local_path(temp_invalid_yaml_formatting_file, account_name)
 
     expected_log_call = mock.call.info(
-        f"Successfully validated {temp_invalid_yaml_formatting_file}"
+        "Successfully validated!"
     )
     assert (
         expected_log_call not in mock_logger.mock_calls
@@ -412,10 +412,10 @@ def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
     with pytest.raises(
         YAMLValidationError, match=".*when expecting one of: aggregation_type_unknown.*"
     ):
-        validate(temp_invalid_yaml_uppercase_file, account_name)
+        validate_from_local_path(temp_invalid_yaml_uppercase_file, account_name)
 
     expected_log_call = mock.call.info(
-        f"Successfully validated {temp_invalid_yaml_uppercase_file}"
+        "Successfully validated!"
     )
     assert (
         expected_log_call not in mock_logger.mock_calls
@@ -428,14 +428,14 @@ def test_invalid_yaml_missing_quote(
 ):
     account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
-        validate(temp_invalid_yaml_unmatched_quote_file, account_name)
+        validate_from_local_path(temp_invalid_yaml_unmatched_quote_file, account_name)
 
     expected_error_fragment = "Unable to validate your semantic model. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
 
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
     expected_log_call = mock.call.info(
-        f"Successfully validated {temp_invalid_yaml_unmatched_quote_file}"
+        "Successfully validated!"
     )
 
     assert (
@@ -449,7 +449,7 @@ def test_invalid_yaml_incorrect_datatype(
 ):
     account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
-        validate(temp_invalid_yaml_incorrect_dtype, account_name)
+        validate_from_local_path(temp_invalid_yaml_incorrect_dtype, account_name)
 
     expected_error = "Unable to validate your semantic model. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model."
 
@@ -462,7 +462,7 @@ def test_valid_yaml_too_long_context(
 ):
     account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
-        validate(temp_valid_yaml_too_long_context, account_name)
+        validate_from_local_path(temp_valid_yaml_too_long_context, account_name)
 
     expected_error = "Your semantic model is too large. Passed size is 37216 characters. We need you to remove 13136 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
 

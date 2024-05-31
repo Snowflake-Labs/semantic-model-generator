@@ -11,7 +11,7 @@ python = "^3.8.1"
 pandas = "^2.0.1"
 loguru = "^0.7.2"
 snowflake-connector-python = {extras = ["pandas"], version = "^3.8.1"}
-protobuf = "^5.26.1"
+protobuf = "^4.25.3"
 pydantic = "^2.6.4"
 PyYAML = "^6.0.1"
 "ruamel.yaml" = "^0.18.6"
