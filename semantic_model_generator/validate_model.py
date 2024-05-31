@@ -1,9 +1,7 @@
 import jsonargparse
 from loguru import logger
 
-from semantic_model_generator.data_processing.proto_utils import (
-    yaml_to_semantic_model,
-)
+from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
 )
