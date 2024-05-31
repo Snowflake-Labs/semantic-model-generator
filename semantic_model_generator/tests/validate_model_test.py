@@ -362,9 +362,7 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
 
     validate_from_local_path(temp_valid_yaml_file, account_name)
 
-    expected_log_call_1 = mock.call.info(
-        "Successfully validated!"
-    )
+    expected_log_call_1 = mock.call.info("Successfully validated!")
     expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
     expected_log_call_3 = mock.call.info("Validated logical table: ALIAS")
     assert (
@@ -398,9 +396,7 @@ def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file)
     with pytest.raises(DuplicateKeysDisallowed):
         validate_from_local_path(temp_invalid_yaml_formatting_file, account_name)
 
-    expected_log_call = mock.call.info(
-        "Successfully validated!"
-    )
+    expected_log_call = mock.call.info("Successfully validated!")
     assert (
         expected_log_call not in mock_logger.mock_calls
     ), "Unexpected log message found in logger calls"
@@ -414,9 +410,7 @@ def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
     ):
         validate_from_local_path(temp_invalid_yaml_uppercase_file, account_name)
 
-    expected_log_call = mock.call.info(
-        "Successfully validated!"
-    )
+    expected_log_call = mock.call.info("Successfully validated!")
     assert (
         expected_log_call not in mock_logger.mock_calls
     ), "Unexpected log message found in logger calls"
@@ -434,9 +428,7 @@ def test_invalid_yaml_missing_quote(
 
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
-    expected_log_call = mock.call.info(
-        "Successfully validated!"
-    )
+    expected_log_call = mock.call.info("Successfully validated!")
 
     assert (
         expected_log_call not in mock_logger.mock_calls
