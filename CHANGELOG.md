@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.20] - 2024-05-31
+### Updates
+- Fix for validation CLI and README
+
 ## [0.1.19] - 2024-05-31
 ### Updates
 - Fix protobuf version to be compatible with streamlit
