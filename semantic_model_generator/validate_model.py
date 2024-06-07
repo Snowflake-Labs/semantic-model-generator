@@ -1,6 +1,9 @@
 import jsonargparse
 from loguru import logger
 
+from semantic_model_generator.data_processing.cte_utils import (
+    expand_all_logical_tables_as_ctes,
+)
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
@@ -52,6 +55,19 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
             except Exception as e:
                 raise ValueError(f"Unable to validate your semantic model. Error = {e}")
             logger.info(f"Validated logical table: {table.name}")
+
+    for vq in model.verified_queries:
+        logger.info(f"Checking verified queries for: {vq.question}")
+        with connector.connect(
+            db_name=table.base_table.database, schema_name=table.base_table.schema
+        ) as conn:
+            try:
+                vqr_with_ctes = expand_all_logical_tables_as_ctes(vq.sql, model)
+                # Run the query
+                _ = conn.cursor().execute(vqr_with_ctes)
+            except Exception as e:
+                raise ValueError(f"Fail to validate your verified query. Error = {e}")
+            logger.info(f"Validated verified query: {vq.question}")
 
     logger.info("Successfully validated!")
 
