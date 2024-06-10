@@ -21,7 +21,7 @@ A. To find your Account locator, please execute the following sql command in you
 SELECT CURRENT_ACCOUNT_LOCATOR();
 ```
 
-B. To find the host for your account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
+B. To find the `SNOWFLAKE_HOST` for your account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility on API.
 * It typically follows format of: `https://<accountlocator>.<region>.<cloud>.snowflakecomputing.com`
 
@@ -78,6 +78,11 @@ You may generate a semantic model for a given list of fully qualified tables fol
 
 All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from the root of this project or the current directory you're in.
 
+---
+
+*The file `semantic_model_generator.ipynb` has all the instructions from cloning this repo to generating the model and validating the mode. The alternative is to use methods below.*
+
+---
 
 ### Generation - Python
 
