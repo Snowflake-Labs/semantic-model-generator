@@ -13,7 +13,6 @@ from semantic_model_generator.generate_model import raw_schema_to_semantic_conte
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 
-
 SNOWFLAKE_ACCOUNT = os.environ["SNOWFLAKE_ACCOUNT_LOCATOR"]
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 

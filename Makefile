@@ -1,3 +1,5 @@
+.PHONY: admin_app
+
 install-poetry:
 	curl -sSL https://install.python-poetry.org | python3 -
 
@@ -25,7 +27,7 @@ setup: check-deps shell ## Install dependencies into your poetry environment.
 
 # app
 admin_app:
-	streamlit run semantic_model_generator/admin_app/streamlit_app.py
+	streamlit run admin_app/streamlit_app.py
 
 # Linting and formatting below.
 run_mypy:  ## Run mypy
