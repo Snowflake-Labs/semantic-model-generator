@@ -19,7 +19,5 @@ How to use this app?
 * Once successfully validated, you can either `Upload` it directly, or go to the `Chat` tab to ask frequently asked questions to test on the model,
     and add verified queries to the model.
 
-
-We'd love to get your feedback. Please reach out at [foobar]
 """
 )
