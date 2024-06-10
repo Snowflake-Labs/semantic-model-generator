@@ -40,18 +40,6 @@ def changed_from_last_validated_model() -> bool:
     return False
 
 
-# TODO:
-# 1. Add inline validation of fields and forms.  E.g. if 'SQL Expression' is a required field
-#    for adding a dimension then prompt about the missing field in the UI itself.
-# 4. Handle error cases in 'Add Table' workflow.
-# 5. Add an option to specify connection parameters in the app, instead of env vars.
-
-# Known issues:
-# 1. Sometimes the 'Show YAML' and 'Add Table' buttons don't respond to clicks after the user
-#    has imported an existing model.
-# 2. The semantic model name doesn't update in the headline immediately after user enters it.
-
-
 def init_session_states() -> None:
     # semantic_model stores the proto of generated semantic model using app.
     if "semantic_model" not in st.session_state:

@@ -63,13 +63,13 @@ os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
 
 ### Generation and validation using admin app
 
-1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
+1. Ensure you have installed the Python package.
 ```bash
 pip install dist/*.whl
 ```
 2. Start the admin streamlit app on your local.
 ```bash
-make admin_app
+make run_admin_app
 ```
 
 ## Usage

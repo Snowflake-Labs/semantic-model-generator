@@ -1,4 +1,4 @@
-.PHONY: admin_app
+.PHONY: run_admin_app
 
 install-poetry:
 	curl -sSL https://install.python-poetry.org | python3 -
@@ -26,7 +26,7 @@ setup: check-deps shell ## Install dependencies into your poetry environment.
 	poetry install
 
 # app
-admin_app:
+run_admin_app:
 	streamlit run admin_app/streamlit_app.py
 
 # Linting and formatting below.
