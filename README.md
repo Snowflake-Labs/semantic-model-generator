@@ -59,12 +59,6 @@ You may generate a semantic model for a given list of fully qualified tables fol
 
 All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from the root of this project or the current directory you're in.
 
----
-
-*The file `semantic_model_generator.ipynb` has all the instructions from cloning this repo to generating the model and validating the mode. The alternative is to use methods below.*
-
----
-
 ### Generation - Python
 
 1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
