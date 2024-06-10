@@ -23,6 +23,10 @@ shell: check-deps ## Get into a poetry shell
 setup: check-deps shell ## Install dependencies into your poetry environment.
 	poetry install
 
+# app
+admin_app:
+	streamlit run semantic_model_generator/admin_app/streamlit_app.py
+
 # Linting and formatting below.
 run_mypy:  ## Run mypy
 	mypy --config-file=mypy.ini .
