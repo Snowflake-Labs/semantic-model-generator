@@ -1,0 +1,5 @@
+SNOWFLAKE_HOST="<org>-<account>.snowflakecomputing.com"
+SNOWFLAKE_USER="<your_username>"
+SNOWFLAKE_PASSWORD="<your_pswd>"
+SNOWFLAKE_ROLE="<your_role>"
+SNOWFLAKE_WAREHOUSE="<your_wh>"
