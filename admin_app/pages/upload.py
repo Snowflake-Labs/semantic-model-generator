@@ -16,9 +16,9 @@ if "snowflake_stage" in st.session_state:
         f"Upload semantic model `{semantic_model_name}` to stage `{full_stage_name}`",
         key="upload_model",
         disabled=disabled,
-        help="⚠️ **Model is not validated! Go back to 'Validate'**"
-        if disabled
-        else None,
+        help=(
+            "⚠️ **Model is not validated! Go back to 'Validate'**" if disabled else None
+        ),
     ):
         user_upload_yaml()
 
