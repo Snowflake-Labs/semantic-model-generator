@@ -76,7 +76,7 @@ def _create_select_statement(table: Table, limit: int) -> str:
         )
         if expr == "":
             return None
-        # Validate no aggregations in cols.
+        # (TODO renee: move this constraint) Validate no aggregations in cols.
         for agg in _AGGREGATION_FUNCTIONS:
             if agg.lower() in expr.lower():
                 raise ValueError(

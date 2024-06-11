@@ -4,9 +4,10 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 
 Your workflow should be:
 1. [Setup](#setup) to set credentials.
-2. [Usage](#usage) to create a model either through Python or command line.
-3. [Post Generation](#post-generation) to fill out the rest of your semantic model.
-4. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
+2. [Admin App](#admin-app) spin up the admin app for easier generation of your semantic model.
+3. [Usage](#usage) to create a model either through Python or command line.
+4. [Post Generation](#post-generation) to fill out the rest of your semantic model.
+5. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
 
 Or, if you want to see what a semantic model looks like, skip to [Examples](#examples).
 
@@ -14,14 +15,15 @@ Or, if you want to see what a semantic model looks like, skip to [Examples](#exa
 
 We currently leverage credentials saved as environment variables. Note, `host` is optional depending on your Snowflake deployment.
 
-A. To find your Account Name, [follow these instructions](https://docs.snowflake.com/en/sql-reference/functions/current_account_name), or execute the following sql command in your account.
+A. To find your Account locator, please execute the following sql command in your account.
 
 ```sql
-SELECT CURRENT_ACCOUNT_NAME();
+SELECT CURRENT_ACCOUNT_LOCATOR();
 ```
 
-B. To find the host for your account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
-* Typically, the account name follows the following format: `https://<orgname>-<account_name>.snowflakecomputing.com`
+B. To find the `SNOWFLAKE_HOST` for your account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
+* Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility on API.
+* It typically follows format of: `https://<accountlocator>.<region>.<cloud>.snowflakecomputing.com`
 
 
 1. To set these on Mac OS/Linux: 
@@ -30,6 +32,7 @@ export SNOWFLAKE_ROLE="<your-snowflake-role>"
 export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
 export SNOWFLAKE_USER="<your-snowflake-user>"
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
@@ -39,6 +42,7 @@ set SNOWFLAKE_ROLE=<your-snowflake-role>
 set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
 set SNOWFLAKE_USER=<your-snowflake-user>
 set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
@@ -51,8 +55,23 @@ os.environ['SNOWFLAKE_ROLE'] = '<your-snowflake-role>'
 os.environ['SNOWFLAKE_WAREHOUSE'] = '<your-snowflake-warehouse>'
 os.environ['SNOWFLAKE_USER'] = '<your-snowflake-user>'
 os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+os.environ['SNOWFLAKE_ACCOUNT_LOCATOR']='<your-snowflake-account-locator>'
 os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
 ```
+
+## admin-app
+
+### Generation and validation using admin app
+
+1. Ensure you have installed the Python package.
+```bash
+pip install dist/*.whl
+```
+2. Start the admin streamlit app on your local.
+```bash
+make run_admin_app
+```
+
 ## Usage
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.
@@ -63,7 +82,7 @@ All generated semantic models by default are saved either under `semantic_model_
 
 1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
 ```bash
-pip install dist/semantic_model_generator-0.1.20-py3-none-any.whl
+pip install dist/*.whl
 ```
 2. Activate Python shell
 ```bash
