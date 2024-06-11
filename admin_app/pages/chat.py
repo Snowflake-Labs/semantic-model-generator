@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests
@@ -63,7 +63,7 @@ def pretty_print_sql(sql: str) -> str:
     return formatted_sql
 
 
-def send_message(conn: SnowflakeConnection, prompt: str) -> dict[str, Any]:
+def send_message(conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
     """Calls the REST API and returns the response."""
     request_body = {
         "role": "user",
@@ -78,12 +78,12 @@ def send_message(conn: SnowflakeConnection, prompt: str) -> dict[str, Any]:
             ),
             json=request_body,
             headers={
-                "Authorization": f'Snowflake Token="{conn.rest.token}"',
+                "Authorization": f'Snowflake Token="{conn.rest.token}"',  # type: ignore[union-attr]
                 "Content-Type": "application/json",
             },
         )
         if resp.status_code < 400:
-            json_resp: dict[str, Any] = resp.json()
+            json_resp: Dict[str, Any] = resp.json()
             return json_resp
         else:
             if num_retry >= max_retries:
@@ -187,8 +187,8 @@ def add_verified_query(question: str, sql: str) -> None:
 
 def display_content(
     conn: SnowflakeConnection,
-    content: list[dict[str, Any]],
-    message_index: int | None = None,
+    content: List[Dict[str, Any]],
+    message_index: Optional[int] = None,
 ) -> None:
     """Displays a content item for a message. For generated SQL, allow user to add to verified queries directly or edit then add."""
     message_index = message_index or len(st.session_state.messages)
