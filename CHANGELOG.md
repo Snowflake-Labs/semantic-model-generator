@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.21] - 2024-06-10
+### Updates
+- Add validation for verified queries;
+- Add streamlit admin app for semantic model generation, validation and verified query flow.
+
 ## [0.1.20] - 2024-05-31
 ### Updates
 - Fix for validation CLI and README
