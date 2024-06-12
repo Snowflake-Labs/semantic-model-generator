@@ -471,7 +471,7 @@ def test_generate_base_context_from_table_that_has_not_supported_dtype(
     mock_file().write.assert_not_called()
 
 
-@patch("semantic_model_generator.generate_model.logger")
+@patch("semantic_model_generator.validate.context_length.logger")
 @patch("builtins.open", new_callable=mock_open)
 def test_generate_base_context_from_table_that_has_too_long_context(
     mock_file,
@@ -485,17 +485,16 @@ def test_generate_base_context_from_table_that_has_too_long_context(
     output_path = "output_model_path.yaml"
     semantic_model_name = "Another Incredible Semantic Model with long context"
 
-    with pytest.raises(ValueError) as excinfo:
-        generate_base_semantic_model_from_snowflake(
-            base_tables=base_tables,
-            snowflake_account=snowflake_account,
-            output_yaml_path=output_path,
-            semantic_model_name=semantic_model_name,
-        )
+    generate_base_semantic_model_from_snowflake(
+        base_tables=base_tables,
+        snowflake_account=snowflake_account,
+        output_yaml_path=output_path,
+        semantic_model_name=semantic_model_name,
+    )
 
-    assert (
-        str(excinfo.value)
-        == "Your semantic model is too large. Passed size is 144558 characters. We need you to remove 120476 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
+    mock_file.assert_called_once_with(output_path, "w")
+    mock_logger.warning.assert_called_once_with(
+        "WARNING 🚨: The Semantic model is too large. \n Passed size is 144558 characters. We need you to remove 120476 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values. \n Once you've finished updating, please validate your semantic model."
     )
 
     mock_file.assert_called_once_with(output_path, "w")

@@ -303,8 +303,9 @@ def generate_base_semantic_model_from_snowflake(
         f.write(yaml_str)
     logger.info(f"Semantic model saved to {write_path}")
 
-    # Validate the generated yaml is within context limits
-    validate_context_length(yaml_str)
+    # Validate the generated yaml is within context limits.
+    # We just throw a warning here to allow users to update.
+    validate_context_length(yaml_str, throw_error=False)
     return None
 
 
