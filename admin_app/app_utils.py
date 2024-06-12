@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from io import StringIO
+from typing import Optional
 
 import pandas as pd
 import streamlit as st
@@ -610,7 +611,7 @@ def import_yaml() -> None:
         type=[".yaml", ".yml"],
         accept_multiple_files=False,
     )
-    pb: semantic_model_pb2.SemanticModel | None = None
+    pb: Optional[semantic_model_pb2.SemanticModel] = None
 
     if uploaded_file is not None:
         try:

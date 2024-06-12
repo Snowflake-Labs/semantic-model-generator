@@ -117,7 +117,7 @@ st.write("Your companion app to manage Snowflake semantic models.")
 st.divider()
 
 # Show page title
-icon_name = selected_page.icon.split("/")[1].removesuffix(":")
+icon_name = selected_page.icon.split("/")[1].rstrip(":")
 icon_html = f"""<span class="material-symbols-outlined">{icon_name}</span>"""
 title = f"""<h2> {icon_html} {selected_page.title}</h2>"""
 st.markdown(title, unsafe_allow_html=True)
