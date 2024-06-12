@@ -317,3 +317,5 @@ You should follow the setup commands from usage-cli to install poetry and create
 5. Push your files for approval.
 6. After approval, run `make release` which will cut a new release and attach the .whl file.
 7. Merge in your pr.
+
+- Note: If you `make release` does not trigger the GH action. Please delete the tag and push again.

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "semantic_model_generator/**"
+      - "admin_app/**"
 
 jobs:
   build:
