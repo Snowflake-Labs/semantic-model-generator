@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.22] - 2024-06-11
+### Updates
+- Fix small streamlit app components to be compatible with python 3.8
+
 ## [0.1.21] - 2024-06-10
 ### Updates
 - Add validation for verified queries;
