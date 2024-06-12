@@ -95,11 +95,13 @@ from semantic_model_generator.generate_model import generate_base_semantic_model
 BASE_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']
 SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
 SEMANTIC_MODEL_NAME = "<a-meaningful-semantic-model-name>"
+N_SAMPLE_VALUE_TO_PULL_PER_COLUMN = 10 # If you have many columns, feel free to update this. We set a floor of 1 per column internally.
 
 generate_base_semantic_model_from_snowflake(
     base_tables=BASE_TABLES,
     snowflake_account=SNOWFLAKE_ACCOUNT,
-    semantic_model_name=SEMANTIC_MODEL_NAME
+    semantic_model_name=SEMANTIC_MODEL_NAME,
+    n_sample_values=N_SAMPLE_VALUE_TO_PULL_PER_COLUMN
 )
 ```
 

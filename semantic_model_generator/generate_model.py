@@ -21,6 +21,7 @@ from semantic_model_generator.validate.context_length import validate_context_le
 
 _PLACEHOLDER_COMMENT = "  "
 _FILL_OUT_TOKEN = " # <FILL-OUT>"
+_DEFAULT_N_SAMPLE_VALUES_PER_COL = 10
 
 
 def _get_placeholder_filter() -> List[semantic_model_pb2.NamedFilter]:
@@ -137,7 +138,10 @@ def _raw_table_to_semantic_context_table(
 
 
 def raw_schema_to_semantic_context(
-    base_tables: List[str], snowflake_account: str, semantic_model_name: str
+    base_tables: List[str],
+    snowflake_account: str,
+    semantic_model_name: str,
+    n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -146,6 +150,7 @@ def raw_schema_to_semantic_context(
     - base_tables  (list[str]): Fully qualified table names to include in the semantic model.
     - snowflake_account (str): Snowflake account identifier.
     - semantic_model_name (str): A meaningful semantic model name.
+    - n_sample_values (int): The number of sample values per col.
 
     Returns:
     - The semantic model (semantic_model_pb2.SemanticModel).
@@ -159,7 +164,6 @@ def raw_schema_to_semantic_context(
     """
     connector = SnowflakeConnector(
         account_name=snowflake_account,
-        ndv_per_column=10,  # number of sample values to pull per column.
         max_workers=1,
     )
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
@@ -194,7 +198,7 @@ def raw_schema_to_semantic_context(
                 schema_name=fqn_table.schema_name,
                 table_name=fqn_table.table,
                 table_index=0,
-                ndv_per_column=10,  # number of sample values to pull per column.
+                ndv_per_column=n_sample_values,  # number of sample values to pull per column.
                 columns_df=valid_columns_df_this_table,
                 max_workers=1,
             )
@@ -266,6 +270,7 @@ def generate_base_semantic_model_from_snowflake(
     base_tables: List[str],
     snowflake_account: str,
     semantic_model_name: str,
+    n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
     output_yaml_path: Optional[str] = None,
 ) -> None:
     """
@@ -276,6 +281,7 @@ def generate_base_semantic_model_from_snowflake(
         snowflake_account: Identifier of the Snowflake account.
         semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
         output_yaml_path: Path for the output YAML file. If None, defaults to 'semantic_model_generator/output_models/YYYYMMDDHHMMSS_<semantic_model_name>.yaml'.
+        n_sample_values: The number of sample values to populate for all columns.
 
     Returns:
         None. Writes the semantic context to a YAML file.
@@ -292,6 +298,7 @@ def generate_base_semantic_model_from_snowflake(
     context = raw_schema_to_semantic_context(
         base_tables,
         snowflake_account=snowflake_account,
+        n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
     )
 
@@ -337,6 +344,13 @@ if __name__ == "__main__":
         required=False,
         help="Custom path to save the YAML. Optional.",
     )
+    parser.add_argument(
+        "--n_sample_values",
+        type=int,
+        default=_DEFAULT_N_SAMPLE_VALUES_PER_COL,
+        required=False,
+        help=f"The number of sample values to populate for all columns. Defaults to {_DEFAULT_N_SAMPLE_VALUES_PER_COL}.",
+    )
 
     args = parser.parse_args()
 
@@ -345,4 +359,5 @@ if __name__ == "__main__":
         snowflake_account=args.snowflake_account,
         semantic_model_name=args.semantic_model_name,
         output_yaml_path=args.output_yaml_path,
+        n_sample_values=args.n_sample_values,
     )

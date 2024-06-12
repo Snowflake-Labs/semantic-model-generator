@@ -130,6 +130,7 @@ def _get_column_representation(
         try:
             cursor = conn.cursor(DictCursor)
             assert cursor is not None, "Cursor is unexpectedly None"
+            logger.info(f" ndv ={ndv}")
             cursor_execute = cursor.execute(
                 f'select distinct "{column_name}" from "{schema_name}"."{table_name}" limit {ndv}'
             )
@@ -217,11 +218,9 @@ class SnowflakeConnector:
     def __init__(
         self,
         account_name: str,
-        ndv_per_column: int = 0,
         max_workers: int = 1,
     ):
         self.account_name: str = account_name
-        self._ndv_per_column = ndv_per_column
         self._max_workers = max_workers
 
     # Required env vars below
