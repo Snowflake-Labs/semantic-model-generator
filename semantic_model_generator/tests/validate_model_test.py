@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from strictyaml import DuplicateKeysDisallowed, YAMLValidationError
 
+from semantic_model_generator.tests.samples import validate_yamls
 from semantic_model_generator.validate_model import validate_from_local_path
 
 
@@ -16,280 +17,11 @@ def mock_snowflake_connection():
         yield mock
 
 
-_VALID_YAML = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-      - name: ALIAS
-        synonyms:
-            - 'an alias for something'
-        expr: ALIAS
-        data_type: TEXT
-        sample_values:
-          - Holtsville
-          - Adjuntas
-          - Boqueron
-    measures:
-      - name: ZIP_CODE
-        synonyms:
-            - 'another synonym'
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-  - name: AREA_CODE
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: AREA_CODE
-    measures:
-      - name: ZIP_CODE
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-          - '544'
-      - name: AREA_CODE
-        expr: AREA_CODE
-        data_type: NUMBER
-        sample_values:
-          - '631'
-"""
-
-_INVALID_YAML_FORMATTING = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-    - name: ALIAS
-    synonyms:
-        - 'an alias for something'
-    expr: ALIAS
-    data_type: TEXT
-    sample_values:
-        - Holtsville
-        - Adjuntas
-        - Boqueron
-    measures:
-    - name: ZIP_CODE
-    synonyms:
-        - 'another synonym'
-    expr: ZIP_CODE
-    data_type: NUMBER
-    sample_values:
-        - '501'
-  - name: AREA_CODE
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: AREA_CODE
-    measures:
-      - name: ZIP_CODE
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-          - '544'
-      - name: AREA_CODE
-        expr: AREA_CODE
-        data_type: NUMBER
-        sample_values:
-          - '631'
-"""
-
-
-_INVALID_YAML_UPPERCASE_DEFAULT_AGG = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-      - name: ALIAS
-        synonyms:
-            - 'an alias for something'
-        expr: ALIAS
-        data_type: TEXT
-        sample_values:
-          - Holtsville
-          - Adjuntas
-          - Boqueron
-    measures:
-      - name: ZIP_CODE
-        synonyms:
-            - 'another synonym'
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-        default_aggregation: AVG
-  - name: AREA_CODE
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: AREA_CODE
-    measures:
-      - name: ZIP_CODE
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-          - '544'
-      - name: AREA_CODE
-        expr: AREA_CODE
-        data_type: NUMBER
-        sample_values:
-          - '631'
-"""
-
-_INVALID_YAML_UNMATCHED_QUOTE = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-      - name: ALIAS
-        synonyms:
-            - 'an alias for something'
-        expr: ALIAS
-        data_type: TEXT
-        sample_values:
-          - Holtsville
-          - Adjuntas
-          - Boqueron
-    measures:
-      - name: ZIP_CODE
-        synonyms:
-            - 'another synonym'
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-  - name: AREA_CODE
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: AREA_CODE
-    measures:
-      - name: ZIP_CODE"
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-          - '544'
-      - name: AREA_CODE
-        expr: AREA_CODE
-        data_type: NUMBER
-        sample_values:
-          - '631'
-"""
-
-
-_INVALID_YAML_INCORRECT_DATA_TYPE = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-      - name: ALIAS
-        synonyms:
-            - 'an alias for something'
-        expr: ALIAS
-        data_type: TEXT
-        sample_values:
-          - Holtsville
-          - Adjuntas
-          - Boqueron
-    measures:
-      - name: ZIP_CODE
-        synonyms:
-            - 'another synonym'
-        expr: ZIP_CODE
-        data_type: OBJECT
-        sample_values:
-          - '{1:2}'
-"""
-
-
-_VALID_YAML_TOO_LONG_CONTEXT = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-      - name: ALIAS
-        synonyms:
-            - 'an alias for something'
-        expr: ALIAS
-        data_type: TEXT
-        sample_values:
-          - Holtsville
-          - Adjuntas
-          - Boqueron
-        description: The world is a vast and diverse place, filled with an array of landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities. f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  d is a vast and diverse place, filled with an array of landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities. f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.   The world is a vast and diverse place, filled with an array of landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities. f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  d is a vast and diverse place, filled with an array of landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities. f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.   The world is a vast and diverse place, filled with an array of landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities. f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  d is a vast and diverse place, filled with an array of landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities.  f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communities. f landscapes, cultures, and ecosystems. From the towering peaks of the Himalayas to the depths of the Amazon rainforest, the Earth is home to a rich tapestry of natural wonders. Inhabitants of the world span a spectrum of species, from microscopic organisms thriving in the depths of the ocean to majestic creatures roaming the savannahs of Africa. Human civilization has flourished across continents, giving rise to an intricate tapestry of languages, traditions, and beliefs. The world's history is a story of triumphs and tragedies, marked by epochs of innovation and exploration alongside periods of conflict and upheaval. From the ancient civilizations of Mesopotamia and Egypt to the rise and fall of empires like Rome and Byzantium, the past has shaped the present in profound ways. Today, the world is interconnected as never before, with advances in technology and communication bridging distances and connecting people from every corner of the globe. Globalization has brought both opportunities and challenges, transforming economies, societies, and the environment in its wake. As we navigate the complexities of the modern world, we are confronted with urgent issues such as climate change, poverty, and inequality. Yet, amid these challenges, there is also hope – in the resilience of communities, the ingenuity of innovators, and the collective efforts of individuals striving for a better future. In this ever-evolving world, each day brings new discoveries, new connections, and new possibilities. It is a world of boundless beauty and complexity, waiting to be explored and understood, and it is our collective responsibility to cherish and steward it for generations to come. From the bustling streets of metropolises to the quiet serenity of remote villages, the world offers a mosaic of lifestyles and experiences. Cultural diversity enriches our understanding of humanity, with traditions, art forms, and cuisines reflecting the unique identities of different communit
-    measures:
-      - name: ZIP_CODE
-        synonyms:
-            - 'another synonym'
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-  - name: AREA_CODE
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: AREA_CODE
-    measures:
-      - name: ZIP_CODE
-        expr: ZIP_CODE
-        data_type: NUMBER
-        sample_values:
-          - '501'
-          - '544'
-      - name: AREA_CODE
-        expr: AREA_CODE
-        data_type: NUMBER
-        sample_values:
-          - '631'
-
-"""
-
-_VALID_YAML_FLOW_STYLE = """name: my test semantic model
-tables:
-  - name: ALIAS
-    base_table:
-      database: AUTOSQL_DATASET_BIRD_V2
-      schema: ADDRESS
-      table: ALIAS
-    dimensions:
-      - name: ALIAS
-        synonyms: ['an alias for something']
-        expr: ALIAS
-        data_type: TEXT
-        sample_values: ['Holtsville', 'Adjuntas', 'Boqueron']
-"""
-
-
 @pytest.fixture
 def temp_valid_yaml_file_flow_style():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_VALID_YAML_FLOW_STYLE)
+        tmp.write(validate_yamls._VALID_YAML_FLOW_STYLE)
         tmp.flush()  # Ensure all data is written to the file
         yield tmp.name
 
@@ -298,7 +30,16 @@ def temp_valid_yaml_file_flow_style():
 def temp_valid_yaml_file():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_VALID_YAML)
+        tmp.write(validate_yamls._VALID_YAML)
+        tmp.flush()  # Ensure all data is written to the file
+        yield tmp.name
+
+
+@pytest.fixture
+def temp_valid_yaml_file_long_vqr_context():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(validate_yamls._VALID_YAML_LONG_VQR_CONTEXT)
         tmp.flush()  # Ensure all data is written to the file
         yield tmp.name
 
@@ -307,7 +48,7 @@ def temp_valid_yaml_file():
 def temp_invalid_yaml_formatting_file():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_INVALID_YAML_FORMATTING)
+        tmp.write(validate_yamls._INVALID_YAML_FORMATTING)
         tmp.flush()
         yield tmp.name
 
@@ -316,7 +57,7 @@ def temp_invalid_yaml_formatting_file():
 def temp_invalid_yaml_uppercase_file():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_INVALID_YAML_UPPERCASE_DEFAULT_AGG)
+        tmp.write(validate_yamls._INVALID_YAML_UPPERCASE_DEFAULT_AGG)
         tmp.flush()
         yield tmp.name
 
@@ -325,7 +66,7 @@ def temp_invalid_yaml_uppercase_file():
 def temp_invalid_yaml_unmatched_quote_file():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_INVALID_YAML_UNMATCHED_QUOTE)
+        tmp.write(validate_yamls._INVALID_YAML_UNMATCHED_QUOTE)
         tmp.flush()
         yield tmp.name
 
@@ -334,7 +75,7 @@ def temp_invalid_yaml_unmatched_quote_file():
 def temp_invalid_yaml_incorrect_dtype():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_INVALID_YAML_INCORRECT_DATA_TYPE)
+        tmp.write(validate_yamls._INVALID_YAML_INCORRECT_DATA_TYPE)
         tmp.flush()
         yield tmp.name
 
@@ -343,7 +84,7 @@ def temp_invalid_yaml_incorrect_dtype():
 def temp_valid_yaml_too_long_context():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(_VALID_YAML_TOO_LONG_CONTEXT)
+        tmp.write(validate_yamls._VALID_YAML_TOO_LONG_CONTEXT)
         tmp.flush()
         yield tmp.name
 
@@ -361,6 +102,42 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
     account_name = "snowflake test"
 
     validate_from_local_path(temp_valid_yaml_file, account_name)
+
+    expected_log_call_1 = mock.call.info("Successfully validated!")
+    expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
+    expected_log_call_3 = mock.call.info("Validated logical table: ALIAS")
+    assert (
+        expected_log_call_1 in mock_logger.mock_calls
+    ), "Expected log message not found in logger calls"
+    assert (
+        expected_log_call_2 in mock_logger.mock_calls
+    ), "Expected log message not found in logger calls"
+    assert (
+        expected_log_call_3 in mock_logger.mock_calls
+    ), "Expected log message not found in logger calls"
+    snowflake_query_one = (
+        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
+    )
+    snowflake_query_two = (
+        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
+    )
+    assert any(
+        snowflake_query_one in str(call)
+        for call in mock_snowflake_connection.mock_calls
+    ), "Query not executed"
+    assert any(
+        snowflake_query_two in str(call)
+        for call in mock_snowflake_connection.mock_calls
+    ), "Query not executed"
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_valid_yaml_with_long_vqr_context(
+    mock_logger, temp_valid_yaml_file_long_vqr_context, mock_snowflake_connection
+):
+    account_name = "snowflake test"
+
+    validate_from_local_path(temp_valid_yaml_file_long_vqr_context, account_name)
 
     expected_log_call_1 = mock.call.info("Successfully validated!")
     expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
@@ -456,6 +233,6 @@ def test_valid_yaml_too_long_context(
     with pytest.raises(ValueError) as exc_info:
         validate_from_local_path(temp_valid_yaml_too_long_context, account_name)
 
-    expected_error = "Your semantic model is too large. Passed size is 37216 characters. We need you to remove 13136 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
+    expected_error = "Your semantic model is too large. Passed size is 41937 characters. We need you to remove 15856 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
 
     assert expected_error in str(exc_info.value), "Unexpected error message"
