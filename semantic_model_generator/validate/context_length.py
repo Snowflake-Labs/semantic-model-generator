@@ -16,7 +16,6 @@ def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
 
     yaml_model: The yaml semantic model
     throw_error: Should this function throw an error or just a warning.
-    remove_vqr: Whether to remove the VQR from total token count. As these are indexed separately, default to True.
     """
 
     model.ClearField("verified_queries")
