@@ -18,7 +18,6 @@ def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
     throw_error: Should this function throw an error or just a warning.
     remove_vqr: Whether to remove the VQR from total token count. As these are indexed separately, default to True.
     """
-    # Convert back to a model to remove sections that don't count against token limit (i.e. VQR).
 
     model.ClearField("verified_queries")
     yaml_str = proto_to_yaml(model)
