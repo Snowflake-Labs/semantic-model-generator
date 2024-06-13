@@ -301,14 +301,13 @@ def generate_base_semantic_model_from_snowflake(
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
     )
+    # Validate the generated yaml is within context limits.
+    # We just throw a warning here to allow users to update.
+    validate_context_length(context)
 
     yaml_str = proto_utils.proto_to_yaml(context)
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
-
-    # Validate the generated yaml is within context limits.
-    # We just throw a warning here to allow users to update.
-    validate_context_length(yaml_str, throw_error=False)
 
     with open(write_path, "w") as f:
         f.write(yaml_str)
