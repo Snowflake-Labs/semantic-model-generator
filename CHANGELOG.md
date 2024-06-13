@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.23] - 2024-06-13
+### Updates
+- Remove VQR from context length calculation.
+- Add toggle for number of sample values.
+
 ## [0.1.22] - 2024-06-11
 ### Updates
 - Fix small streamlit app components to be compatible with python 3.8
