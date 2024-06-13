@@ -1,10 +1,25 @@
+from typing import TypeVar
+
+from google.protobuf.message import Message
 from loguru import logger
 
-_MODEL_CONTEXT_LENGTH_TOKENS = 6000  # We use 6k, with 1.2k for prompt, so that we can reserve ~1k for response tokens.
+from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
+
+ProtoMsg = TypeVar("ProtoMsg", bound=Message)
+_MODEL_CONTEXT_LENGTH_TOKENS = 6500  # We use 6.5k, with 1.2k for instructions, so that we can reserve 500 for response tokens (average is 300).
 _MODEL_CONTEXT_INSTR_TOKEN = 20  # buffer for instr tokens
 
 
-def validate_context_length(yaml_str: str, throw_error: bool = True) -> None:
+def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
+    """
+    Validate the token limit for the model with space for the prompt.
+
+    yaml_model: The yaml semantic model
+    throw_error: Should this function throw an error or just a warning.
+    """
+
+    model.ClearField("verified_queries")
+    yaml_str = proto_to_yaml(model)
     # Pass in the str version of the semantic context yaml.
     # This isn't exactly how many tokens the model will be, but should roughly be correct.
     TOTAL_TOKENS_LIMIT = _MODEL_CONTEXT_LENGTH_TOKENS + _MODEL_CONTEXT_INSTR_TOKEN

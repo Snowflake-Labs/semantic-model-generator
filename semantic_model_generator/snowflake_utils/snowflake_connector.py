@@ -130,7 +130,6 @@ def _get_column_representation(
         try:
             cursor = conn.cursor(DictCursor)
             assert cursor is not None, "Cursor is unexpectedly None"
-            logger.info(f" ndv ={ndv}")
             cursor_execute = cursor.execute(
                 f'select distinct "{column_name}" from "{schema_name}"."{table_name}" limit {ndv}'
             )

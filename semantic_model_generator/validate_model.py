@@ -32,10 +32,11 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
 
     TODO: ensure that all expressions are valid by running a query containing all columns and expressions.
     """
-    # Validate the context length doesn't exceed max we can support.
-    validate_context_length(yaml_str)
 
     model = yaml_to_semantic_model(yaml_str)
+    # Validate the context length doesn't exceed max we can support.
+    validate_context_length(model, throw_error=True)
+
     connector = SnowflakeConnector(
         account_name=snowflake_account,
         max_workers=1,
