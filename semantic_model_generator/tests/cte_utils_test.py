@@ -4,8 +4,8 @@ import pytest
 
 from semantic_model_generator.data_processing.cte_utils import (
     _get_col_expr,
+    _validate_col,
     context_to_column_format,
-    generate_agg_expr_selects,
     generate_select,
     is_aggregation_expr,
 )
@@ -232,18 +232,18 @@ class SemanticModelTest(TestCase):
 
     def test_generate_select(self) -> None:
         col_format_tbl = get_test_table_col_format()
-        got = generate_select(col_format_tbl, 100)
+        got = generate_select(col_format_tbl, 100, check_aggregate_cols=False)
         want = "WITH __t1 AS (SELECT d1_expr AS d1, d2_expr AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
         assert got == want
 
     def test_generate_select_w_agg(self) -> None:
         col_format_tbl = get_test_table_col_format_w_agg()
-        got = generate_select(col_format_tbl, 100)
+        got = generate_select(col_format_tbl, 100, check_aggregate_cols=False)
         want = "WITH __t1 AS (SELECT d1_expr AS d1, SUM(d3) OVER (PARTITION BY d1) AS d3 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
         assert got == want
 
-        agg_got = generate_agg_expr_selects(col_format_tbl, 100)
-        agg_want = ["SELECT SUM(d2) AS d2 FROM db.sc.t1 LIMIT 100"]
+        agg_got = generate_select(col_format_tbl, 100, check_aggregate_cols=True)
+        agg_want = "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
         assert agg_got == agg_want
 
     def test_col_expr_w_space(self) -> None:
@@ -261,7 +261,7 @@ class SemanticModelTest(TestCase):
             ValueError,
             match=f"Please do not include spaces in your column name: {col.name}",
         ):
-            _get_col_expr(col)
+            _validate_col(col)
 
     def test_col_expr_w_space_v2(self) -> None:
         col = semantic_model_pb2.Column(
@@ -293,4 +293,4 @@ class SemanticModelTest(TestCase):
             ValueError,
             match=f"We do not support object datatypes in the semantic model. Col {col.name} has data type {col.data_type}. Please remove this column from your semantic model or flatten it to non-object type.",
         ):
-            _get_col_expr(col)
+            _validate_col(col)

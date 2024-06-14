@@ -4,8 +4,8 @@ from loguru import logger
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
     expand_all_logical_tables_as_ctes,
-    generate_agg_expr_selects,
     generate_select,
+    validate_all_cols,
 )
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
@@ -53,7 +53,11 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
             db_name=table.base_table.database, schema_name=table.base_table.schema
         ) as conn:
             try:
-                sqls = [generate_select(table, 1)] + generate_agg_expr_selects(table, 1)
+                validate_all_cols(table)
+                sqls = [
+                    generate_select(table, 1, check_aggregate_cols=True),
+                    generate_select(table, 1, check_aggregate_cols=False),
+                ]
                 # Run the query.
                 # TODO: some expr maybe expensive if contains aggregations or window functions. Move to EXPLAIN?
                 for sql in sqls:
