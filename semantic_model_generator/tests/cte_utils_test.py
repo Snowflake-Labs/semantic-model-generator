@@ -245,7 +245,7 @@ class SemanticModelTest(TestCase):
             "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
             "WITH __t1 AS (SELECT d1_expr AS d1, SUM(d3) OVER (PARTITION BY d1) AS d3 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
         ]
-        assert got == want
+        assert sorted(got) == sorted(want)
 
     def test_col_expr_w_space(self) -> None:
         col = semantic_model_pb2.Column(

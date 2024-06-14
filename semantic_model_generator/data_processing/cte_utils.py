@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import List
 
 import sqlglot
 import sqlglot.expressions
@@ -107,7 +107,7 @@ def _get_col_expr(column: semantic_model_pb2.Column) -> str:
 
 
 def _generate_cte_for(
-    table: semantic_model_pb2.Table, columns: Set[semantic_model_pb2.Column]
+    table: semantic_model_pb2.Table, columns: List[semantic_model_pb2.Column]
 ) -> str:
     """
     Returns a CTE representing a logical table that selects 'col' columns from 'table'.
@@ -116,10 +116,7 @@ def _generate_cte_for(
     if len(columns) == 0:
         raise ValueError("Please include at least one column to generate CTE on.")
     else:
-        expr_columns = []
-        expr_columns.extend(
-            [_get_col_expr(col) for col in table.columns if col.name in columns]
-        )
+        expr_columns = [_get_col_expr(col) for col in columns]
         cte = f"WITH {logical_table_name(table)} AS (\n"
         cte += "SELECT \n"
         cte += ",\n".join(expr_columns) + "\n"
@@ -128,13 +125,11 @@ def _generate_cte_for(
         return cte
 
 
-def _generate_non_agg_cte(table: semantic_model_pb2.Table):
+def _generate_non_agg_cte(table: semantic_model_pb2.Table) -> str:
     """
     Returns a CTE representing a logical table that selects 'col' columns from 'table' except for aggregation columns.
     """
-    filtered_cols = {
-        col.name: col for col in table.columns if not is_aggregation_expr(col)
-    }
+    filtered_cols = [col for col in table.columns if not is_aggregation_expr(col)]
     return _generate_cte_for(table, filtered_cols)
 
 
@@ -160,7 +155,7 @@ def _convert_to_snowflake_sql(sql: str) -> str:
 
 def generate_select(
     table_in_column_format: semantic_model_pb2.Table, limit: int
-) -> str:
+) -> List[str]:
     """Generate select query for all columns for validation purpose."""
     # Generate select query for columns without aggregation exprs.
     non_agg_cte = _generate_non_agg_cte(table_in_column_format)
@@ -170,11 +165,9 @@ def generate_select(
     )
 
     # Generate select query for columns with aggregation exprs.
-    agg_cols = {
-        col.name: col
-        for col in table_in_column_format.columns
-        if is_aggregation_expr(col)
-    }
+    agg_cols = [
+        col for col in table_in_column_format.columns if is_aggregation_expr(col)
+    ]
     if len(agg_cols) == 0:
         return [_convert_to_snowflake_sql(non_agg_sql)]
     else:
