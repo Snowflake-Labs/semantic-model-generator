@@ -275,7 +275,7 @@ class SemanticModelTest(TestCase):
             sample_values=["d1_sample_value1", "d1_sample_value2"],
         )
         got = _get_col_expr(col)
-        want = 'd1_expr as d1'
+        want = "d1_expr as d1"
         assert got == want
 
     def test_col_expr_object_type(self) -> None:
