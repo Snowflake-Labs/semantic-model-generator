@@ -129,6 +129,9 @@ def _generate_cte_for(
 
 
 def _generate_non_agg_cte(table: semantic_model_pb2.Table):
+    """
+    Returns a CTE representing a logical table that selects 'col' columns from 'table' except for aggregation columns.
+    """
     filtered_cols = {
         col.name: col for col in table.columns if not is_aggregation_expr(col)
     }
@@ -158,13 +161,15 @@ def _convert_to_snowflake_sql(sql: str) -> str:
 def generate_select(
     table_in_column_format: semantic_model_pb2.Table, limit: int
 ) -> str:
-    """Generate select query for all columns except for columns with aggregations, for validation purpose."""
+    """Generate select query for all columns for validation purpose."""
+    # Generate select query for columns without aggregation exprs.
     non_agg_cte = _generate_non_agg_cte(table_in_column_format)
     non_agg_sql = (
         non_agg_cte
         + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
     )
 
+    # Generate select query for columns with aggregation exprs.
     agg_cols = {
         col.name: col
         for col in table_in_column_format.columns
