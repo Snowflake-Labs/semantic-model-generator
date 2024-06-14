@@ -111,6 +111,8 @@ def _generate_cte_for(
 ) -> str:
     """
     Returns a CTE representing a logical table that selects 'col' columns from 'table'.
+    When check_aggregate_cols is False, we create CTEs for all columns that do not contain aggregations in expressions.
+    When check_aggregate_cols is True, we create CTEs for all columns that contain aggregations in expressions.
     """
 
     columns = []
