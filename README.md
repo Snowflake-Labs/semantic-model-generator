@@ -4,10 +4,10 @@ The `Semantic Model Generator` is used to generate a semantic model for use in y
 
 Your workflow should be:
 1. [Setup](#setup) to set credentials.
-2. [Admin App](#admin-app) spin up the admin app for easier generation of your semantic model.
-3. [Usage](#usage) to create a model either through Python or command line.
-4. [Post Generation](#post-generation) to fill out the rest of your semantic model.
-5. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
+2. [Usage](#usage) to create a model either through Python or command line.
+3. [Post Generation](#post-generation) to fill out the rest of your semantic model.
+4. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
+5. [Admin App](#admin-app) spin up the admin app for easier generation of your semantic model.
 
 Or, if you want to see what a semantic model looks like, skip to [Examples](#examples).
 
@@ -57,19 +57,6 @@ os.environ['SNOWFLAKE_USER'] = '<your-snowflake-user>'
 os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
 os.environ['SNOWFLAKE_ACCOUNT_LOCATOR']='<your-snowflake-account-locator>'
 os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
-```
-
-## admin-app
-
-### Generation and validation using admin app
-
-1. Ensure you have installed the Python package.
-```bash
-pip install dist/*.whl
-```
-2. Start the admin streamlit app on your local.
-```bash
-make run_admin_app
 ```
 
 ## Usage
@@ -166,6 +153,22 @@ python -m semantic_model_generator.validate_model \
     --yaml_path="/path/to/your/model_yaml.yaml \
     --snowflake_account="<your-account-name>"
 ```
+
+
+
+## admin-app
+
+### Generation and validation using admin app
+
+1. Ensure you have installed the Python package.
+```bash
+pip install dist/*.whl
+```
+2. Start the admin streamlit app on your local.
+```bash
+make run_admin_app
+```
+
 
 ## Examples
 
