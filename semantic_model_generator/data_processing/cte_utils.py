@@ -136,6 +136,7 @@ def _convert_to_snowflake_sql(sql: str) -> str:
 def generate_select(
     table_in_column_format: semantic_model_pb2.Table, limit: int
 ) -> str:
+    """Generate select query for all columns except for columns with aggregations, for validation purpose."""
     cte = _generate_cte_for(table_in_column_format)
     sql = (
         cte
@@ -145,6 +146,7 @@ def generate_select(
 
 
 def generate_agg_expr_selects(table: semantic_model_pb2.Table, limit: int) -> List[str]:
+    """For columns with expr of aggregate function, create 'select expr from table' for each of the expr for validation purpose."""
     sqls = []
     for col in table.columns:
         if is_aggregation_expr(col):
