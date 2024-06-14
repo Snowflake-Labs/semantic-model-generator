@@ -77,17 +77,18 @@ def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
     return sql_without_logical_cte  # type: ignore [no-any-return]
 
 
+def _get_col_expr(column: semantic_model_pb2.Column) -> str:
+    return (
+        f"{column.expr} as {column.name}"
+        if column.expr.lower() != column.name.lower()
+        else f"{column.expr}"
+    )
+
+
 def _generate_cte_for(table: semantic_model_pb2.Table) -> str:
     """
     Returns a CTE representing a logical table that selects 'col' columns from 'table'.
     """
-
-    def _get_col_expr(column: semantic_model_pb2.Column) -> str:
-        return (
-            f"{column.expr} as {column.name}"
-            if column.expr.lower() != column.name.lower()
-            else f"{column.expr}"
-        )
 
     columns = []
     table_non_agg_column_names = {
@@ -112,8 +113,55 @@ def _generate_cte_for(table: semantic_model_pb2.Table) -> str:
     return cte
 
 
+def _convert_to_snowflake_sql(sql: str) -> str:
+    """
+    Converts a given SQL statement to Snowflake SQL syntax using SQLGlot.
+
+    Args:
+    sql (str): The SQL statement to convert.
+
+    Returns:
+    str: The SQL statement in Snowflake syntax.
+    """
+    try:
+        expression = sqlglot.parse_one(sql, dialect=Snowflake)
+    except Exception as e:
+        raise ValueError(
+            f"Unable to parse sql statement.\n Provided sql: {sql}\n. Error: {e}"
+        )
+
+    return expression.sql()
+
+
+def generate_select(
+    table_in_column_format: semantic_model_pb2.Table, limit: int
+) -> str:
+    cte = _generate_cte_for(table_in_column_format)
+    sql = (
+        cte
+        + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
+    )
+    return _convert_to_snowflake_sql(sql)
+
+
+def generate_agg_expr_selects(table: semantic_model_pb2.Table, limit: int) -> List[str]:
+    sqls = []
+    for col in table.columns:
+        if is_aggregation_expr(col):
+            sql = (
+                "SELECT "
+                + _get_col_expr(col)
+                + f" FROM {fully_qualified_table_name(table.base_table)} LIMIT {limit};"
+            )
+            sql = _convert_to_snowflake_sql(sql)
+            sqls.append(sql)
+        else:
+            continue
+    return sqls
+
+
 def expand_all_logical_tables_as_ctes(
-    sql_query: str, model: semantic_model_pb2.SemanticModel
+    sql_query: str, model_in_column_format: semantic_model_pb2.SemanticModel
 ) -> str:
     """
     Returns a SQL query that expands all logical tables contained in ctx as ctes.
@@ -135,11 +183,8 @@ def expand_all_logical_tables_as_ctes(
             ctes.append(_generate_cte_for(table))
         return ctes
 
-    # convert semantic model into Column format to be compatible with old utils.
-    ctx = context_to_column_format(model)
-
     # Step 1: Generate a CTE for each logical table referenced in the query.
-    ctes = generate_full_logical_table_ctes(ctx)
+    ctes = generate_full_logical_table_ctes(model_in_column_format)
 
     # Step 2: Parse each generated CTE as a 'WITH' clause.
     new_withs = []

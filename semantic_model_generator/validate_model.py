@@ -2,13 +2,15 @@ import jsonargparse
 from loguru import logger
 
 from semantic_model_generator.data_processing.cte_utils import (
+    context_to_column_format,
     expand_all_logical_tables_as_ctes,
+    generate_agg_expr_selects,
+    generate_select,
 )
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
 )
-from semantic_model_generator.sqlgen.generate_sql import generate_select_with_all_cols
 from semantic_model_generator.validate.context_length import validate_context_length
 
 
@@ -41,8 +43,9 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
         account_name=snowflake_account,
         max_workers=1,
     )
+    model_in_column_format = context_to_column_format(model)
 
-    for table in model.tables:
+    for table in model_in_column_format.tables:
         logger.info(f"Checking logical table: {table.name}")
         # Each table can be a different database/schema.
         # Create new connection for each one.
@@ -50,9 +53,13 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
             db_name=table.base_table.database, schema_name=table.base_table.schema
         ) as conn:
             try:
-                select = generate_select_with_all_cols(table, 100)
+                sqls = [generate_select(table, 100)] + generate_agg_expr_selects(
+                    table, 100
+                )
+                breakpoint()
                 # Run the query
-                _ = conn.cursor().execute(select)
+                for sql in sqls:
+                    _ = conn.cursor().execute(sql)
             except Exception as e:
                 raise ValueError(f"Unable to validate your semantic model. Error = {e}")
             logger.info(f"Validated logical table: {table.name}")
@@ -63,7 +70,9 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
             db_name=table.base_table.database, schema_name=table.base_table.schema
         ) as conn:
             try:
-                vqr_with_ctes = expand_all_logical_tables_as_ctes(vq.sql, model)
+                vqr_with_ctes = expand_all_logical_tables_as_ctes(
+                    vq.sql, model_in_column_format
+                )
                 # Run the query
                 _ = conn.cursor().execute(vqr_with_ctes)
             except Exception as e:
