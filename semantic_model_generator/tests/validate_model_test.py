@@ -115,12 +115,8 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
     assert (
         expected_log_call_3 in mock_logger.mock_calls
     ), "Expected log message not found in logger calls"
-    snowflake_query_one = (
-        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
-    )
-    snowflake_query_two = (
-        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
-    )
+    snowflake_query_one = "WITH __ALIAS AS (SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS) SELECT * FROM __ALIAS LIMIT 1"
+    snowflake_query_two = "WITH __AREA_CODE AS (SELECT ZIP_CODE, AREA_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.AREA_CODE) SELECT * FROM __AREA_CODE LIMIT 1"
     assert any(
         snowflake_query_one in str(call)
         for call in mock_snowflake_connection.mock_calls
@@ -151,12 +147,8 @@ def test_valid_yaml_with_long_vqr_context(
     assert (
         expected_log_call_3 in mock_logger.mock_calls
     ), "Expected log message not found in logger calls"
-    snowflake_query_one = (
-        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
-    )
-    snowflake_query_two = (
-        "SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS LIMIT 100"
-    )
+    snowflake_query_one = "WITH __ALIAS AS (SELECT ALIAS, ZIP_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.ALIAS) SELECT * FROM __ALIAS LIMIT 1"
+    snowflake_query_two = "WITH __AREA_CODE AS (SELECT ZIP_CODE, AREA_CODE FROM AUTOSQL_DATASET_BIRD_V2.ADDRESS.AREA_CODE) SELECT * FROM __AREA_CODE LIMIT 1"
     assert any(
         snowflake_query_one in str(call)
         for call in mock_snowflake_connection.mock_calls
@@ -201,8 +193,9 @@ def test_invalid_yaml_missing_quote(
     with pytest.raises(ValueError) as exc_info:
         validate_from_local_path(temp_invalid_yaml_unmatched_quote_file, account_name)
 
-    expected_error_fragment = "Unable to validate your semantic model. Error = Invalid column name 'ZIP_CODE\"'. Mismatched quotes detected."
-
+    expected_error_fragment = (
+        "Unable to validate your semantic model. Error = Unable to parse sql statement."
+    )
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
     expected_log_call = mock.call.info("Successfully validated!")

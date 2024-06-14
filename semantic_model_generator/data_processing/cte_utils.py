@@ -5,6 +5,9 @@ import sqlglot.expressions
 from sqlglot.dialects.snowflake import Snowflake
 
 from semantic_model_generator.protos import semantic_model_pb2
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    OBJECT_DATATYPES,
+)
 
 _LOGICAL_TABLE_PREFIX = "__"
 
@@ -78,6 +81,12 @@ def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
 
 
 def _get_col_expr(column: semantic_model_pb2.Column) -> str:
+    """Return column expr in SQL format.
+    Raise errors if columns is of OBJECT_DATATYPES, which we do not support today."""
+    if column.data_type.upper() in OBJECT_DATATYPES:
+        raise ValueError(
+            f"We do not support object datatypes in the semantic model. Col {column.name} has data type {column.data_type}. Please remove this column from your semantic model."
+        )
     return (
         f"{column.expr} as {column.name}"
         if column.expr.lower() != column.name.lower()
