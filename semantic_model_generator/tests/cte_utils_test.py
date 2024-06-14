@@ -263,6 +263,21 @@ class SemanticModelTest(TestCase):
         ):
             _get_col_expr(col)
 
+    def test_col_expr_w_space_v2(self) -> None:
+        col = semantic_model_pb2.Column(
+            name="d1 ",
+            kind=semantic_model_pb2.ColumnKind.dimension,
+            description="d1_description",
+            synonyms=["d1_synonym1", "d1_synonym2"],
+            expr="d1_expr",
+            data_type="d1_data_type",
+            unique=True,
+            sample_values=["d1_sample_value1", "d1_sample_value2"],
+        )
+        got = _get_col_expr(col)
+        want = 'd1_expr as d1'
+        assert got == want
+
     def test_col_expr_object_type(self) -> None:
         col = semantic_model_pb2.Column(
             name="d1",

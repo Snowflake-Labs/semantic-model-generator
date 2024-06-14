@@ -92,9 +92,9 @@ def _get_col_expr(column: semantic_model_pb2.Column) -> str:
             f"We do not support object datatypes in the semantic model. Col {column.name} has data type {column.data_type}. Please remove this column from your semantic model or flatten it to non-object type."
         )
     return (
-        f"{column.expr} as {column.name}"
-        if column.expr.lower() != column.name.lower()
-        else f"{column.expr}"
+        f"{column.expr.strip()} as {column.name.strip()}"
+        if column.expr.strip().lower() != column.name.strip().lower()
+        else f"{column.expr.strip()}"
     )
 
 
