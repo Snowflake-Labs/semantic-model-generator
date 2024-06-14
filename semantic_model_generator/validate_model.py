@@ -53,10 +53,7 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
             db_name=table.base_table.database, schema_name=table.base_table.schema
         ) as conn:
             try:
-                sqls = [generate_select(table, 100)] + generate_agg_expr_selects(
-                    table, 100
-                )
-                breakpoint()
+                sqls = [generate_select(table, 1)] + generate_agg_expr_selects(table, 1)
                 # Run the query
                 for sql in sqls:
                     _ = conn.cursor().execute(sql)
