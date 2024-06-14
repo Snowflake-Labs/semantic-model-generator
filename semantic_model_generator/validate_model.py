@@ -54,7 +54,8 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
         ) as conn:
             try:
                 sqls = [generate_select(table, 1)] + generate_agg_expr_selects(table, 1)
-                # Run the query
+                # Run the query. 
+                # TODO: some expr maybe expensive if contains aggregations or window functions. Move to EXPLAIN?
                 for sql in sqls:
                     _ = conn.cursor().execute(sql)
             except Exception as e:
