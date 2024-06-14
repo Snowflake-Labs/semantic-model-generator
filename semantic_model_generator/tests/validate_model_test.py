@@ -213,7 +213,7 @@ def test_invalid_yaml_incorrect_datatype(
     with pytest.raises(ValueError) as exc_info:
         validate_from_local_path(temp_invalid_yaml_incorrect_dtype, account_name)
 
-    expected_error = "Unable to validate your semantic model. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model."
+    expected_error = "Unable to validate your semantic model. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model or flatten it to non-object type."
 
     assert expected_error in str(exc_info.value), "Unexpected error message"
 

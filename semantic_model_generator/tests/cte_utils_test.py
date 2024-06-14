@@ -1,6 +1,9 @@
 from unittest import TestCase
 
+import pytest
+
 from semantic_model_generator.data_processing.cte_utils import (
+    _get_col_expr,
     context_to_column_format,
     generate_agg_expr_selects,
     generate_select,
@@ -242,3 +245,37 @@ class SemanticModelTest(TestCase):
         agg_got = generate_agg_expr_selects(col_format_tbl, 100)
         agg_want = ["SELECT SUM(d2) AS d2 FROM db.sc.t1 LIMIT 100"]
         assert agg_got == agg_want
+
+    def test_col_expr_w_space(self) -> None:
+        col = semantic_model_pb2.Column(
+            name="d 1",
+            kind=semantic_model_pb2.ColumnKind.dimension,
+            description="d1_description",
+            synonyms=["d1_synonym1", "d1_synonym2"],
+            expr="d1_expr",
+            data_type="d1_data_type",
+            unique=True,
+            sample_values=["d1_sample_value1", "d1_sample_value2"],
+        )
+        with pytest.raises(
+            ValueError,
+            match=f"Please do not include spaces in your column name: {col.name}",
+        ):
+            _get_col_expr(col)
+
+    def test_col_expr_object_type(self) -> None:
+        col = semantic_model_pb2.Column(
+            name="d1",
+            kind=semantic_model_pb2.ColumnKind.dimension,
+            description="d1_description",
+            synonyms=["d1_synonym1", "d1_synonym2"],
+            expr="d1_expr",
+            data_type="variant",
+            unique=True,
+            sample_values=["d1_sample_value1", "d1_sample_value2"],
+        )
+        with pytest.raises(
+            ValueError,
+            match=f"We do not support object datatypes in the semantic model. Col {col.name} has data type {col.data_type}. Please remove this column from your semantic model or flatten it to non-object type.",
+        ):
+            _get_col_expr(col)

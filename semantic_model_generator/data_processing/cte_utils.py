@@ -83,9 +83,13 @@ def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
 def _get_col_expr(column: semantic_model_pb2.Column) -> str:
     """Return column expr in SQL format.
     Raise errors if columns is of OBJECT_DATATYPES, which we do not support today."""
+    if " " in column.name.strip():
+        raise ValueError(
+            f"Please do not include spaces in your column name: {column.name}"
+        )
     if column.data_type.upper() in OBJECT_DATATYPES:
         raise ValueError(
-            f"We do not support object datatypes in the semantic model. Col {column.name} has data type {column.data_type}. Please remove this column from your semantic model."
+            f"We do not support object datatypes in the semantic model. Col {column.name} has data type {column.data_type}. Please remove this column from your semantic model or flatten it to non-object type."
         )
     return (
         f"{column.expr} as {column.name}"
