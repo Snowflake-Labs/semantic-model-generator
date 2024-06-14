@@ -232,19 +232,20 @@ class SemanticModelTest(TestCase):
 
     def test_generate_select(self) -> None:
         col_format_tbl = get_test_table_col_format()
-        got = generate_select(col_format_tbl, 100, check_aggregate_cols=False)
-        want = "WITH __t1 AS (SELECT d1_expr AS d1, d2_expr AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
+        got = generate_select(col_format_tbl, 100)
+        want = [
+            "WITH __t1 AS (SELECT d1_expr AS d1, d2_expr AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
+        ]
         assert got == want
 
     def test_generate_select_w_agg(self) -> None:
         col_format_tbl = get_test_table_col_format_w_agg()
-        got = generate_select(col_format_tbl, 100, check_aggregate_cols=False)
-        want = "WITH __t1 AS (SELECT d1_expr AS d1, SUM(d3) OVER (PARTITION BY d1) AS d3 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
+        got = generate_select(col_format_tbl, 100)
+        want = [
+            "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
+            "WITH __t1 AS (SELECT d1_expr AS d1, SUM(d3) OVER (PARTITION BY d1) AS d3 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
+        ]
         assert got == want
-
-        agg_got = generate_select(col_format_tbl, 100, check_aggregate_cols=True)
-        agg_want = "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
-        assert agg_got == agg_want
 
     def test_col_expr_w_space(self) -> None:
         col = semantic_model_pb2.Column(

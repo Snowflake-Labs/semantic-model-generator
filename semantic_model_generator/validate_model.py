@@ -54,10 +54,7 @@ def validate(yaml_str: str, snowflake_account: str) -> None:
         ) as conn:
             try:
                 validate_all_cols(table)
-                sqls = [
-                    generate_select(table, 1, check_aggregate_cols=True),
-                    generate_select(table, 1, check_aggregate_cols=False),
-                ]
+                sqls = generate_select(table, 1)
                 # Run the query.
                 # TODO: some expr maybe expensive if contains aggregations or window functions. Move to EXPLAIN?
                 for sql in sqls:
