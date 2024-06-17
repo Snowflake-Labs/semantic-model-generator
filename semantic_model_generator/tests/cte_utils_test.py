@@ -189,6 +189,23 @@ def get_test_table_col_format_w_agg() -> semantic_model_pb2.Table:
     )
 
 
+def get_test_table_col_format_w_agg_only() -> semantic_model_pb2.Table:
+    return semantic_model_pb2.Table(
+        name="t1",
+        base_table=semantic_model_pb2.FullyQualifiedTable(
+            database="db", schema="sc", table="t1"
+        ),
+        columns=[
+            semantic_model_pb2.Column(
+                name="d2",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                description="d2_description",
+                expr="sum(d2)",
+            ),
+        ],
+    )
+
+
 class SemanticModelTest(TestCase):
     def test_convert_to_column_format(self) -> None:
         """
@@ -244,6 +261,14 @@ class SemanticModelTest(TestCase):
         want = [
             "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
             "WITH __t1 AS (SELECT d1_expr AS d1, SUM(d3) OVER (PARTITION BY d1) AS d3 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
+        ]
+        assert sorted(got) == sorted(want)
+
+    def test_generate_select_w_agg_only(self) -> None:
+        col_format_tbl = get_test_table_col_format_w_agg_only()
+        got = generate_select(col_format_tbl, 100)
+        want = [
+            "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
         ]
         assert sorted(got) == sorted(want)
 

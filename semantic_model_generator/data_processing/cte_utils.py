@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import sqlglot
 import sqlglot.expressions
@@ -125,12 +125,15 @@ def _generate_cte_for(
         return cte
 
 
-def _generate_non_agg_cte(table: semantic_model_pb2.Table) -> str:
+def _generate_non_agg_cte(table: semantic_model_pb2.Table) -> Optional[str]:
     """
     Returns a CTE representing a logical table that selects 'col' columns from 'table' except for aggregation columns.
     """
     filtered_cols = [col for col in table.columns if not is_aggregation_expr(col)]
-    return _generate_cte_for(table, filtered_cols)
+    if len(filtered_cols) > 0:
+        return _generate_cte_for(table, filtered_cols)
+    else:
+        return None
 
 
 def _convert_to_snowflake_sql(sql: str) -> str:
@@ -157,26 +160,30 @@ def generate_select(
     table_in_column_format: semantic_model_pb2.Table, limit: int
 ) -> List[str]:
     """Generate select query for all columns for validation purpose."""
+    sqls_to_return: List[str] = []
     # Generate select query for columns without aggregation exprs.
     non_agg_cte = _generate_non_agg_cte(table_in_column_format)
-    non_agg_sql = (
-        non_agg_cte
-        + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
-    )
+    if non_agg_cte is not None:
+        non_agg_sql = (
+            non_agg_cte
+            + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
+        )
+        sqls_to_return.append(_convert_to_snowflake_sql(non_agg_sql))
 
     # Generate select query for columns with aggregation exprs.
     agg_cols = [
         col for col in table_in_column_format.columns if is_aggregation_expr(col)
     ]
     if len(agg_cols) == 0:
-        return [_convert_to_snowflake_sql(non_agg_sql)]
+        return sqls_to_return
     else:
         agg_cte = _generate_cte_for(table_in_column_format, agg_cols)
         agg_sql = (
             agg_cte
             + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
         )
-    return [_convert_to_snowflake_sql(agg_sql), _convert_to_snowflake_sql(non_agg_sql)]
+        sqls_to_return.append(_convert_to_snowflake_sql(agg_sql))
+    return sqls_to_return
 
 
 def expand_all_logical_tables_as_ctes(
@@ -198,7 +205,9 @@ def expand_all_logical_tables_as_ctes(
             # Append all columns and expressions for the logical table.
             # TODO (renee): If table contains expr with aggregations, we need to select its referred columns within CTE,
             # which is not properly handled yet.
-            ctes.append(_generate_non_agg_cte(table))
+            cte = _generate_non_agg_cte(table)
+            if cte is not None:
+                ctes.append(cte)
         return ctes
 
     # Step 1: Generate a CTE for each logical table referenced in the query.
