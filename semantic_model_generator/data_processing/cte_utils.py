@@ -1,10 +1,13 @@
-from typing import List
+from typing import List, Optional
 
 import sqlglot
 import sqlglot.expressions
 from sqlglot.dialects.snowflake import Snowflake
 
 from semantic_model_generator.protos import semantic_model_pb2
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    OBJECT_DATATYPES,
+)
 
 _LOGICAL_TABLE_PREFIX = "__"
 
@@ -77,43 +80,114 @@ def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
     return sql_without_logical_cte  # type: ignore [no-any-return]
 
 
-def _generate_cte_for(table: semantic_model_pb2.Table) -> str:
+def _validate_col(column: semantic_model_pb2.Column) -> None:
+    if " " in column.name.strip():
+        raise ValueError(
+            f"Please do not include spaces in your column name: {column.name}"
+        )
+    if column.data_type.upper() in OBJECT_DATATYPES:
+        raise ValueError(
+            f"We do not support object datatypes in the semantic model. Col {column.name} has data type {column.data_type}. Please remove this column from your semantic model or flatten it to non-object type."
+        )
+
+
+def validate_all_cols(table: semantic_model_pb2.Table) -> None:
+    for column in table.columns:
+        _validate_col(column)
+
+
+def _get_col_expr(column: semantic_model_pb2.Column) -> str:
+    """Return column expr in SQL format.
+    Raise errors if columns is of OBJECT_DATATYPES, which we do not support today."""
+    return (
+        f"{column.expr.strip()} as {column.name.strip()}"
+        if column.expr.strip().lower() != column.name.strip().lower()
+        else f"{column.expr.strip()}"
+    )
+
+
+def _generate_cte_for(
+    table: semantic_model_pb2.Table, columns: List[semantic_model_pb2.Column]
+) -> str:
     """
     Returns a CTE representing a logical table that selects 'col' columns from 'table'.
     """
 
-    def _get_col_expr(column: semantic_model_pb2.Column) -> str:
-        return (
-            f"{column.expr} as {column.name}"
-            if column.expr.lower() != column.name.lower()
-            else f"{column.expr}"
+    if len(columns) == 0:
+        raise ValueError("Please include at least one column to generate CTE on.")
+    else:
+        expr_columns = [_get_col_expr(col) for col in columns]
+        cte = f"WITH {logical_table_name(table)} AS (\n"
+        cte += "SELECT \n"
+        cte += ",\n".join(expr_columns) + "\n"
+        cte += f"FROM {fully_qualified_table_name(table.base_table)}"
+        cte += ")"
+        return cte
+
+
+def _generate_non_agg_cte(table: semantic_model_pb2.Table) -> Optional[str]:
+    """
+    Returns a CTE representing a logical table that selects 'col' columns from 'table' except for aggregation columns.
+    """
+    filtered_cols = [col for col in table.columns if not is_aggregation_expr(col)]
+    if len(filtered_cols) > 0:
+        return _generate_cte_for(table, filtered_cols)
+    else:
+        return None
+
+
+def _convert_to_snowflake_sql(sql: str) -> str:
+    """
+    Converts a given SQL statement to Snowflake SQL syntax using SQLGlot.
+
+    Args:
+    sql (str): The SQL statement to convert.
+
+    Returns:
+    str: The SQL statement in Snowflake syntax.
+    """
+    try:
+        expression = sqlglot.parse_one(sql, dialect=Snowflake)
+    except Exception as e:
+        raise ValueError(
+            f"Unable to parse sql statement.\n Provided sql: {sql}\n. Error: {e}"
         )
 
-    columns = []
-    table_non_agg_column_names = {
-        col.name: col for col in table.columns if not is_aggregation_expr(col)
-    }
-    # If a table has no explicit columns referenced (e.g. for select count(*) from table)
-    # or "*" is in the columns (e.g. for select * from table),
-    # then just add all the columns (excl. ones with aggregation functions in expr).
-    columns.extend(
-        [
-            _get_col_expr(col)
-            for col in table.columns
-            if col.name in table_non_agg_column_names
-        ]
-    )
+    return expression.sql()
 
-    cte = f"WITH {logical_table_name(table)} AS (\n"
-    cte += "SELECT \n"
-    cte += ",\n".join(columns) + "\n"
-    cte += f"FROM {fully_qualified_table_name(table.base_table)}"
-    cte += ")"
-    return cte
+
+def generate_select(
+    table_in_column_format: semantic_model_pb2.Table, limit: int
+) -> List[str]:
+    """Generate select query for all columns for validation purpose."""
+    sqls_to_return: List[str] = []
+    # Generate select query for columns without aggregation exprs.
+    non_agg_cte = _generate_non_agg_cte(table_in_column_format)
+    if non_agg_cte is not None:
+        non_agg_sql = (
+            non_agg_cte
+            + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
+        )
+        sqls_to_return.append(_convert_to_snowflake_sql(non_agg_sql))
+
+    # Generate select query for columns with aggregation exprs.
+    agg_cols = [
+        col for col in table_in_column_format.columns if is_aggregation_expr(col)
+    ]
+    if len(agg_cols) == 0:
+        return sqls_to_return
+    else:
+        agg_cte = _generate_cte_for(table_in_column_format, agg_cols)
+        agg_sql = (
+            agg_cte
+            + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
+        )
+        sqls_to_return.append(_convert_to_snowflake_sql(agg_sql))
+    return sqls_to_return
 
 
 def expand_all_logical_tables_as_ctes(
-    sql_query: str, model: semantic_model_pb2.SemanticModel
+    sql_query: str, model_in_column_format: semantic_model_pb2.SemanticModel
 ) -> str:
     """
     Returns a SQL query that expands all logical tables contained in ctx as ctes.
@@ -128,18 +202,16 @@ def expand_all_logical_tables_as_ctes(
         """
         ctes: List[str] = []
         for table in ctx.tables:
-            # If table contains expr with aggregations, we need to select the referred columns within CTE.
-            # Enrich the table with the referred columns, if not listed explicitly within table.columns.
-            # table = _enrich_column_in_expr_with_aggregation(table)
             # Append all columns and expressions for the logical table.
-            ctes.append(_generate_cte_for(table))
+            # TODO (renee): If table contains expr with aggregations, we need to select its referred columns within CTE,
+            # which is not properly handled yet.
+            cte = _generate_non_agg_cte(table)
+            if cte is not None:
+                ctes.append(cte)
         return ctes
 
-    # convert semantic model into Column format to be compatible with old utils.
-    ctx = context_to_column_format(model)
-
     # Step 1: Generate a CTE for each logical table referenced in the query.
-    ctes = generate_full_logical_table_ctes(ctx)
+    ctes = generate_full_logical_table_ctes(model_in_column_format)
 
     # Step 2: Parse each generated CTE as a 'WITH' clause.
     new_withs = []
