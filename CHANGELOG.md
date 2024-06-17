@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.24] - 2024-06-17
+### Updates
+- Consolidate validations to use the same set of utils
+- Handle the validation for expr with aggregations properly
+
 ## [0.1.23] - 2024-06-13
 ### Updates
 - Remove VQR from context length calculation.
