@@ -81,6 +81,8 @@ def send_message(conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
                 "Authorization": f'Snowflake Token="{conn.rest.token}"',  # type: ignore[union-attr]
                 "Content-Type": "application/json",
             },
+            # This is only to skip verifying host match.
+            verify=False
         )
         if resp.status_code < 400:
             json_resp: Dict[str, Any] = resp.json()
