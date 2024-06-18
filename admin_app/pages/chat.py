@@ -82,7 +82,7 @@ def send_message(conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
                 "Content-Type": "application/json",
             },
             # This is only to skip verifying host match.
-            verify=False
+            verify=False,
         )
         if resp.status_code < 400:
             json_resp: Dict[str, Any] = resp.json()
