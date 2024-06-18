@@ -72,7 +72,7 @@ def _raw_table_to_semantic_context_table(
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=[_PLACEHOLDER_COMMENT],
-                    description=_PLACEHOLDER_COMMENT,
+                    description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
 
@@ -84,7 +84,7 @@ def _raw_table_to_semantic_context_table(
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=[_PLACEHOLDER_COMMENT],
-                    description=_PLACEHOLDER_COMMENT,
+                    description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
 
@@ -96,7 +96,7 @@ def _raw_table_to_semantic_context_table(
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=[_PLACEHOLDER_COMMENT],
-                    description=_PLACEHOLDER_COMMENT,
+                    description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
         elif col.column_type.upper() in OBJECT_DATATYPES:
@@ -115,7 +115,7 @@ def _raw_table_to_semantic_context_table(
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=[_PLACEHOLDER_COMMENT],
-                    description=_PLACEHOLDER_COMMENT,
+                    description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
     if len(time_dimensions) + len(dimensions) + len(measures) == 0:
@@ -129,7 +129,7 @@ def _raw_table_to_semantic_context_table(
             database=database, schema=schema, table=raw_table.name
         ),
         # For fields we can not automatically infer, leave a comment for the user to fill out.
-        description=_PLACEHOLDER_COMMENT,
+        description=raw_table.comment if raw_table.comment else _PLACEHOLDER_COMMENT,
         filters=_get_placeholder_filter(),
         dimensions=dimensions,
         time_dimensions=time_dimensions,
