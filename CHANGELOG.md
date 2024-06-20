@@ -2,6 +2,11 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.25] - 2024-06-18
+### Updates
+- Plumb through column and table comments
+- Skip host name match verification for now
+
 ## [0.1.24] - 2024-06-17
 ### Updates
 - Consolidate validations to use the same set of utils
