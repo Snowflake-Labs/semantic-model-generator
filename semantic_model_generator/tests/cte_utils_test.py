@@ -1,11 +1,14 @@
 from unittest import TestCase
 
 import pytest
+import sqlglot
 
 from semantic_model_generator.data_processing.cte_utils import (
+    _enrich_column_in_expr_with_aggregation,
     _get_col_expr,
     _validate_col,
     context_to_column_format,
+    expand_all_logical_tables_as_ctes,
     generate_select,
     is_aggregation_expr,
 )
@@ -18,6 +21,9 @@ def get_test_ctx() -> semantic_model_pb2.SemanticModel:
         tables=[
             semantic_model_pb2.Table(
                 name="t1",
+                base_table=semantic_model_pb2.FullyQualifiedTable(
+                    database="db", schema="sc", table="t1"
+                ),
                 dimensions=[
                     semantic_model_pb2.Dimension(
                         name="d1",
@@ -37,6 +43,9 @@ def get_test_ctx() -> semantic_model_pb2.SemanticModel:
             ),
             semantic_model_pb2.Table(
                 name="t2",
+                base_table=semantic_model_pb2.FullyQualifiedTable(
+                    database="db", schema="sc", table="t2"
+                ),
                 time_dimensions=[
                     semantic_model_pb2.TimeDimension(
                         name="td1",
@@ -63,6 +72,11 @@ def get_test_ctx() -> semantic_model_pb2.SemanticModel:
                         description="m1_description",
                         expr="m1_expr",
                     ),
+                    semantic_model_pb2.Measure(
+                        name="total_m3",
+                        description="m3_description",
+                        expr="sum(m3_expr)",
+                    ),
                 ],
             ),
         ],
@@ -75,6 +89,9 @@ def get_test_ctx_col_format() -> semantic_model_pb2.SemanticModel:
         tables=[
             semantic_model_pb2.Table(
                 name="t1",
+                base_table=semantic_model_pb2.FullyQualifiedTable(
+                    database="db", schema="sc", table="t1"
+                ),
                 columns=[
                     semantic_model_pb2.Column(
                         name="d1",
@@ -96,6 +113,9 @@ def get_test_ctx_col_format() -> semantic_model_pb2.SemanticModel:
             ),
             semantic_model_pb2.Table(
                 name="t2",
+                base_table=semantic_model_pb2.FullyQualifiedTable(
+                    database="db", schema="sc", table="t2"
+                ),
                 columns=[
                     semantic_model_pb2.Column(
                         name="td1",
@@ -122,6 +142,12 @@ def get_test_ctx_col_format() -> semantic_model_pb2.SemanticModel:
                         kind=semantic_model_pb2.ColumnKind.measure,
                         description="m1_description",
                         expr="m1_expr",
+                    ),
+                    semantic_model_pb2.Column(
+                        name="total_m3",
+                        kind=semantic_model_pb2.ColumnKind.measure,
+                        description="m3_description",
+                        expr="sum(m3_expr)",
                     ),
                 ],
             ),
@@ -174,7 +200,7 @@ def get_test_table_col_format_w_agg() -> semantic_model_pb2.Table:
                 sample_values=["d1_sample_value1", "d1_sample_value2"],
             ),
             semantic_model_pb2.Column(
-                name="d2",
+                name="d2_total",
                 kind=semantic_model_pb2.ColumnKind.measure,
                 description="d2_description",
                 expr="sum(d2)",
@@ -197,7 +223,7 @@ def get_test_table_col_format_w_agg_only() -> semantic_model_pb2.Table:
         ),
         columns=[
             semantic_model_pb2.Column(
-                name="d2",
+                name="d2_total",
                 kind=semantic_model_pb2.ColumnKind.measure,
                 description="d2_description",
                 expr="sum(d2)",
@@ -259,7 +285,7 @@ class SemanticModelTest(TestCase):
         col_format_tbl = get_test_table_col_format_w_agg()
         got = generate_select(col_format_tbl, 100)
         want = [
-            "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
+            "WITH __t1 AS (SELECT SUM(d2) AS d2_total FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
             "WITH __t1 AS (SELECT d1_expr AS d1, SUM(d3) OVER (PARTITION BY d1) AS d3 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100",
         ]
         assert sorted(got) == sorted(want)
@@ -268,7 +294,7 @@ class SemanticModelTest(TestCase):
         col_format_tbl = get_test_table_col_format_w_agg_only()
         got = generate_select(col_format_tbl, 100)
         want = [
-            "WITH __t1 AS (SELECT SUM(d2) AS d2 FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
+            "WITH __t1 AS (SELECT SUM(d2) AS d2_total FROM db.sc.t1) SELECT * FROM __t1 LIMIT 100"
         ]
         assert sorted(got) == sorted(want)
 
@@ -320,3 +346,50 @@ class SemanticModelTest(TestCase):
             match=f"We do not support object datatypes in the semantic model. Col {col.name} has data type {col.data_type}. Please remove this column from your semantic model or flatten it to non-object type.",
         ):
             _validate_col(col)
+
+    def test_enrich_column_in_expr_with_aggregation(self) -> None:
+        col_format_tbl = get_test_table_col_format_w_agg_only()
+        got = _enrich_column_in_expr_with_aggregation(col_format_tbl)
+        want = semantic_model_pb2.Table(
+            name="t1",
+            base_table=semantic_model_pb2.FullyQualifiedTable(
+                database="db", schema="sc", table="t1"
+            ),
+            columns=[
+                semantic_model_pb2.Column(
+                    name="d2_total",
+                    kind=semantic_model_pb2.ColumnKind.measure,
+                    description="d2_description",
+                    expr="sum(d2)",
+                ),
+                # Expand the column referred in expr.
+                semantic_model_pb2.Column(
+                    name="d2",
+                    expr="d2",
+                ),
+            ],
+        )
+        assert got == want
+
+    def test_expand_all_logical_tables_as_ctes(self) -> None:
+        vq = "SELECT * FROM __t2"
+        ctx = get_test_ctx_col_format()
+        got = expand_all_logical_tables_as_ctes(vq, ctx)
+        want = """WITH __t1 AS (SELECT
+    d1_expr AS d1,
+    d2_expr AS d2
+  FROM db.sc.t1
+), __t2 AS (
+  SELECT
+    td1_expr AS td1,
+    m1_expr AS m1,
+    m1_expr AS m2,
+    m3_expr
+  FROM db.sc.t2
+)
+SELECT
+  *
+FROM __t2"""
+        assert sqlglot.parse_one(want, "snowflake") == sqlglot.parse_one(
+            got, "snowflake"
+        )

@@ -1,7 +1,11 @@
-from typing import List, Optional
+# TODO: support in quoted columns are not well tested. Need to add more tests.
+
+import copy
+from typing import Dict, List, Optional
 
 import sqlglot
 import sqlglot.expressions
+from loguru import logger
 from sqlglot.dialects.snowflake import Snowflake
 
 from semantic_model_generator.protos import semantic_model_pb2
@@ -53,6 +57,38 @@ def is_aggregation_expr(col: semantic_model_pb2.Column) -> bool:
             raise ValueError("Only allow aggregation expressions for measures.")
         return True
     return False
+
+
+def _is_physical_table_column(col: semantic_model_pb2.Column) -> bool:
+    """Returns whether the column refers to a single raw table column."""
+    try:
+        parsed = sqlglot.parse_one(col.expr, dialect="snowflake")
+        return isinstance(parsed, sqlglot.expressions.Column)
+    except Exception as ex:
+        logger.warning(
+            f"Failed to parse sql expression: {col.expr}. Error: {ex}. {col}"
+        )
+        return False
+
+
+def _is_identifier_quoted(col_name: str) -> bool:
+    return '"' in col_name
+
+
+def _standardize_sf_identifier(col_name: str) -> str:
+    # If the name is quoted, remove quotes if all cap letter and no spaces within quotes; else return the origin.
+    if _is_identifier_quoted(col_name):
+        col_name_stripped = col_name.strip('"')
+        if col_name_stripped.isupper() and " " not in col_name:
+            # Return the non-quoted and lower case version.
+            return col_name_stripped.lower()
+        else:
+            # Return the original quoted version.
+            return col_name
+
+    else:
+        # For non-quoted columns, return the lower case version.
+        return col_name.lower()
 
 
 def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
@@ -123,6 +159,81 @@ def _generate_cte_for(
         cte += f"FROM {fully_qualified_table_name(table.base_table)}"
         cte += ")"
         return cte
+
+
+def get_all_physical_column_references(
+    column: semantic_model_pb2.Column,
+) -> List[str]:
+    """Returns a set of column names referenced in the column expression.
+
+    For example, the following column expressions yield the following return values:
+    foo -> [foo]
+    foo+bar -> [foo, bar]
+    sum(foo) -> [foo]
+    """
+    try:
+        parsed = sqlglot.parse_one(column.expr, dialect="snowflake")
+        col_names = set()
+        for col in parsed.find_all(sqlglot.expressions.Column):
+            # TODO(renee): update to use _standardize_sf_identifier to handle quoted columns.
+            col_name = col.name.lower()
+            if col.this.quoted:
+                col_name = col.name
+            col_names.add(col_name)
+        return sorted(list(col_names))
+    except Exception as ex:
+        raise ValueError(f"Failed to parse sql expression: {column.expr}. Error: {ex}")
+
+
+def get_all_column_references_in_table(
+    table: semantic_model_pb2.Table,
+) -> Dict[str, Optional[semantic_model_pb2.Column]]:
+    """Returns all physical table columns referenced in the table.
+
+    Maps the raw table column name to the semantic context Column that directly references it.
+    If the raw table column name has no exact semantic context Column, it'll be mapped to None.
+    """
+    all_col_references: Dict[str, Optional[semantic_model_pb2.Column]] = {}
+    for col in table.columns:
+        col_references = get_all_physical_column_references(column=col)
+        if _is_physical_table_column(col):
+            column = col
+        else:
+            column = None
+        for reference in col_references:
+            if reference in all_col_references:
+                all_col_references[reference] = all_col_references[reference] or column
+            else:
+                all_col_references[reference] = column
+    return all_col_references
+
+
+def _enrich_column_in_expr_with_aggregation(
+    table: semantic_model_pb2.Table,
+) -> semantic_model_pb2.Table:
+    """
+    Append column mentioned in expr with aggregation, if not listed explicitly in table.columns.
+    """
+    tbl = copy.deepcopy(table)
+    col_name_to_obj = get_all_column_references_in_table(tbl)
+    cols_to_append = set()
+    for col in tbl.columns:
+        if not is_aggregation_expr(col):
+            continue
+        for col_name in get_all_physical_column_references(col):
+            if col_name_to_obj[col_name] is None:
+                cols_to_append.add(col_name)
+
+    for col_name_to_append in cols_to_append:
+        dest_col = semantic_model_pb2.Column(
+            name=col_name_to_append, expr=col_name_to_append
+        )
+        # Only append when the name is not used; otherwise will cause compilation issue.
+        if _standardize_sf_identifier(dest_col.name) not in [
+            _standardize_sf_identifier(col.name) for col in tbl.columns
+        ]:
+            tbl.columns.append(dest_col)
+    return tbl
 
 
 def _generate_non_agg_cte(table: semantic_model_pb2.Table) -> Optional[str]:
@@ -203,9 +314,9 @@ def expand_all_logical_tables_as_ctes(
         ctes: List[str] = []
         for table in ctx.tables:
             # Append all columns and expressions for the logical table.
-            # TODO (renee): If table contains expr with aggregations, we need to select its referred columns within CTE,
-            # which is not properly handled yet.
-            cte = _generate_non_agg_cte(table)
+            # If table contains expr with aggregations, enrich its referred columns into the table.
+            table_ = _enrich_column_in_expr_with_aggregation(table)
+            cte = _generate_non_agg_cte(table_)
             if cte is not None:
                 ctes.append(cte)
         return ctes
