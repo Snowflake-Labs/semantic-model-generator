@@ -30,6 +30,7 @@ def _get_placeholder_filter() -> List[semantic_model_pb2.NamedFilter]:
             name=_PLACEHOLDER_COMMENT,
             synonyms=[_PLACEHOLDER_COMMENT],
             description=_PLACEHOLDER_COMMENT,
+            expr=_PLACEHOLDER_COMMENT,
         )
     ]
 
