@@ -138,7 +138,7 @@ _TABLE_WITH_OBJECT_COL = Table(
     comment=None,
 )
 
-_TABLE_WITH_THAT_EXCEEDS_CONTEXT = Table(
+_TABLE_WITH_MANY_SAMPLE_VALUES = Table(
     id_=0,
     name="PRODUCTS",
     columns=[
@@ -149,6 +149,22 @@ _TABLE_WITH_THAT_EXCEEDS_CONTEXT = Table(
             values=["1", "2", "3"] * 550,
             comment=None,
         ),
+    ],
+    comment=None,
+)
+
+_TABLE_THAT_EXCEEDS_CONTEXT = Table(
+    id_=0,
+    name="PRODUCTS",
+    columns=[
+        Column(
+            id_=i,
+            column_name=f"column_{i}",
+            column_type="NUMBER",
+            values=["1", "2", "3"],
+            comment=None,
+        )
+        for i in range(200)
     ],
     comment=None,
 )
@@ -298,7 +314,7 @@ def mock_dependencies_exceed_context(mock_snowflake_connection):
         valid_schemas_tables_columns_df_zip_code,
     ]
     table_representations = [
-        _TABLE_WITH_THAT_EXCEEDS_CONTEXT,  # Value returned on the first call.
+        _TABLE_THAT_EXCEEDS_CONTEXT,  # Value returned on the first call.
     ]
 
     with patch(
@@ -494,7 +510,15 @@ def test_generate_base_context_from_table_that_has_too_long_context(
 
     mock_file.assert_called_once_with(output_path, "w")
     mock_logger.warning.assert_called_once_with(
-        "WARNING 🚨: The Semantic model is too large. \n Passed size is 26867 characters. We need you to remove 784 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values. \n Once you've finished updating, please validate your semantic model."
+        "WARNING 🚨: "
+        "The Semantic model is too large. \n"
+        "Passed size is 41701 characters. "
+        "We need you to remove 16180 characters in your semantic model. "
+        "Please check: \n "
+        "(1) If you have long descriptions that can be truncated. \n "
+        "(2) If you can remove some columns that are not used within your tables. \n "
+        "(3) If you have extra tables you do not need. \n "
+        "Once you've finished updating, please validate your semantic model."
     )
 
     mock_file.assert_called_once_with(output_path, "w")

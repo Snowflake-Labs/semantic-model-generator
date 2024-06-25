@@ -1,3 +1,5 @@
+from semantic_model_generator.protos import semantic_model_pb2
+
 _VALID_YAML = """name: my test semantic model
 tables:
   - name: ALIAS
@@ -279,7 +281,7 @@ tables:
 """
 
 
-_VALID_YAML_TOO_LONG_CONTEXT = """name: my test semantic model
+_INVALID_YAML_TOO_LONG_CONTEXT = """name: my test semantic model
 tables:
   - name: ALIAS
     base_table:
@@ -339,3 +341,31 @@ tables:
         data_type: TEXT
         sample_values: ['Holtsville', 'Adjuntas', 'Boqueron']
 """
+
+_VALID_YAML_MANY_SAMPLE_VALUES = semantic_model_pb2.SemanticModel(
+    name="test model",
+    tables=[
+        semantic_model_pb2.Table(
+            name="ALIAS",
+            base_table=semantic_model_pb2.FullyQualifiedTable(
+                database="AUTOSQL_DATASET_BIRD_V2", schema="ADDRESS", table="ALIAS"
+            ),
+            dimensions=[
+                semantic_model_pb2.Dimension(
+                    name=f"DIMENSION_{i}",
+                    expr="ALIAS",
+                    data_type="TEXT",
+                    sample_values=[
+                        "apple",
+                        "banana",
+                        "cantaloupe",
+                        "date",
+                        "elderberry",
+                    ]
+                    * 100,
+                )
+                for i in range(5)
+            ],
+        )
+    ],
+)

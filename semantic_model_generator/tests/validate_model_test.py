@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from strictyaml import DuplicateKeysDisallowed, YAMLValidationError
 
+from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
 from semantic_model_generator.tests.samples import validate_yamls
 from semantic_model_generator.validate_model import validate_from_local_path
 
@@ -81,10 +82,10 @@ def temp_invalid_yaml_incorrect_dtype():
 
 
 @pytest.fixture
-def temp_valid_yaml_too_long_context():
+def temp_invalid_yaml_too_long_context():
     """Create a temporary YAML file with the test data."""
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
-        tmp.write(validate_yamls._VALID_YAML_TOO_LONG_CONTEXT)
+        tmp.write(validate_yamls._INVALID_YAML_TOO_LONG_CONTEXT)
         tmp.flush()
         yield tmp.name
 
@@ -219,13 +220,30 @@ def test_invalid_yaml_incorrect_datatype(
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
-def test_valid_yaml_too_long_context(
-    mock_logger, temp_valid_yaml_too_long_context, mock_snowflake_connection
+def test_invalid_yaml_too_long_context(
+    mock_logger, temp_invalid_yaml_too_long_context, mock_snowflake_connection
 ):
     account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
-        validate_from_local_path(temp_valid_yaml_too_long_context, account_name)
+        validate_from_local_path(temp_invalid_yaml_too_long_context, account_name)
 
-    expected_error = "Your semantic model is too large. Passed size is 41937 characters. We need you to remove 15856 characters in your semantic model. Please check: \n (1) If you have long descriptions that can be truncated. \n (2) If you can remove some columns that are not used within your tables. \n (3) If you have extra tables you do not need. \n (4) If you can remove sample values."
+    expected_error = (
+        "Your semantic model is too large. "
+        "Passed size is 41937 characters. "
+        "We need you to remove 16416 characters in your semantic model. Please check: \n"
+        " (1) If you have long descriptions that can be truncated. \n"
+        " (2) If you can remove some columns that are not used within your tables. \n"
+        " (3) If you have extra tables you do not need."
+    )
 
     assert expected_error in str(exc_info.value), "Unexpected error message"
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_valid_yaml_many_sample_values(mock_logger, mock_snowflake_connection):
+    account_name = "snowflake test"
+    yaml = proto_to_yaml(validate_yamls._VALID_YAML_MANY_SAMPLE_VALUES)
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(yaml)
+        tmp.flush()
+        assert validate_from_local_path(tmp.name, account_name) is None

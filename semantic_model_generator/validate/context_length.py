@@ -1,4 +1,4 @@
-from typing import TypeVar, Any
+from typing import Any, TypeVar
 
 from google.protobuf.message import Message
 from loguru import logger
@@ -78,7 +78,10 @@ def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
     yaml_str = proto_to_yaml(model)
     # Pass in the str version of the semantic context yaml.
     # This isn't exactly how many tokens the model will be, but should roughly be correct.
-    literals_buffer = _TOKENS_PER_LITERAL_RETRIEVAL + num_search_services * _TOKENS_PER_LITERAL_RETRIEVAL
+    literals_buffer = (
+        _TOKENS_PER_LITERAL_RETRIEVAL
+        + num_search_services * _TOKENS_PER_LITERAL_RETRIEVAL
+    )
     approx_instruction_length = _BASE_INSTRUCTION_TOKEN_LENGTH + literals_buffer
     model_tokens_limit = _TOTAL_PROMPT_TOKEN_LIMIT - approx_instruction_length
     model_tokens = len(yaml_str) // _CHARS_PER_TOKEN
