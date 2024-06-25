@@ -6,6 +6,10 @@ from loguru import logger
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
 
 ProtoMsg = TypeVar("ProtoMsg", bound=Message)
+
+# Max total tokens is 8200.
+# We reserve 500 tokens for response (average response is 300 tokens).
+# So the prompt token limit is 7700.
 _TOTAL_PROMPT_TOKEN_LIMIT = 7700
 _BASE_INSTRUCTION_TOKEN_LENGTH = 1220
 _TOKENS_PER_LITERAL_RETRIEVAL = 100
@@ -70,7 +74,6 @@ def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
     model.ClearField("verified_queries")
     _truncate_sample_values(model)
     num_search_services = _count_search_services(model)
-    import pdb; pdb.set_trace()
 
     yaml_str = proto_to_yaml(model)
     # Pass in the str version of the semantic context yaml.
