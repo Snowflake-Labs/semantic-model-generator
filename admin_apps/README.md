@@ -1,15 +1,33 @@
-This app combines semantic model generation, validation, and verified query workflow and aiming to provide jump start to `cortex analyst` users.
+# Admin apps
 
+This folder contains two Streamlit apps that are designed to help you manage your semantic models for the Cortex Analyst feature.
 
-TODO:
-1. Add inline validation of fields and forms.  E.g. if 'SQL Expression' is a required field
-   for adding a dimension then prompt about the missing field in the UI itself.
-2. Handle error cases in 'Add Table' workflow.
-3. Move the stage requirement to only apply to upload tab, when API endpoint allows passing in the semantic context string, instead of the stage path.
-4. Add an option to specify connection parameters in the app, instead of env vars.
-5. Move streamlit version to 1.36.0 when available.
+<table border="0">
+   <tr>
+     <td><img src="fillme" width="300"></td>
+     <td><img src="fillme" width="300"></td>
+  </tr>
+  <tr>
+      <td><strong>Builder app</strong> · so you can build your semantic model and edit tables, measures and dimensions from a UI</td>
+      <td><strong>Chat app</strong> · so you can iterate on your semantic model by trying it live in a chat UI!</td>
+   </tr>
 
-Known issues:
-1. Sometimes the 'Show YAML' and 'Add Table' buttons don't respond to clicks after the user
-   has imported an existing model.
-2. The semantic model name doesn't update in the headline immediately after user enters it.
+<table>
+
+## Get started
+
+1. Make sure you've installed the requirements from the `pyproject.toml` file in the root of this repository.
+
+2. Inside this directory, run the following command:
+
+```bash
+streamlit run builder_app.py  # for the Builder app
+```
+
+... or
+
+```bash
+streamlit run chat_app.py  # for the Chat app
+```
+
+3. Enjoy!
