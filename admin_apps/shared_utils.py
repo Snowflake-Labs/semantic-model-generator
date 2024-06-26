@@ -823,3 +823,10 @@ class SnowflakeStage:
     stage_database: str
     stage_schema: str
     stage_name: str
+
+    def to_dict(self):
+        return {
+            "Database": self.stage_database,
+            "Schema": self.stage_schema,
+            "Stage": self.stage_name,
+        }

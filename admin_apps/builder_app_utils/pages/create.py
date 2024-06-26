@@ -4,7 +4,7 @@ from shared_utils import display_semantic_model, import_yaml, init_session_state
 init_session_states()
 
 # In case the semantic model was built already,
-# the next page should be available already.
+# the next page should be available.
 st.session_state["next_is_unlocked"] = semantic_model_exists()
 
 """ Create your semantic model from scratch or by uploading an existing YAML file."""

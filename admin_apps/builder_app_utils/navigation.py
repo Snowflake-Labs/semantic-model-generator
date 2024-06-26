@@ -2,7 +2,7 @@ from __future__ import annotations
 import streamlit as st
 
 # Specify app navigation utils
-PAGES_DIRECTORY = "yaml_app_utils/pages"
+PAGES_DIRECTORY = "builder_app_utils/pages"
 NAVIGATION = [
     st.Page(
         page=f"{PAGES_DIRECTORY}/getting_started.py",
@@ -47,12 +47,12 @@ a[data-testid="stPageLink-NavLink"] > span {
 CUSTOM_STYLE_ANIMATION = """
 a[data-testid="stPageLink-NavLink"] > span {
     margin-left: auto;
-    animation: signal 3s;
+    animation: infinite signal .2s;
 }
 
 @keyframes signal {
-  from {color: blue;}
-  to {color: default;}
+  from {color: default;}
+  to {color: green;}
 }
 """
 
