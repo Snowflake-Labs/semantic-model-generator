@@ -14,6 +14,7 @@ from shared_utils import (
     SNOWFLAKE_ACCOUNT,
     SnowflakeStage,
     init_session_states,
+    add_logo
 )
 
 st.set_page_config(layout="wide", page_icon="💬", page_title="Chat app")
@@ -435,6 +436,13 @@ def set_up_requirements():
 if "snowflake_stage" not in st.session_state:
     set_up_requirements()
     st.stop()
+
+add_logo()
+
+with st.sidebar:
+    # Show app title (common to all pages)
+    st.title("Chat app 💬")
+    st.write("Your companion app to build a Snowflake semantic model.")
 
 # TODO: Load semantic model YAML file from stage instead of hard-coded
 yaml = (Path(".") / st.session_state.file_name).read_text()

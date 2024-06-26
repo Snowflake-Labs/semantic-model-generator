@@ -2,7 +2,7 @@ from __future__ import annotations
 import streamlit as st
 from streamlit_extras.stylable_container import stylable_container
 
-from shared_utils import model_is_validated, semantic_model_exists, show_yaml_in_dialog, AppMetadata
+from shared_utils import add_logo, model_is_validated, semantic_model_exists, show_yaml_in_dialog, AppMetadata
 from builder_app_utils.navigation import (
     NAVIGATION,
     PAGES_DIRECTORY,
@@ -13,7 +13,7 @@ from builder_app_utils.navigation import (
     get_spec,
 )
 
-st.set_page_config(layout="centered")
+st.set_page_config(layout="centered", page_title="Builder app", page_icon="👷")
 
 # Import Material Icons manually so we can use
 # them beyond page titles in st.markdown or so.
@@ -21,17 +21,7 @@ MATERIAL_ICONS_URL = "https://fonts.googleapis.com/css2?family=Material+Symbols+
 material_icons_css = f'<link rel="stylesheet" href="{MATERIAL_ICONS_URL}" />'
 st.markdown(material_icons_css, unsafe_allow_html=True)
 
-# Add a logo on the top-left corner of the app
-LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/2560px-Snowflake_Logo.svg.png"
-LOGO_URL_SMALL = (
-    "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
-)
-
-st.logo(
-    image=LOGO_URL_LARGE,
-    link="https://www.snowflake.com/en/data-cloud/cortex/",
-    icon_image=LOGO_URL_SMALL,
-)
+add_logo()
 
 selected_page: st.Page = st.navigation(
     NAVIGATION,
@@ -42,7 +32,7 @@ selected_page: st.Page = st.navigation(
 with st.sidebar:
 
     # Show app title (common to all pages)
-    st.title("Semantic model builder")
+    st.title("Builder app 👷")
     st.write("Your companion app to build a Snowflake semantic model.")
 
     st.caption(

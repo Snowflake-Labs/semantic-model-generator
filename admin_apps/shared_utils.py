@@ -20,6 +20,18 @@ from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
+# Add a logo on the top-left corner of the app
+LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/2560px-Snowflake_Logo.svg.png"
+LOGO_URL_SMALL = (
+    "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
+)
+
+def add_logo() -> None:
+    st.logo(
+        image=LOGO_URL_LARGE,
+        link="https://www.snowflake.com/en/data-cloud/cortex/",
+        icon_image=LOGO_URL_SMALL,
+    )
 
 def update_last_validated_model() -> None:
     """Whenever user validated, update the last_validated_model to track semantic_model,
