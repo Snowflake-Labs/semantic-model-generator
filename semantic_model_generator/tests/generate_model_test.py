@@ -43,7 +43,7 @@ _CONVERTED_TABLE_ALIAS = Table(
             column_name="ZIP_CODE",
             column_type="TEXT",
             values=None,
-            comment=None,
+            comment="some column comment",
         ),
         Column(
             id_=1,
@@ -67,7 +67,7 @@ _CONVERTED_TABLE_ALIAS = Table(
             comment=None,
         ),
     ],
-    comment=None,
+    comment="some table comment",
 )
 
 
@@ -314,7 +314,7 @@ def mock_dependencies_exceed_context(mock_snowflake_connection):
 def test_raw_schema_to_semantic_context(
     mock_dependencies, mock_snowflake_connection, mock_snowflake_connection_env
 ):
-    want_yaml = "name: this is the best semantic model ever\ntables:\n  - name: ALIAS\n    description: '  '\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  '\n        synonyms:\n          - '  '\n        description: '  '\n        expr: '  '\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  '\n        description: '  '\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  '\n        description: '  '\n        expr: CBSA\n        data_type: NUMBER\n"
+    want_yaml = "name: this is the best semantic model ever\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  '\n        synonyms:\n          - '  '\n        description: '  '\n        expr: '  '\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  '\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  '\n        description: '  '\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  '\n        description: '  '\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  '\n        description: '  '\n        expr: CBSA\n        data_type: NUMBER\n"
 
     snowflake_account = "test_account"
     base_tables = ["test_db.schema_test.ALIAS"]
@@ -365,7 +365,7 @@ def test_generate_base_context_with_placeholder_comments(
     mock_file.assert_called_once_with(output_path, "w")
     # Assert file save called with placeholder comments added.
     mock_file().write.assert_called_once_with(
-        "name: my awesome semantic model\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
+        "name: my awesome semantic model\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
     )
 
 
@@ -395,7 +395,7 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
 
     # Assert file save called with placeholder comments added along with sample values and cross-database
     mock_file().write.assert_called_once_with(
-        "name: Another Incredible Semantic Model\ntables:\n  - name: ALIAS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: PRODUCTS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: A_DIFFERENT_DATABASE\n      schema: A_DIFFERENT_SCHEMA\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: SKU\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
+        "name: Another Incredible Semantic Model\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: PRODUCTS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: A_DIFFERENT_DATABASE\n      schema: A_DIFFERENT_SCHEMA\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: SKU\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
     )
 
 
