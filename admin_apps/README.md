@@ -4,8 +4,8 @@ This folder contains two Streamlit apps that are designed to help you manage you
 
 <table border="0">
    <tr>
-     <td><img src="fillme" width="300"></td>
-     <td><img src="fillme" width="300"></td>
+     <td><img src="https://github.com/Snowflake-Labs/semantic-model-generator/assets/103658138/d96a4255-9e82-41ba-8a82-dcb87353b667" width="500"></td>
+     <td><img src="https://github.com/Snowflake-Labs/semantic-model-generator/assets/103658138/2b5fd664-9a9a-46ed-afbf-cb7638f0ad19" width="700"></td>
   </tr>
   <tr>
       <td><strong>Builder app</strong> · so you can build your semantic model and edit tables, measures and dimensions from a UI</td>
