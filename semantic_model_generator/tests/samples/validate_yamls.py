@@ -5,6 +5,12 @@ tables:
       database: AUTOSQL_DATASET_BIRD_V2
       schema: ADDRESS
       table: ALIAS
+    filters:
+      - name: '  ' # <FILL-OUT>
+        synonyms:
+          - '  ' # <FILL-OUT>
+        description: '  ' # <FILL-OUT>
+        expr: '  ' # <FILL-OUT>
     dimensions:
       - name: ALIAS
         synonyms:
