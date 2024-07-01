@@ -465,11 +465,11 @@ with yaml_container:
     title = "**Edit**"
     yaml_editor(yaml, status_container=title_container)
 
-FIRST_MESSAGE = """Welcome! 😊
+FIRST_MESSAGE = f"""Welcome! 😊
 In this app, you can iteratively edit the semantic model YAML
 on the left side, and test it out in a chat setting here on the right side.
 
-Just so you know, I'm currently using the semantic model `FOOBAR` that
+Just so you know, I'm currently using the semantic model `{st.session_state.file_name}` that
 was last edited on `FILL_ME`.
 
 How can I help you today?
