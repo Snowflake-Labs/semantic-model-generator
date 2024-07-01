@@ -1,10 +1,9 @@
-import streamlit as st
 import json
 import os
 import time
 from typing import Any, Dict, List, Optional
 
-from pathlib import Path
+from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 import pandas as pd
 import requests
@@ -49,7 +48,7 @@ connector = get_connector()
 
 
 def get_file_name() -> str:
-    return st.session_state.file_name
+    return st.session_state.file_name  # type: ignore
 
 
 @st.cache_data(show_spinner=False)
@@ -146,7 +145,7 @@ def show_expr_for_ref(message_index: int) -> None:
 
 @st.experimental_dialog("Edit", width="large")
 def edit_verified_query(
-    conn: SnowflakeConnection, sql: str, question: str, message_index: int
+        conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
     """Allow user to correct generated SQL and add to verfied queries.
     Note: Verified queries needs to be against logical table/column."""
@@ -175,8 +174,8 @@ def edit_verified_query(
             st.caption("**Output data**")
             st.dataframe(df)
             if st.button(
-                "Click to save modified query to yaml",
-                key=f"confirm_vqr_idx_{message_index}",
+                    "Click to save modified query to yaml",
+                    key=f"confirm_vqr_idx_{message_index}",
             ):
                 add_verified_query(question, sql)
                 st.session_state.editing = False
@@ -201,7 +200,7 @@ def add_verified_query(question: str, sql: str) -> None:
     verified_query = semantic_model_pb2.VerifiedQuery(
         question=question,
         sql=sql,
-        verified_by=USER,
+        verified_by=st.session_state["user_name"],
         verified_at=int(time.time()),
     )
     st.session_state.semantic_model.verified_queries.append(verified_query)
@@ -211,9 +210,9 @@ def add_verified_query(question: str, sql: str) -> None:
 
 
 def display_content(
-    conn: SnowflakeConnection,
-    content: List[Dict[str, Any]],
-    message_index: Optional[int] = None,
+        conn: SnowflakeConnection,
+        content: List[Dict[str, Any]],
+        message_index: Optional[int] = None,
 ) -> None:
     """Displays a content item for a message. For generated SQL, allow user to add to verified queries directly or edit then add."""
     message_index = message_index or len(st.session_state.messages)
@@ -229,10 +228,10 @@ def display_content(
                 st.markdown(suggestion_response["explanation"])
                 with st.expander("Suggestions", expanded=True):
                     for suggestion_index, suggestion in enumerate(
-                        suggestion_response["suggestions"]
+                            suggestion_response["suggestions"]
                     ):
                         if st.button(
-                            suggestion, key=f"{message_index}_{suggestion_index}"
+                                suggestion, key=f"{message_index}_{suggestion_index}"
                         ):
                             st.session_state.active_suggestion = suggestion
             else:
@@ -254,16 +253,16 @@ def display_content(
 
                 left, right = st.columns(2)
                 if right.button(
-                    "Save as verified query",
-                    key=f"save_idx_{message_index}",
-                    use_container_width=True,
+                        "Save as verified query",
+                        key=f"save_idx_{message_index}",
+                        use_container_width=True,
                 ):
                     add_verified_query(question, remove_ltable_cte(sql))
 
                 if left.button(
-                    "Edit",
-                    key=f"edits_idx_{message_index}",
-                    use_container_width=True,
+                        "Edit",
+                        key=f"edits_idx_{message_index}",
+                        use_container_width=True,
                 ):
                     edit_verified_query(conn, sql, question, message_index)
 
@@ -311,7 +310,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 
 
 @st.experimental_dialog("Upload", width="small")
-def upload_dialog(content: str):
+def upload_dialog(content: str) -> None:
     st.markdown("This will upload your YAML to the following Snowflake stage.")
     st.write(st.session_state.snowflake_stage.to_dict())
     if st.button("Let's do it!"):
@@ -320,12 +319,12 @@ def upload_dialog(content: str):
         pass
 
 
-def update_container(container: st.container, content: str, prefix: str = None) -> None:
+def update_container(container: DeltaGenerator, content: str, prefix: Optional[str]) -> None:
     """
     Update the given Streamlit container with the provided content.
 
     Args:
-        container (st.container): The Streamlit container to update.
+        container (DeltaGenerator): The Streamlit container to update.
         content (str): The content to be displayed in the container.
         prefix (str): The prefix to be added to the content.
     """
@@ -347,24 +346,25 @@ def update_container(container: st.container, content: str, prefix: str = None) 
 
 
 @st.experimental_dialog("Error", width="small")
-def exception_as_dialog(e: Exception):
+def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
+
 @st.experimental_fragment
-def yaml_editor(yaml: str, status_container: st.container):
+def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
     """
     Editor for YAML content. Meant to be used on the left side
     of the app.
 
     Args:
-        yaml (str): YAML content to be edited.
-        title_container (st.container): Container in
+        yaml_str (str): YAML content to be edited.
+        status_container (DeltaGenerator): Container in
             which we will write the edition status (validated, editing
             or failed).
     """
 
     content = st_monaco(
-        value=yaml,
+        value=yaml_str,
         height="600px",
         language="yaml",
     )
@@ -407,8 +407,9 @@ def yaml_editor(yaml: str, status_container: st.container):
     "Welcome to the Chat app! 💬",
     width="large",
 )
-def set_up_requirements():
-    st.markdown("Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup).")
+def set_up_requirements() -> None:
+    st.markdown(
+        "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup).")
     account_name = st.text_input(
         "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
     )
@@ -478,7 +479,7 @@ How can I help you today?
 with chat_container:
     st.markdown("**Chat**")
     with connector.connect(
-        db_name=st.session_state.snowflake_stage.stage_database,
-        schema_name=st.session_state.snowflake_stage.stage_schema,
+            db_name=st.session_state.snowflake_stage.stage_database,
+            schema_name=st.session_state.snowflake_stage.stage_schema,
     ) as conn:
         chat_and_edit_vqr(conn)

@@ -17,7 +17,7 @@ from semantic_model_generator.generate_model import raw_schema_to_semantic_conte
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 
-SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
+SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # Add a logo on the top-left corner of the app
@@ -769,7 +769,7 @@ def stage_exists() -> bool:
     return "snowflake_stage" in st.session_state
 
 
-def get_environment_variables() -> dict:
+def get_environment_variables() -> dict[str, str | None]:
     import os
     return {
         key: os.getenv(key)
@@ -790,8 +790,9 @@ def environment_variables_exist() -> bool:
 
 def model_is_validated() -> bool:
     if semantic_model_exists():
-        return st.session_state.validated
+        return st.session_state.validated  # type: ignore
     return False
+
 
 def download_yaml(file_name: str) -> str:
     """util to download a semantic YAML from a stage."""
@@ -809,8 +810,8 @@ def download_yaml(file_name: str) -> str:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         with connector.connect(
-                db_name=st.session_state.snowflake_stage.stage_database,
-                schema_name=st.session_state.snowflake_stage.stage_schema,
+            db_name=st.session_state.snowflake_stage.stage_database,
+            schema_name=st.session_state.snowflake_stage.stage_schema,
         ) as conn:
             # Downloads the YAML to {temp_dir}/{file_name}.
             download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
@@ -839,20 +840,22 @@ class AppMetadata:
         if stage_exists():
             stage = st.session_state.snowflake_stage
             return f"{stage.stage_database}.{stage.stage_schema}.{stage.stage_name}"
+        return None
 
     @property
     def model(self) -> str | None:
         if semantic_model_exists():
-            return st.session_state.semantic_model.name
+            return st.session_state.semantic_model.name  # type: ignore
+        return None
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, str | None]:
         return {
             "User": self.user,
             "Stage": self.stage,
             "Model": self.model,
         }
 
-    def show_as_dataframe(self):
+    def show_as_dataframe(self) -> None:
         data = self.to_dict()
         st.dataframe(
             data,
@@ -866,7 +869,7 @@ class SnowflakeStage:
     stage_schema: str
     stage_name: str
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, str]:
         return {
             "Database": self.stage_database,
             "Schema": self.stage_schema,

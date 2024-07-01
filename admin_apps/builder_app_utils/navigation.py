@@ -1,5 +1,6 @@
 from __future__ import annotations
 import streamlit as st
+from streamlit.navigation.page import StreamlitPage
 
 # Specify app navigation utils
 PAGES_DIRECTORY = "builder_app_utils/pages"
@@ -57,7 +58,7 @@ a[data-testid="stPageLink-NavLink"] > span {
 """
 
 def get_selected_page_index(
-    selected_page: st.Page, navigation: list[st.Page] = NAVIGATION
+    selected_page: StreamlitPage, navigation: list[StreamlitPage] = NAVIGATION
 ) -> int:
     """
     Get page index
@@ -77,9 +78,9 @@ def get_selected_page_index(
 
 
 def get_previous_and_next_pages(
-    selected_page: st.Page,
-    navigation: list[st.Page] = NAVIGATION,
-) -> tuple[st.Page | None, st.Page | None]:
+    selected_page: StreamlitPage,
+    navigation: list[StreamlitPage] = NAVIGATION,
+) -> tuple[StreamlitPage | None, StreamlitPage | None]:
     """
     Get the previous and next page objects for a given page.
     This assumes the pages are sorted sequentially inside
@@ -109,10 +110,10 @@ def get_previous_and_next_pages(
     else:
         next_page = navigation[selected_page_index + 1]
 
-    return (previous_page, next_page)
+    return previous_page, next_page
 
 
-def get_spec(previous_page: st.Page | None, next_page: st.Page | None) -> tuple:
+def get_spec(previous_page: StreamlitPage | None, next_page: StreamlitPage | None) -> tuple[int, int, int]:
     """
     Get a spec for the st.columns to work nicely depending on the labels
     for the previous (left) and next (right) buttons.

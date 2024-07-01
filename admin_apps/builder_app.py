@@ -1,5 +1,6 @@
 from __future__ import annotations
 import streamlit as st
+from streamlit.navigation.page import StreamlitPage
 from streamlit_extras.stylable_container import stylable_container
 
 from shared_utils import add_logo, model_is_validated, semantic_model_exists, show_yaml_in_dialog, AppMetadata
@@ -23,7 +24,7 @@ st.markdown(material_icons_css, unsafe_allow_html=True)
 
 add_logo()
 
-selected_page: st.Page = st.navigation(
+selected_page: StreamlitPage = st.navigation(
     NAVIGATION,
     position="hidden",  # We hide the default navigation since we make a custom topnav one
 )
