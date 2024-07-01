@@ -43,6 +43,11 @@ jobs:
         run: |
           $HOME/.local/bin/poetry install --no-interaction
 
+      - name: Install admin app dependencies using Poetry
+        working-directory: admin_apps
+        run: |
+          $HOME/.local/bin/poetry install --no-interaction
+
       - name: Run mypy
         run: |
             make run_mypy
