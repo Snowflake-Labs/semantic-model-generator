@@ -10,9 +10,16 @@ ProtoMsg = TypeVar("ProtoMsg", bound=Message)
 # Max total tokens is 8200.
 # We reserve 500 tokens for response (average response is 300 tokens).
 # So the prompt token limit is 7700.
+# We reserve 1220 tokens for model instructions, separate from the semantic model.
+# Thus, the semantic model will get about 6480 tokens,
+# with some more discounting for retrieved literals.
 _TOTAL_PROMPT_TOKEN_LIMIT = 7700
 _BASE_INSTRUCTION_TOKEN_LENGTH = 1220
-_TOKENS_PER_LITERAL_RETRIEVAL = 100
+#  Estimated 10 tokens per literals since each literal is presented as a filter expression
+#  (i.e. table.column = 'literal').
+#  Currently 10 literals are retrieved per search.
+_TOKENS_PER_LITERAL = 10
+_NUM_LITERAL_RETRIEVALS = 10
 
 # As per https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
 _CHARS_PER_TOKEN = 4
@@ -79,8 +86,7 @@ def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
     # Pass in the str version of the semantic context yaml.
     # This isn't exactly how many tokens the model will be, but should roughly be correct.
     literals_buffer = (
-        _TOKENS_PER_LITERAL_RETRIEVAL
-        + num_search_services * _TOKENS_PER_LITERAL_RETRIEVAL
+        _TOKENS_PER_LITERAL * _NUM_LITERAL_RETRIEVALS * (1 + num_search_services)
     )
     approx_instruction_length = _BASE_INSTRUCTION_TOKEN_LENGTH + literals_buffer
     model_tokens_limit = _TOTAL_PROMPT_TOKEN_LIMIT - approx_instruction_length
