@@ -793,6 +793,36 @@ def model_is_validated() -> bool:
         return st.session_state.validated
     return False
 
+def download_yaml(file_name: str) -> str:
+    """util to download a semantic YAML from a stage."""
+    import os
+    import tempfile
+
+    from semantic_model_generator.snowflake_utils.snowflake_connector import (
+        SnowflakeConnector,
+    )
+
+    connector = SnowflakeConnector(
+        account_name=SNOWFLAKE_ACCOUNT,
+        max_workers=1,
+    )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with connector.connect(
+                db_name=st.session_state.snowflake_stage.stage_database,
+                schema_name=st.session_state.snowflake_stage.stage_schema,
+        ) as conn:
+            # Downloads the YAML to {temp_dir}/{file_name}.
+            download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
+            conn.cursor().execute(download_yaml_sql)
+
+            tmp_file_path = os.path.join(temp_dir, f"{file_name}")
+            with open(tmp_file_path, "r") as temp_file:
+                # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
+                yaml_str = temp_file.read()
+                return yaml_str
+
+
 @dataclass
 class AppMetadata:
     """

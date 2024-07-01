@@ -14,7 +14,7 @@ from shared_utils import (
     SNOWFLAKE_ACCOUNT,
     SnowflakeStage,
     init_session_states,
-    add_logo
+    add_logo, download_yaml
 )
 
 st.set_page_config(layout="wide", page_icon="💬", page_title="Chat app")
@@ -408,7 +408,7 @@ def yaml_editor(yaml: str, status_container: st.container):
     width="large",
 )
 def set_up_requirements():
-    st.markdown("Before we get started, let's make sure we have everything set up.")
+    st.markdown("Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup).")
     account_name = st.text_input(
         "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
     )
@@ -417,7 +417,7 @@ def set_up_requirements():
     stage_database = st.text_input("Stage database", value="SNOWFLAKE_SEMANTIC_CONTEXT")
     stage_schema = st.text_input("Stage schema", value="DEFINITIONS")
     stage_name = st.text_input("Stage name", value="TEST")
-    file_name = st.text_input("File name", value="jaffle_shop.yaml")
+    file_name = st.text_input("File name", value="")
     if st.button("Submit"):
         st.session_state["snowflake_stage"] = SnowflakeStage(
             stage_database=stage_database,
@@ -444,8 +444,7 @@ with st.sidebar:
     st.title("Chat app 💬")
     st.write("Your companion app to build a Snowflake semantic model.")
 
-# TODO: Load semantic model YAML file from stage instead of hard-coded
-yaml = (Path(".") / st.session_state.file_name).read_text()
+yaml = download_yaml(st.session_state.file_name)
 if "last_saved_yaml" not in st.session_state:
     st.session_state["last_saved_yaml"] = yaml
 
