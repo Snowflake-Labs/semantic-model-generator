@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
 
     steps:
       - name: Check out the code
@@ -40,6 +40,11 @@ jobs:
           $HOME/.local/bin/poetry config virtualenvs.create false
 
       - name: Install dependencies using Poetry
+        run: |
+          $HOME/.local/bin/poetry install --no-interaction
+
+      - name: Install admin app dependencies using Poetry
+        working-directory: admin_apps
         run: |
           $HOME/.local/bin/poetry install --no-interaction
 

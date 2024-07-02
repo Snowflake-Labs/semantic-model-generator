@@ -1,6 +1,9 @@
+from __future__ import annotations
 import os
 from datetime import datetime
 from io import StringIO
+import time
+from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
@@ -14,9 +17,21 @@ from semantic_model_generator.generate_model import raw_schema_to_semantic_conte
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 
-SNOWFLAKE_ACCOUNT = os.environ["SNOWFLAKE_ACCOUNT_LOCATOR"]
+SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
+# Add a logo on the top-left corner of the app
+LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/2560px-Snowflake_Logo.svg.png"
+LOGO_URL_SMALL = (
+    "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
+)
+
+def add_logo() -> None:
+    st.logo(
+        image=LOGO_URL_LARGE,
+        link="https://www.snowflake.com/en/data-cloud/cortex/",
+        icon_image=LOGO_URL_SMALL,
+    )
 
 def update_last_validated_model() -> None:
     """Whenever user validated, update the last_validated_model to track semantic_model,
@@ -585,16 +600,32 @@ def display_semantic_model() -> None:
     Renders the entire semantic model.
     """
     semantic_model = st.session_state.semantic_model
-    semantic_model.name = st.text_input("Name", semantic_model.name)
-    semantic_model.description = st.text_area(
-        "Description",
-        semantic_model.description,
-        key="display-semantic-model-description",
-    )
+    with st.form(border=False, key="create"):
+        name = st.text_input(
+            "Name",
+            semantic_model.name,
+            placeholder="My semantic model",
+        )
+
+        description = st.text_area(
+            "Description",
+            semantic_model.description,
+            key="display-semantic-model-description",
+            placeholder="The model describes the data and metrics available for Foocorp",
+        )
+
+        left, right = st.columns((1, 4), vertical_alignment="center")
+        if left.form_submit_button("Create", use_container_width=True):
+            st.session_state.semantic_model.name = name
+            st.session_state.semantic_model.description = description
+            st.session_state["next_is_unlocked"] = True
+            right.success("Successfully created model. Updating...")
+            time.sleep(1.5)
+            st.rerun()
 
 
 def edit_semantic_model() -> None:
-    st.write("### Tables")
+    st.write("#### Tables")
     for t in st.session_state.semantic_model.tables:
         with st.expander(t.name):
             display_table(t.name)
@@ -625,7 +656,8 @@ def import_yaml() -> None:
             return
 
         st.session_state["semantic_model"] = pb
-        st.success(f"Successfully imported {pb.name}!", icon="✅")
+        st.success(f"Successfully imported **{pb.name}**!")
+        st.session_state["next_is_unlocked"] = True
         if "yaml_just_imported" not in st.session_state:
             st.session_state["yaml_just_imported"] = True
             st.rerun()
@@ -692,9 +724,13 @@ def validate_and_upload_tmp_yaml() -> None:
         upload_yaml(_TMP_FILE_NAME)
         st.session_state.validated = True
         update_last_validated_model()
-        st.success("Successfully validated your model!")
     except Exception as e:
         st.warning(f"Invalid YAML: {e} please fix!")
+
+    st.success("Successfully validated your model!")
+    st.session_state["next_is_unlocked"] = True
+    time.sleep(1)
+    st.rerun()
 
 
 @st.experimental_dialog("Upload YAML to stage")  # type: ignore[misc]
@@ -727,3 +763,115 @@ def semantic_model_exists() -> bool:
                 model_name: str = st.session_state.semantic_model.name.strip()
                 return model_name != ""
     return False
+
+
+def stage_exists() -> bool:
+    return "snowflake_stage" in st.session_state
+
+
+def get_environment_variables() -> dict[str, str | None]:
+    import os
+    return {
+        key: os.getenv(key)
+        for key in (
+            "SNOWFLAKE_USER",
+            "SNOWFLAKE_PASSWORD",
+            "SNOWFLAKE_ROLE",
+            "SNOWFLAKE_WAREHOUSE",
+            "SNOWFLAKE_HOST",
+            "SNOWFLAKE_ACCOUNT_LOCATOR",
+        )
+    }
+
+def environment_variables_exist() -> bool:
+    snowflake_env = get_environment_variables()
+    return all([env != None for env in snowflake_env.values()])
+
+
+def model_is_validated() -> bool:
+    if semantic_model_exists():
+        return st.session_state.validated  # type: ignore
+    return False
+
+
+def download_yaml(file_name: str) -> str:
+    """util to download a semantic YAML from a stage."""
+    import os
+    import tempfile
+
+    from semantic_model_generator.snowflake_utils.snowflake_connector import (
+        SnowflakeConnector,
+    )
+
+    connector = SnowflakeConnector(
+        account_name=SNOWFLAKE_ACCOUNT,
+        max_workers=1,
+    )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with connector.connect(
+            db_name=st.session_state.snowflake_stage.stage_database,
+            schema_name=st.session_state.snowflake_stage.stage_schema,
+        ) as conn:
+            # Downloads the YAML to {temp_dir}/{file_name}.
+            download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
+            conn.cursor().execute(download_yaml_sql)
+
+            tmp_file_path = os.path.join(temp_dir, f"{file_name}")
+            with open(tmp_file_path, "r") as temp_file:
+                # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
+                yaml_str = temp_file.read()
+                return yaml_str
+
+
+@dataclass
+class AppMetadata:
+    """
+    Metadata about the active semantic model and environment variables
+    being in used in the app session.
+    """
+
+    @property
+    def user(self) -> str | None:
+        return os.getenv("SNOWFLAKE_USER")
+
+    @property
+    def stage(self) -> str | None:
+        if stage_exists():
+            stage = st.session_state.snowflake_stage
+            return f"{stage.stage_database}.{stage.stage_schema}.{stage.stage_name}"
+        return None
+
+    @property
+    def model(self) -> str | None:
+        if semantic_model_exists():
+            return st.session_state.semantic_model.name  # type: ignore
+        return None
+
+    def to_dict(self) -> dict[str, str | None]:
+        return {
+            "User": self.user,
+            "Stage": self.stage,
+            "Model": self.model,
+        }
+
+    def show_as_dataframe(self) -> None:
+        data = self.to_dict()
+        st.dataframe(
+            data,
+            column_config={"value": st.column_config.Column(label="Value")},
+            use_container_width=True,
+        )
+
+@dataclass
+class SnowflakeStage:
+    stage_database: str
+    stage_schema: str
+    stage_name: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "Database": self.stage_database,
+            "Schema": self.stage_schema,
+            "Stage": self.stage_name,
+        }
