@@ -9,6 +9,8 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
+
+from semantic_model_generator.data_processing.proto_utils import proto_to_yaml, yaml_to_semantic_model
 from shared_utils import (
     SNOWFLAKE_ACCOUNT,
     SnowflakeStage,
@@ -207,6 +209,7 @@ def add_verified_query(question: str, sql: str) -> None:
     st.success(
         "Verified Query Added! You can go back to validate your YAML again and upload; or keep adding more verified queries."
     )
+    st.rerun()
 
 
 def display_content(
@@ -418,7 +421,7 @@ def set_up_requirements() -> None:
     stage_database = st.text_input("Stage database", value="SNOWFLAKE_SEMANTIC_CONTEXT")
     stage_schema = st.text_input("Stage schema", value="DEFINITIONS")
     stage_name = st.text_input("Stage name", value="TEST")
-    file_name = st.text_input("File name", value="")
+    file_name = st.text_input("File name", value="revenue_timeseries_no_pk.yaml")
     if st.button("Submit"):
         st.session_state["snowflake_stage"] = SnowflakeStage(
             stage_database=stage_database,
@@ -448,6 +451,10 @@ with st.sidebar:
 yaml = download_yaml(st.session_state.file_name)
 if "last_saved_yaml" not in st.session_state:
     st.session_state["last_saved_yaml"] = yaml
+    st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
+if "yaml" not in st.session_state:
+    st.session_state["yaml"] = yaml
+    st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
 
 # Now, user can interact with both panels
 left, right = st.columns(2)
@@ -464,7 +471,7 @@ the semantic model must be validated to be uploaded."""
 with yaml_container:
     title_container = st.empty()
     title = "**Edit**"
-    yaml_editor(yaml, status_container=title_container)
+    yaml_editor(proto_to_yaml(st.session_state["semantic_model"]), status_container=title_container)
 
 FIRST_MESSAGE = f"""Welcome! 😊
 In this app, you can iteratively edit the semantic model YAML
