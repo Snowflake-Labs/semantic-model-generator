@@ -40,7 +40,7 @@ OPTIONAL_FIELD_NUMBER: _ClassVar[int]
 optional: _descriptor.FieldDescriptor
 
 class Dimension(_message.Message):
-    __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values")
+    __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values", "cortex_search_service_name")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SYNONYMS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -48,6 +48,7 @@ class Dimension(_message.Message):
     DATA_TYPE_FIELD_NUMBER: _ClassVar[int]
     UNIQUE_FIELD_NUMBER: _ClassVar[int]
     SAMPLE_VALUES_FIELD_NUMBER: _ClassVar[int]
+    CORTEX_SEARCH_SERVICE_NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     synonyms: _containers.RepeatedScalarFieldContainer[str]
     description: str
@@ -55,7 +56,8 @@ class Dimension(_message.Message):
     data_type: str
     unique: bool
     sample_values: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., unique: bool = ..., sample_values: _Optional[_Iterable[str]] = ...) -> None: ...
+    cortex_search_service_name: str
+    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., unique: bool = ..., sample_values: _Optional[_Iterable[str]] = ..., cortex_search_service_name: _Optional[str] = ...) -> None: ...
 
 class TimeDimension(_message.Message):
     __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values")

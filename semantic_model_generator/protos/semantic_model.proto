@@ -46,6 +46,8 @@ message Dimension {
     bool unique = 6 [(optional) = true];
     // Sample values of this column.
     repeated string sample_values = 7 [(optional) = true];
+    // Name of a Cortex Search Service configured on this column.
+    string cortex_search_service_name = 12 [(optional) = true];
 }
 
 // Time dimension columns contain time values (e.g. sale_date, created_at, year).
