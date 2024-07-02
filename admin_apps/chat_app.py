@@ -165,33 +165,33 @@ def edit_verified_query(
                 height=200
             )
             run = st.form_submit_button("Run", use_container_width=True)
+            save = st.form_submit_button("Save as verified query", use_container_width=True)
 
-    if run:
-        try:
-            sql_to_execute = expand_all_logical_tables_as_ctes(
-                user_updated_sql, st.session_state.ctx
-            )
+            if run:
+                try:
+                    sql_to_execute = expand_all_logical_tables_as_ctes(
+                        user_updated_sql, st.session_state.ctx
+                    )
 
-            # TODO: figure out how to reuse the original connection, it's closed by this point
-            with connector.connect(
-                db_name=st.session_state.snowflake_stage.stage_database,
-                schema_name=st.session_state.snowflake_stage.stage_schema,
-            ) as connection:
-                df = pd.read_sql(sql_to_execute, connection)
-                st.code(user_updated_sql)
-                st.caption("**Output data**")
-                st.dataframe(df)
-                if st.button(
-                        "Click to save modified query to yaml",
-                        key=f"confirm_vqr_idx_{message_index}",
-                ):
-                    add_verified_query(question, sql)
-                    st.session_state.editing = False
-                    st.session_state.confirmed_edits = False
-        except Exception as e:
-            raise ValueError(
-                f"Edited SQL not compatible with semantic model provided, please double check: {e}"
-            )
+                    # TODO: figure out how to reuse the original connection, it's closed by this point
+                    with connector.connect(
+                            db_name=st.session_state.snowflake_stage.stage_database,
+                            schema_name=st.session_state.snowflake_stage.stage_schema,
+                    ) as connection:
+                        df = pd.read_sql(sql_to_execute, connection)
+                        st.code(user_updated_sql)
+                        st.caption("**Output data**")
+                        st.dataframe(df)
+                except Exception as e:
+                    raise ValueError(
+                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    )
+
+            if save:
+                add_verified_query(question, user_updated_sql)
+                st.session_state.editing = False
+                st.session_state.confirmed_edits = False
+
 
     st.markdown("")
     st.divider()
