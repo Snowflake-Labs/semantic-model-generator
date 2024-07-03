@@ -402,7 +402,6 @@ def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
         on_click=upload_dialog,
         args=(content,),
         use_container_width=True,
-        disabled=not st.session_state.validated,
         help=UPLOAD_HELP,
     )
 
