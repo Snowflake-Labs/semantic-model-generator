@@ -232,6 +232,32 @@ def get_test_table_col_format_w_agg_only() -> semantic_model_pb2.Table:
     )
 
 
+def get_test_table_col_format_agg_and_renaming() -> semantic_model_pb2.Table:
+    return semantic_model_pb2.Table(
+        name="t1",
+        base_table=semantic_model_pb2.FullyQualifiedTable(
+            database="db", schema="sc", table="t1"
+        ),
+        columns=[
+            semantic_model_pb2.Column(
+                name="cost",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                expr="cst",
+            ),
+            semantic_model_pb2.Column(
+                name="clicks",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                expr="clcks",
+            ),
+            semantic_model_pb2.Column(
+                name="cpc",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                expr="sum(cst) / sum(clcks)",
+            ),
+        ],
+    )
+
+
 class SemanticModelTest(TestCase):
     def test_convert_to_column_format(self) -> None:
         """
@@ -369,6 +395,38 @@ class SemanticModelTest(TestCase):
                 ),
             ],
         )
+        assert got == want
+
+    def test_enrich_column_in_expr_with_aggregation_and_renaming(self) -> None:
+        tbl = get_test_table_col_format_agg_and_renaming()
+        got = [c for c in _enrich_column_in_expr_with_aggregation(tbl).columns]
+        want = [
+            semantic_model_pb2.Column(
+                name="cost",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                expr="cst",
+            ),
+            semantic_model_pb2.Column(
+                name="clicks",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                expr="clcks",
+            ),
+            semantic_model_pb2.Column(
+                name="cpc",
+                kind=semantic_model_pb2.ColumnKind.measure,
+                expr="sum(cst) / sum(clcks)",
+            ),
+            semantic_model_pb2.Column(
+                name="clcks",
+                expr="clcks",
+            ),
+            semantic_model_pb2.Column(
+                name="cst",
+                expr="cst",
+            ),
+        ]
+        got.sort(key=lambda c: c.name.lower())
+        want.sort(key=lambda c: c.name.lower())
         assert got == want
 
     def test_expand_all_logical_tables_as_ctes(self) -> None:
