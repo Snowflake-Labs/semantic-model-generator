@@ -171,12 +171,12 @@ def get_all_physical_column_references(
 
 def direct_mapping_logical_columns(
     table: semantic_model_pb2.Table,
-) -> list[semantic_model_pb2.Column]:
+) -> List[semantic_model_pb2.Column]:
     """
     Returns a list of logical columns that map 1:1 to an underlying physical column
     (i.e. logical table's expression is simply the physical column name) in this table.
     """
-    ret: list[semantic_model_pb2.Column] = []
+    ret: List[semantic_model_pb2.Column] = []
     for c in table.columns:
         if _is_physical_table_column(c):
             ret.append(c)
