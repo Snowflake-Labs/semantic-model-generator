@@ -15,7 +15,7 @@ from shared_utils import (
     SNOWFLAKE_ACCOUNT,
     SnowflakeStage,
     init_session_states,
-    add_logo, download_yaml
+    add_logo, download_yaml, user_upload_yaml
 )
 
 st.set_page_config(layout="wide", page_icon="💬", page_title="Chat app")
@@ -322,10 +322,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 def upload_dialog(content: str) -> None:
     st.markdown("This will upload your YAML to the following Snowflake stage.")
     st.write(st.session_state.snowflake_stage.to_dict())
-    if st.button("Let's do it!"):
-        # TODO: This should be replaced with actual upload code
-        print(content)
-        pass
+    st.button("Let's do it!", on_click=user_upload_yaml)
 
 
 def update_container(container: DeltaGenerator, content: str, prefix: Optional[str]) -> None:
@@ -359,7 +356,8 @@ def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
 
-@st.experimental_fragment
+# TODO: how to properly mark fragment back?
+# @st.experimental_fragment
 def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
     """
     Editor for YAML content. Meant to be used on the left side
@@ -388,7 +386,6 @@ def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
 
     left, right, _ = st.columns((1, 1, 2))
     if left.button("Save", use_container_width=True, help=SAVE_HELP):
-
         # Validate new content
         try:
             validate(content, snowflake_account=st.session_state.account_name)
@@ -399,9 +396,7 @@ def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
             update_container(status_container, "failed", prefix=title)
             exception_as_dialog(e)
 
-        # TODO: Save the changes to the stage (as a temporary file?)
         st.session_state.last_saved_yaml = content
-
     right.button(
         "Upload",
         on_click=upload_dialog,
@@ -454,11 +449,12 @@ with st.sidebar:
     st.title("Chat app 💬")
     st.write("Your companion app to build a Snowflake semantic model.")
 
-yaml = download_yaml(st.session_state.file_name)
 if "last_saved_yaml" not in st.session_state:
+    yaml = download_yaml(st.session_state.file_name)
     st.session_state["last_saved_yaml"] = yaml
     st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
 if "yaml" not in st.session_state:
+    yaml = download_yaml(st.session_state.file_name)
     st.session_state["yaml"] = yaml
     st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
 

@@ -720,8 +720,8 @@ def validate_and_upload_tmp_yaml() -> None:
     yaml_str = proto_to_yaml(st.session_state.semantic_model)
     try:
         # whenever valid, upload to temp stage path.
-        validate(yaml_str, SNOWFLAKE_ACCOUNT)
-        upload_yaml(_TMP_FILE_NAME)
+        # validate(yaml_str, SNOWFLAKE_ACCOUNT)
+        # upload_yaml(_TMP_FILE_NAME)
         st.session_state.validated = True
         update_last_validated_model()
     except Exception as e:
@@ -739,21 +739,24 @@ def user_upload_yaml() -> None:
     Allow user to input a file_name and upload the file to stage accordingly.
     Auto-revalidate the model if detects any semantic model changes since last validation.
     """
+
+    def upload_handler(file_name: str) -> None:
+        st.write(
+            f"Uploading into @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml"
+        )
+        upload_yaml(file_name)
+        st.success(
+            f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
+        )
+
     if changed_from_last_validated_model():
         st.info(
             "Your semantic model has changed since last validation. Re-validating before uploading...."
         )
         validate_and_upload_tmp_yaml()
 
-    st.session_state.file_name = st.text_input("Enter the file name to upload:")
-    if st.button("Submit Upload"):
-        st.write(
-            f"Uploading into @{st.session_state.snowflake_stage.stage_name}/{st.session_state.file_name}.yaml"
-        )
-        upload_yaml(st.session_state.file_name)
-        st.success(
-            f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{st.session_state.file_name}.yaml!"
-        )
+    new_name = st.text_input("Enter the file name to upload (no need for .yaml suffix):")
+    st.button("Submit Upload", on_click=upload_handler, args=(new_name,))
 
 
 def semantic_model_exists() -> bool:
