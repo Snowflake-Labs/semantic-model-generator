@@ -1,7 +1,7 @@
 # TODO: Add tests for quoted columns, which are not well tested today.
 
 import copy
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import sqlglot
 import sqlglot.expressions
