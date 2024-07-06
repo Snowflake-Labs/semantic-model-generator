@@ -1,7 +1,7 @@
 import concurrent.futures
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List, Optional, TypeVar
+from typing import Any, Dict, Generator, List, Optional, Tuple, TypeVar
 
 import pandas as pd
 from loguru import logger
@@ -74,6 +74,61 @@ OBJECT_DATATYPES = ["VARIANT", "ARRAY", "OBJECT", "GEOGRAPHY"]
 _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
+def _get_table_comment(
+    conn, table_name: str, columns_df: pd.DataFrame
+) -> Tuple[str, bool]:
+    """
+    Returns:
+        Tuple[str, bool]: column comment, is_auto_generated
+    """
+    if columns_df[_TABLE_COMMENT_COL].iloc[0]:
+        return columns_df[_TABLE_COMMENT_COL].iloc[0], False
+    else:
+        # auto-generate table comment if it is not provided.
+        try:
+            tbl_ddl = (
+                conn.cursor()
+                .execute(f"select get_ddl('table', '{table_name}');")
+                .fetchall()[0][0]
+            )
+            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a description for the table. Only return the description without any other text."
+            complete_sql = (
+                f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
+            )
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]
+            return cmt, True
+        except Exception as e:
+            logger.warning(f"Unable to auto generate table comment: {e}")
+            return "", False
+
+
+def _get_column_comment(
+    conn, column_row: pd.Series, column_values: Optional[List[str]]
+) -> Tuple[str, bool]:
+    """
+    Returns:
+        Tuple[str, bool]: column comment, is_auto_generated
+    """
+    if column_row[_COLUMN_COMMENT_ALIAS]:
+        return column_row[_COLUMN_COMMENT_ALIAS], False
+    else:
+        # auto-generate column comment if it is not provided.
+        try:
+            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}:
+name: {column_row['COLUMN_NAME']};
+type: {column_row['DATA_TYPE']};
+values: {';'.join(column_values)};
+Please provide a description for the column. Only return the description without any other text."""
+            complete_sql = (
+                f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
+            )
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]
+            return cmt, True
+        except Exception as e:
+            logger.warning(f"Unable to auto generate column comment: {e}")
+            return "", False
+
+
 def get_table_representation(
     conn: SnowflakeConnection,
     schema_name: str,
@@ -83,18 +138,29 @@ def get_table_representation(
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    table_comment = columns_df[_TABLE_COMMENT_COL].iloc[0]
+    table_comment, is_auto_generated = _get_table_comment(conn, table_name, columns_df)
+
+    def _get_ndv_per_column(column_row: pd.Series, ndv_per_column: int) -> int:
+        data_type = column_row[_DATATYPE_COL]
+        data_type = data_type.split("(")[0].strip().upper()
+        if data_type in DIMENSION_DATATYPES:
+            # For dimension columns, we will by default fetch at least 25 distinct values
+            # As we index all dimensional column sample values by default.
+            return max(25, ndv_per_column)
+        if data_type in TIME_MEASURE_DATATYPES:
+            return max(3, ndv_per_column)
+        if data_type in MEASURE_DATATYPES:
+            return max(3, ndv_per_column)
+        return ndv_per_column
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
             conn=conn,
             schema_name=schema_name,
             table_name=table_name,
-            column_name=column_row[_COLUMN_NAME_COL],
-            column_comment=column_row[_COLUMN_COMMENT_ALIAS],
+            column_row=column_row,
             column_index=col_index,
-            column_datatype=column_row[_DATATYPE_COL],
-            ndv=ndv_per_column,
+            ndv=_get_ndv_per_column(column_row, ndv_per_column),
         )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -110,7 +176,11 @@ def get_table_representation(
         columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
 
     return Table(
-        id_=table_index, name=table_name, comment=table_comment, columns=columns
+        id_=table_index,
+        name=table_name,
+        comment=table_comment,
+        columns=columns,
+        is_auto_generated_comment=is_auto_generated,
     )
 
 
@@ -118,12 +188,12 @@ def _get_column_representation(
     conn: SnowflakeConnection,
     schema_name: str,
     table_name: str,
-    column_name: str,
-    column_comment: str,
+    column_row: pd.Series,
     column_index: int,
-    column_datatype: str,
     ndv: int,
 ) -> Column:
+    column_name = column_row[_COLUMN_NAME_COL]
+    column_datatype = column_row[_DATATYPE_COL]
     column_values = None
     if ndv > 0:
         # Pull sample values.
@@ -150,12 +220,17 @@ def _get_column_representation(
         except Exception as e:
             logger.error(f"unable to get values: {e}")
 
+    column_comment, is_auto_generated = _get_column_comment(
+        conn, column_row, column_values
+    )
+
     column = Column(
         id_=column_index,
         column_name=column_name,
         comment=column_comment,
         column_type=column_datatype,
         values=column_values,
+        is_auto_generated_comment=is_auto_generated,
     )
     return column
 

@@ -21,7 +21,7 @@ from semantic_model_generator.validate.context_length import validate_context_le
 
 _PLACEHOLDER_COMMENT = "  "
 _FILL_OUT_TOKEN = " # <FILL-OUT>"
-_DEFAULT_N_SAMPLE_VALUES_PER_COL = 10
+_DEFAULT_N_SAMPLE_VALUES_PER_COL = 3
 
 
 def _get_placeholder_filter() -> List[semantic_model_pb2.NamedFilter]:
@@ -202,7 +202,6 @@ def raw_schema_to_semantic_context(
                 columns_df=valid_columns_df_this_table,
                 max_workers=1,
             )
-
             table_object = _raw_table_to_semantic_context_table(
                 database=fqn_table.database,
                 schema=fqn_table.schema_name,

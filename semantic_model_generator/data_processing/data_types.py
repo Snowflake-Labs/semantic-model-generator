@@ -20,9 +20,10 @@ class Column:
     column_name: str
     column_type: str
     values: Optional[List[str]] = None
-    comment: Optional[str] = (
-        None  # comment field's to save the column comment user specified on the column
-    )
+    comment: Optional[
+        str
+    ] = None  # comment field's to save the column comment user specified on the column
+    is_auto_generated_comment: bool = False
 
     def __post_init__(self: Any) -> None:
         """
@@ -37,9 +38,10 @@ class Table:
     id_: int
     name: str
     columns: List[Column]
-    comment: Optional[str] = (
-        None  # comment field's to save the table comment user specified on the table
-    )
+    comment: Optional[
+        str
+    ] = None  # comment field's to save the table comment user specified on the table
+    is_auto_generated_comment: bool = False
 
     def __post_init__(self: Any) -> None:
         for col in self.columns:
