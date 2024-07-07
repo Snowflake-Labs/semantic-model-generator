@@ -1,9 +1,13 @@
+import copy
 from typing import Any, TypeVar
 
 from google.protobuf.message import Message
 from loguru import logger
 
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
+
+# Max number of sample values we include in the semantic model representation.
+_MAX_SAMPLE_VALUES = 3
 
 ProtoMsg = TypeVar("ProtoMsg", bound=Message)
 
@@ -48,15 +52,20 @@ def _count_search_services(model: ProtoMsg) -> int:
     return cnt
 
 
-def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
+def validate_context_length(model_orig: ProtoMsg, throw_error: bool = False) -> None:
     """
     Validate the token limit for the model with space for the prompt.
 
     yaml_model: The yaml semantic model
     throw_error: Should this function throw an error or just a warning.
     """
-
+    model = copy.deepcopy(model_orig)
     model.ClearField("verified_queries")
+    # Also clear all the dimensional sample values, as we'll retrieve those into filters by default.
+    for t in model.tables:
+        for dim in t.dimensions:
+            del dim.sample_values[_MAX_SAMPLE_VALUES:]
+
     num_search_services = _count_search_services(model)
 
     yaml_str = proto_to_yaml(model)
