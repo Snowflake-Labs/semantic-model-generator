@@ -87,7 +87,7 @@ def _get_table_comment(
         # auto-generate table comment if it is not provided.
         try:
             tbl_ddl = (
-                conn.cursor()
+                conn.cursor()  # type: ignore[union-attr]
                 .execute(f"select get_ddl('table', '{table_name}');")
                 .fetchall()[0][0]
             )
@@ -95,7 +95,7 @@ def _get_table_comment(
             complete_sql = (
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
             )
-            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return cmt, True
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
@@ -122,7 +122,7 @@ Please provide a description for the column. Only return the description without
             complete_sql = (
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
             )
-            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return cmt, True
         except Exception as e:
             logger.warning(f"Unable to auto generate column comment: {e}")
