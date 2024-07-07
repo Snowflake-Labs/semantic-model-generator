@@ -75,7 +75,7 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
 def _get_table_comment(
-    conn, table_name: str, columns_df: pd.DataFrame
+    conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
 ) -> Tuple[str, bool]:
     """
     Returns:
@@ -103,7 +103,7 @@ def _get_table_comment(
 
 
 def _get_column_comment(
-    conn, column_row: pd.Series, column_values: Optional[List[str]]
+    conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
 ) -> Tuple[str, bool]:
     """
     Returns:
@@ -117,7 +117,7 @@ def _get_column_comment(
             comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}:
 name: {column_row['COLUMN_NAME']};
 type: {column_row['DATA_TYPE']};
-values: {';'.join(column_values)};
+values: {';'.join(column_values) if column_values else ""};
 Please provide a description for the column. Only return the description without any other text."""
             complete_sql = (
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"

@@ -5,6 +5,7 @@ from google.protobuf.message import Message
 from loguru import logger
 
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
+from semantic_model_generator.protos import semantic_model_pb2
 
 # Max number of sample values we include in the semantic model representation.
 _MAX_SAMPLE_VALUES = 3
@@ -52,7 +53,9 @@ def _count_search_services(model: ProtoMsg) -> int:
     return cnt
 
 
-def validate_context_length(model_orig: ProtoMsg, throw_error: bool = False) -> None:
+def validate_context_length(
+    model_orig: semantic_model_pb2.SemanticModel, throw_error: bool = False
+) -> None:
     """
     Validate the token limit for the model with space for the prompt.
 
