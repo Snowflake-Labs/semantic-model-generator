@@ -451,3 +451,25 @@ FROM __t2"""
         assert sqlglot.parse_one(want, "snowflake") == sqlglot.parse_one(
             got, "snowflake"
         )
+
+    def test_expand_all_logical_tables_as_ctes_with_column_renaming(self) -> None:
+        ctx = semantic_model_pb2.SemanticModel(
+            name="model", tables=[get_test_table_col_format_agg_and_renaming()]
+        )
+        logical_query = "SELECT * FROM __t1"
+        got = expand_all_logical_tables_as_ctes(logical_query, ctx)
+        want = """WITH __t1 AS (
+  SELECT
+    cst AS cost,
+    clcks AS clicks,
+    clcks,
+    cst
+  FROM db.sc.t1
+)
+SELECT
+  *
+FROM __t1
+        """
+        assert sqlglot.parse_one(want, "snowflake") == sqlglot.parse_one(
+            got, "snowflake"
+        )

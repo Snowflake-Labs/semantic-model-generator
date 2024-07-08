@@ -189,7 +189,7 @@ def _enrich_column_in_expr_with_aggregation(
     """
     Expands the logical columns of 'table' to include columns mentioned in a logical columns
     with an aggregate expression. E.g. for a logical column called CPC with expr sum(cost) / sum(clicks),
-    adds logical columns for "cost" and "clicks", in not present.
+    adds logical columns for "cost" and "clicks", if not present.
     """
     direct_mapping_lcols = [
         c.name.lower() for c in direct_mapping_logical_columns(table)
@@ -201,12 +201,17 @@ def _enrich_column_in_expr_with_aggregation(
         for pcol in get_all_physical_column_references(col):
             # If the physical column doesn't have a direct mapping logical column
             # with the same name, then we need to add a new logical column for it.
+            # Note that this may introduce multiple logical columns directly referencing
+            # the same physical column, something we should improve up, perhaps by
+            # rewriting the expression to use existing direct mapping logical columns
+            # whenever preset.
             if pcol not in direct_mapping_lcols:
                 cols_to_append.add(pcol)
 
     original_cols = {col.name.lower(): col.expr for col in table.columns}
     ret = copy.deepcopy(table)
-    for c in cols_to_append:
+    # Insert in sorted order to make this method deterministic.
+    for c in sorted(cols_to_append):
         if c in original_cols:
             logger.warning(
                 f"Not adding a logical column for physical column {c} in table {table.name}, "
