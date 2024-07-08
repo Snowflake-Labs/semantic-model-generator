@@ -62,6 +62,7 @@ def validate_context_length(
     yaml_model: The yaml semantic model
     throw_error: Should this function throw an error or just a warning.
     """
+    # When counting tokens, we need to remove the verified_queries field and additional sample values. Make a copy for counting.
     model = copy.deepcopy(model_orig)
     model.ClearField("verified_queries")
     # Also clear all the dimensional sample values, as we'll retrieve those into filters by default.
