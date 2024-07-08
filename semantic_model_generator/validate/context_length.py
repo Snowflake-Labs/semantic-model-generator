@@ -1,9 +1,14 @@
+import copy
 from typing import Any, TypeVar
 
 from google.protobuf.message import Message
 from loguru import logger
 
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
+from semantic_model_generator.protos import semantic_model_pb2
+
+# Max number of sample values we include in the semantic model representation.
+_MAX_SAMPLE_VALUES = 3
 
 ProtoMsg = TypeVar("ProtoMsg", bound=Message)
 
@@ -24,34 +29,12 @@ _NUM_LITERAL_RETRIEVALS = 10
 # As per https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
 _CHARS_PER_TOKEN = 4
 
-# Max number of sample values we include in the semantic model representation.
-_MAX_SAMPLE_VALUES = 3
-
 
 def _get_field(msg: ProtoMsg, field_name: str) -> Any:
     fields = [value for fd, value in msg.ListFields() if fd.name == field_name]
     if not fields:
         return None
     return fields[0]
-
-
-def _truncate_sample_values(model: ProtoMsg) -> None:
-    tables = _get_field(model, "tables")
-    if not tables:
-        return
-    for table in tables:
-        dimensions = _get_field(table, "dimensions")
-        measures = _get_field(table, "measures")
-        if dimensions:
-            for dimension in dimensions:
-                sample_values = _get_field(dimension, "sample_values")
-                if sample_values:
-                    del sample_values[_MAX_SAMPLE_VALUES:]
-        if measures:
-            for measure in measures:
-                sample_values = _get_field(measure, "sample_values")
-                if sample_values:
-                    del sample_values[_MAX_SAMPLE_VALUES:]
 
 
 def _count_search_services(model: ProtoMsg) -> int:
@@ -70,16 +53,23 @@ def _count_search_services(model: ProtoMsg) -> int:
     return cnt
 
 
-def validate_context_length(model: ProtoMsg, throw_error: bool = False) -> None:
+def validate_context_length(
+    model_orig: semantic_model_pb2.SemanticModel, throw_error: bool = False
+) -> None:
     """
     Validate the token limit for the model with space for the prompt.
 
     yaml_model: The yaml semantic model
     throw_error: Should this function throw an error or just a warning.
     """
-
+    # When counting tokens, we need to remove the verified_queries field and additional sample values. Make a copy for counting.
+    model = copy.deepcopy(model_orig)
     model.ClearField("verified_queries")
-    _truncate_sample_values(model)
+    # Also clear all the dimensional sample values, as we'll retrieve those into filters by default.
+    for t in model.tables:
+        for dim in t.dimensions:
+            del dim.sample_values[_MAX_SAMPLE_VALUES:]
+
     num_search_services = _count_search_services(model)
 
     yaml_str = proto_to_yaml(model)
