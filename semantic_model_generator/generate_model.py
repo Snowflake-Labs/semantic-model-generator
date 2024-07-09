@@ -8,6 +8,7 @@ from loguru import logger
 from semantic_model_generator.data_processing import data_types, proto_utils
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    AUTOGEN_TOKEN,
     DIMENSION_DATATYPES,
     MEASURE_DATATYPES,
     OBJECT_DATATYPES,
@@ -22,7 +23,7 @@ from semantic_model_generator.validate.context_length import validate_context_le
 _PLACEHOLDER_COMMENT = "  "
 _FILL_OUT_TOKEN = " # <FILL-OUT>"
 # TODO add _AUTO_GEN_TOKEN to the end of the auto generated descriptions.
-_AUTO_GEN_TOKEN = " # <THIS DESCRIPTION IS AUTO-GENERATED; PLEASE CONFIRM/MODIFY>"
+_AUTOGEN_COMMENT_TOKEN = " # <THIS DESCRIPTION IS AUTO-GENERATED; PLEASE CONFIRM/MODIFY AND REMOVE THE __ AT THE END>"
 _DEFAULT_N_SAMPLE_VALUES_PER_COL = 3
 
 
@@ -238,6 +239,9 @@ def append_comment_to_placeholders(yaml_str: str) -> str:
         if line.rstrip("'").endswith(_PLACEHOLDER_COMMENT):
             # Replace the _PLACEHOLDER_COMMENT with itself plus the append_text
             updated_line = line + _FILL_OUT_TOKEN
+            updated_yaml.append(updated_line)
+        elif line.rstrip("'").endswith(AUTOGEN_TOKEN):
+            updated_line = line + _AUTOGEN_COMMENT_TOKEN
             updated_yaml.append(updated_line)
         else:
             updated_yaml.append(line)

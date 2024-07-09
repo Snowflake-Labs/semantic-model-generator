@@ -1,7 +1,7 @@
 import concurrent.futures
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, Generator, List, Optional, TypeVar
 
 import pandas as pd
 from loguru import logger
@@ -14,6 +14,9 @@ from semantic_model_generator.snowflake_utils import env_vars
 from semantic_model_generator.snowflake_utils.utils import snowflake_connection
 
 ConnectionType = TypeVar("ConnectionType")
+# Append this to the end of the auto-generated comments to indicate that the comment was auto-generated.
+AUTOGEN_TOKEN = "__"
+
 # This is the raw column name from snowflake information schema or desc table
 _COMMENT_COL = "COMMENT"
 _COLUMN_NAME_COL = "COLUMN_NAME"
@@ -76,11 +79,7 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 def _get_table_comment(
     conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
-) -> Tuple[str, bool]:
-    """
-    Returns:
-        Tuple[str, bool]: column comment, is_auto_generated
-    """
+) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
         return columns_df[_TABLE_COMMENT_COL].iloc[0], False
     else:
@@ -96,19 +95,15 @@ def _get_table_comment(
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
             )
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
-            return cmt, True
+            return cmt + AUTOGEN_TOKEN
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
-            return "", False
+            return ""
 
 
 def _get_column_comment(
     conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
-) -> Tuple[str, bool]:
-    """
-    Returns:
-        Tuple[str, bool]: column comment, is_auto_generated
-    """
+) -> str:
     if column_row[_COLUMN_COMMENT_ALIAS]:
         return column_row[_COLUMN_COMMENT_ALIAS], False
     else:
@@ -123,10 +118,10 @@ Please provide a description for the column. Only return the description without
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
             )
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
-            return cmt, True
+            return cmt + AUTOGEN_TOKEN
         except Exception as e:
             logger.warning(f"Unable to auto generate column comment: {e}")
-            return "", False
+            return ""
 
 
 def get_table_representation(
@@ -138,20 +133,7 @@ def get_table_representation(
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    table_comment, is_auto_generated = _get_table_comment(conn, table_name, columns_df)
-
-    def _get_ndv_per_column(column_row: pd.Series, ndv_per_column: int) -> int:
-        data_type = column_row[_DATATYPE_COL]
-        data_type = data_type.split("(")[0].strip().upper()
-        if data_type in DIMENSION_DATATYPES:
-            # For dimension columns, we will by default fetch at least 25 distinct values
-            # As we index all dimensional column sample values by default.
-            return max(25, ndv_per_column)
-        if data_type in TIME_MEASURE_DATATYPES:
-            return max(3, ndv_per_column)
-        if data_type in MEASURE_DATATYPES:
-            return max(3, ndv_per_column)
-        return ndv_per_column
+    table_comment = _get_table_comment(conn, table_name, columns_df)
 
     def _get_ndv_per_column(column_row: pd.Series, ndv_per_column: int) -> int:
         data_type = column_row[_DATATYPE_COL]
@@ -193,7 +175,6 @@ def get_table_representation(
         name=table_name,
         comment=table_comment,
         columns=columns,
-        is_auto_generated_comment=is_auto_generated,
     )
 
 
@@ -233,9 +214,7 @@ def _get_column_representation(
         except Exception as e:
             logger.error(f"unable to get values: {e}")
 
-    column_comment, is_auto_generated = _get_column_comment(
-        conn, column_row, column_values
-    )
+    column_comment = _get_column_comment(conn, column_row, column_values)
 
     column = Column(
         id_=column_index,
@@ -243,7 +222,6 @@ def _get_column_representation(
         comment=column_comment,
         column_type=column_datatype,
         values=column_values,
-        is_auto_generated_comment=is_auto_generated,
     )
     return column
 
