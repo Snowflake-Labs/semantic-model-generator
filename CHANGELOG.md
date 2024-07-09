@@ -2,6 +2,16 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.27] - 2024-07-03
+### Updates
+- Fix VQR validation for measures with aggregation calculation.
+- Update pulling sample value by dimension vs. measures; fix length validation logic.
+
+## [0.1.26] - 2024-07-02
+### Updates
+- Semantic model size validation allows for many more sample values.
+  This corresponds with a release of the Cortex Analyst that does dynamic sample value retrieval by default.
+
 ## [0.1.25] - 2024-06-18
 ### Updates
 - Plumb through column and table comments

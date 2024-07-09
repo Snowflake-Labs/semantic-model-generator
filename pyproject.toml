@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "semantic-model-generator"
-version = "0.1.25"
+version = "0.1.27"
 description = "Generate a Semantic Model from your Snowflake tables"
 authors = ["Jonathan Hilgart <jonathan.hilgart@snowflake.com>", "Nipun Sehrawat <nipun.sehrawat@snowflake.com>", "Renee Huang <renee.huang@snowflake.com>", "Nicole Limtiaco <nicole.limtiaco@snowflake.com>"]
 license = "Apache Software License; BSD License"
@@ -21,6 +21,7 @@ pyarrow = ">=10.0.1,<10.1.0"
 sqlglot = "^23.10.0"
 strictyaml = "^1.7.3"
 streamlit-nightly = "^1.35.1.dev20240609"
+numpy = "^1.24.4"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"

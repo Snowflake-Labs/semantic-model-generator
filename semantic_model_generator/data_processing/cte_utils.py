@@ -1,7 +1,11 @@
+# TODO: Add tests for quoted columns, which are not well tested today.
+
+import copy
 from typing import List, Optional
 
 import sqlglot
 import sqlglot.expressions
+from loguru import logger
 from sqlglot.dialects.snowflake import Snowflake
 
 from semantic_model_generator.protos import semantic_model_pb2
@@ -42,7 +46,7 @@ def is_aggregation_expr(col: semantic_model_pb2.Column) -> bool:
     Raises:
         ValueError: if expr is not parsable, or if aggregation expressions in non-measure columns.
     """
-    parsed = sqlglot.parse_one(col.expr, dialect="snowflake")
+    parsed = sqlglot.parse_one(col.expr, dialect=Snowflake)
     agg_func = list(parsed.find_all(sqlglot.expressions.AggFunc))
     window = list(parsed.find_all(sqlglot.expressions.Window))
     # We've confirmed window functions cannot appear inside aggregate functions
@@ -53,6 +57,22 @@ def is_aggregation_expr(col: semantic_model_pb2.Column) -> bool:
             raise ValueError("Only allow aggregation expressions for measures.")
         return True
     return False
+
+
+def _is_physical_table_column(col: semantic_model_pb2.Column) -> bool:
+    """Returns whether the column refers to a single raw table column."""
+    try:
+        parsed = sqlglot.parse_one(col.expr, dialect=Snowflake)
+        return isinstance(parsed, sqlglot.expressions.Column)
+    except Exception as ex:
+        logger.warning(
+            f"Failed to parse sql expression: {col.expr}. Error: {ex}. {col}"
+        )
+        return False
+
+
+def _is_identifier_quoted(col_name: str) -> bool:
+    return '"' in col_name
 
 
 def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
@@ -123,6 +143,84 @@ def _generate_cte_for(
         cte += f"FROM {fully_qualified_table_name(table.base_table)}"
         cte += ")"
         return cte
+
+
+def get_all_physical_column_references(
+    column: semantic_model_pb2.Column,
+) -> List[str]:
+    """Returns a set of column names referenced in the column expression.
+
+    For example, the following column expressions yield the following return values:
+    foo -> [foo]
+    foo+bar -> [foo, bar]
+    sum(foo) -> [foo]
+    """
+    try:
+        parsed = sqlglot.parse_one(column.expr, dialect=Snowflake)
+        col_names = set()
+        for col in parsed.find_all(sqlglot.expressions.Column):
+            # TODO(renee): Handle quoted columns.
+            col_name = col.name.lower()
+            if col.this.quoted:
+                col_name = col.name
+            col_names.add(col_name)
+        return sorted(list(col_names))
+    except Exception as ex:
+        raise ValueError(f"Failed to parse sql expression: {column.expr}. Error: {ex}")
+
+
+def direct_mapping_logical_columns(
+    table: semantic_model_pb2.Table,
+) -> List[semantic_model_pb2.Column]:
+    """
+    Returns a list of logical columns that map 1:1 to an underlying physical column
+    (i.e. logical table's expression is simply the physical column name) in this table.
+    """
+    ret: List[semantic_model_pb2.Column] = []
+    for c in table.columns:
+        if _is_physical_table_column(c):
+            ret.append(c)
+    return ret
+
+
+def _enrich_column_in_expr_with_aggregation(
+    table: semantic_model_pb2.Table,
+) -> semantic_model_pb2.Table:
+    """
+    Expands the logical columns of 'table' to include columns mentioned in a logical columns
+    with an aggregate expression. E.g. for a logical column called CPC with expr sum(cost) / sum(clicks),
+    adds logical columns for "cost" and "clicks", if not present.
+    """
+    direct_mapping_lcols = [
+        c.name.lower() for c in direct_mapping_logical_columns(table)
+    ]
+    cols_to_append = set()
+    for col in table.columns:
+        if not is_aggregation_expr(col):
+            continue
+        for pcol in get_all_physical_column_references(col):
+            # If the physical column doesn't have a direct mapping logical column
+            # with the same name, then we need to add a new logical column for it.
+            # Note that this may introduce multiple logical columns directly referencing
+            # the same physical column, something we should improve up, perhaps by
+            # rewriting the expression to use existing direct mapping logical columns
+            # whenever preset.
+            if pcol not in direct_mapping_lcols:
+                cols_to_append.add(pcol)
+
+    original_cols = {col.name.lower(): col.expr for col in table.columns}
+    ret = copy.deepcopy(table)
+    # Insert in sorted order to make this method deterministic.
+    for c in sorted(cols_to_append):
+        if c in original_cols:
+            logger.warning(
+                f"Not adding a logical column for physical column {c} in table {table.name}, "
+                f"since this logical column already exists with expression {original_cols[c]}"
+            )
+        else:
+            new_col = semantic_model_pb2.Column(name=c, expr=c)
+            ret.columns.append(new_col)
+    return ret
 
 
 def _generate_non_agg_cte(table: semantic_model_pb2.Table) -> Optional[str]:
@@ -203,9 +301,9 @@ def expand_all_logical_tables_as_ctes(
         ctes: List[str] = []
         for table in ctx.tables:
             # Append all columns and expressions for the logical table.
-            # TODO (renee): If table contains expr with aggregations, we need to select its referred columns within CTE,
-            # which is not properly handled yet.
-            cte = _generate_non_agg_cte(table)
+            # If table contains expr with aggregations, enrich its referred columns into the table.
+            table_ = _enrich_column_in_expr_with_aggregation(table)
+            cte = _generate_non_agg_cte(table_)
             if cte is not None:
                 ctes.append(cte)
         return ctes
