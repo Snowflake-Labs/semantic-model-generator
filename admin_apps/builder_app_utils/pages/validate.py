@@ -1,6 +1,11 @@
 import streamlit as st
+from shared_utils import (
+    model_is_validated,
+    semantic_model_exists,
+    validate_and_upload_tmp_yaml,
+)
+
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
-from shared_utils import semantic_model_exists, validate_and_upload_tmp_yaml, model_is_validated
 
 # In case the model is already validated,
 # the next page should be available already.
@@ -32,6 +37,7 @@ def show_and_validate_yaml() -> None:
         status.info("Processing...")
         with status:
             validate_and_upload_tmp_yaml()
+
 
 """ In this step, you can preview your YAML and check if it's valid."""
 

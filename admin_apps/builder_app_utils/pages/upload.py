@@ -1,17 +1,20 @@
-import streamlit as st
 import time
-from shared_utils import semantic_model_exists, upload_yaml, user_upload_yaml, stage_exists
+
+import streamlit as st
+from shared_utils import semantic_model_exists, stage_exists, upload_yaml
 
 # There's no next!
 st.session_state["next_is_unlocked"] = False
 
 if semantic_model_exists() and stage_exists():
-    """ It's time to upload your semantic model to the stage!"""
+    """It's time to upload your semantic model to the stage!"""
     with st.form(key="upload", border=False):
         semantic_model_name = st.session_state.semantic_model.name
         semantic_model_name = st.session_state.semantic_model.name
         stage = st.session_state.snowflake_stage
-        full_stage_name = f"{stage.stage_database}.{stage.stage_schema}.{stage.stage_name}"
+        full_stage_name = (
+            f"{stage.stage_database}.{stage.stage_schema}.{stage.stage_name}"
+        )
 
         st.text_input("Stage name", full_stage_name, disabled=True)
         st.text_input("Model name", semantic_model_name, disabled=True)
@@ -29,5 +32,7 @@ if semantic_model_exists() and stage_exists():
             upload_yaml(st.session_state.file_name)
             status.success("Successfully uploaded!")
 else:
-    st.warning("""Semantic model or stage are missing. Go back and make sure all steps
-               are correctly done.""")
+    st.warning(
+        """Semantic model or stage are missing. Go back and make sure all steps
+               are correctly done."""
+    )

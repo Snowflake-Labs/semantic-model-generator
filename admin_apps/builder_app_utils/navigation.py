@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
@@ -57,6 +58,7 @@ a[data-testid="stPageLink-NavLink"] > span {
 }
 """
 
+
 def get_selected_page_index(
     selected_page: StreamlitPage, navigation: list[StreamlitPage] = NAVIGATION
 ) -> int:
@@ -113,7 +115,9 @@ def get_previous_and_next_pages(
     return previous_page, next_page
 
 
-def get_spec(previous_page: StreamlitPage | None, next_page: StreamlitPage | None) -> tuple[int, int, int]:
+def get_spec(
+    previous_page: StreamlitPage | None, next_page: StreamlitPage | None
+) -> tuple[int, int, int]:
     """
     Get a spec for the st.columns to work nicely depending on the labels
     for the previous (left) and next (right) buttons.

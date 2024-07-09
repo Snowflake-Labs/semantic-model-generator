@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import os
-from datetime import datetime
-from io import StringIO
 import time
 from dataclasses import dataclass
+from datetime import datetime
+from io import StringIO
 from typing import Optional
 
 import pandas as pd
@@ -26,12 +27,14 @@ LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
 
+
 def add_logo() -> None:
     st.logo(
         image=LOGO_URL_LARGE,
         link="https://www.snowflake.com/en/data-cloud/cortex/",
         icon_image=LOGO_URL_SMALL,
     )
+
 
 def update_last_validated_model() -> None:
     """Whenever user validated, update the last_validated_model to track semantic_model,
@@ -741,7 +744,9 @@ def user_upload_yaml() -> None:
     """
 
     def upload_handler(file_name: str) -> None:
-        with st.spinner(f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."):
+        with st.spinner(
+            f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
+        ):
             upload_yaml(file_name)
         st.success(
             f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
@@ -750,10 +755,14 @@ def user_upload_yaml() -> None:
         st.rerun()
 
     if not st.session_state.validated and changed_from_last_validated_model():
-        with st.spinner("Your semantic model has changed since last validation. Re-validating before uploading..."):
+        with st.spinner(
+            "Your semantic model has changed since last validation. Re-validating before uploading..."
+        ):
             validate_and_upload_tmp_yaml()
 
-    new_name = st.text_input("Enter the file name to upload (no need for .yaml suffix):")
+    new_name = st.text_input(
+        "Enter the file name to upload (no need for .yaml suffix):"
+    )
     if st.button("Submit Upload"):
         upload_handler(new_name)
 
@@ -773,6 +782,7 @@ def stage_exists() -> bool:
 
 def get_environment_variables() -> dict[str, str | None]:
     import os
+
     return {
         key: os.getenv(key)
         for key in (
@@ -785,9 +795,10 @@ def get_environment_variables() -> dict[str, str | None]:
         )
     }
 
+
 def environment_variables_exist() -> bool:
     snowflake_env = get_environment_variables()
-    return all([env != None for env in snowflake_env.values()])
+    return all([env is not None for env in snowflake_env.values()])
 
 
 def model_is_validated() -> bool:
@@ -864,6 +875,7 @@ class AppMetadata:
             column_config={"value": st.column_config.Column(label="Value")},
             use_container_width=True,
         )
+
 
 @dataclass
 class SnowflakeStage:

@@ -1,6 +1,6 @@
-import streamlit as st
 import time
 
+import streamlit as st
 from shared_utils import environment_variables_exist, get_environment_variables
 
 # In case the semantic model was built already,
@@ -19,14 +19,20 @@ environment variables.
 
 if st.button("Check my environment variables"):
     if environment_variables_exist():
-        st.success("All environment variables are properly set. You can move on to the next section.")
+        st.success(
+            "All environment variables are properly set. You can move on to the next section."
+        )
         st.session_state["next_is_unlocked"] = True
         time.sleep(1)
         st.rerun()
     else:
         snowflake_env = get_environment_variables()
-        missing_environment_variables: str = "\n\n- ".join(list({k for k, v in snowflake_env.items() if v is None}))
-        st.error(f"The following environment variables are missing: \n- {missing_environment_variables}")
+        missing_environment_variables: str = "\n\n- ".join(
+            list({k for k, v in snowflake_env.items() if v is None})
+        )
+        st.error(
+            f"The following environment variables are missing: \n- {missing_environment_variables}"
+        )
 
 
 # """

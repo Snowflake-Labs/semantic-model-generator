@@ -1,18 +1,24 @@
 from __future__ import annotations
-import streamlit as st
-from streamlit.navigation.page import StreamlitPage
-from streamlit_extras.stylable_container import stylable_container
 
-from shared_utils import add_logo, model_is_validated, semantic_model_exists, show_yaml_in_dialog, AppMetadata
+import streamlit as st
 from builder_app_utils.navigation import (
-    NAVIGATION,
-    PAGES_DIRECTORY,
     CUSTOM_STYLE,
     CUSTOM_STYLE_ANIMATION,
+    NAVIGATION,
+    PAGES_DIRECTORY,
     get_previous_and_next_pages,
     get_selected_page_index,
     get_spec,
 )
+from shared_utils import (
+    AppMetadata,
+    add_logo,
+    model_is_validated,
+    semantic_model_exists,
+    show_yaml_in_dialog,
+)
+from streamlit.navigation.page import StreamlitPage
+from streamlit_extras.stylable_container import stylable_container
 
 st.set_page_config(layout="centered", page_title="Builder app", page_icon="👷")
 
@@ -31,7 +37,6 @@ selected_page: StreamlitPage = st.navigation(
 
 
 with st.sidebar:
-
     # Show app title (common to all pages)
     st.title("Builder app 👷")
     st.write("Your companion app to build a Snowflake semantic model.")
@@ -77,7 +82,6 @@ with stylable_container(
     key="navigation",
     css_styles="{padding: calc(1em - 1px);}",
 ):
-
     previous_button_container, _, next_button_container = st.columns(
         spec=get_spec(previous_page, next_page),
         vertical_alignment="center",
@@ -85,7 +89,6 @@ with stylable_container(
 
 # Create a bordered container with all the page-level UI
 with st.container(border=True):
-
     # Show page formatted title, with a Material icon
     icon_name = selected_page.icon.split("/")[1].rstrip(":")
     icon_html = f"""<span class="material-symbols-outlined">{icon_name}</span>"""
@@ -106,7 +109,7 @@ with previous_button_container:
     if previous_page:
         url_path = previous_page.url_path or "getting_started"
         st.page_link(
-            label=f" ←  " + f"{previous_page.title}",
+            label=" ←  " + f"{previous_page.title}",
             page=f"{PAGES_DIRECTORY}/{url_path}.py",
             use_container_width=True,
         )
@@ -123,7 +126,6 @@ with next_button_container:
             key="next-page-container",
             css_styles=CUSTOM_STYLE_ANIMATION if not disabled else CUSTOM_STYLE,
         ):
-
             st.page_link(
                 label=" →  " + label,
                 page=f"{PAGES_DIRECTORY}/{next_page.url_path}.py",
