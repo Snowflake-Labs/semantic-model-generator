@@ -63,7 +63,7 @@ os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.
 
-We currently leverages [cortex LLM function](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) to auto-generate description suggestions, if your snowflake tables and comments do not have comments. Those generation are suffixed with '__' and additional comment to remind you to confirm/modity the descriptions.
+If your snowflake tables and comments do not have comments, we currently leverages [cortex LLM function](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) to auto-generate description suggestions. Those generation are suffixed with '__' and additional comment to remind you to confirm/modity the descriptions.
 
 All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from the root of this project or the current directory you're in.
 
