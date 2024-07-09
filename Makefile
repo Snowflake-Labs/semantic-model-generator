@@ -69,7 +69,7 @@ update-version: ## Bump poetry and github version. TYPE should be `patch` `minor
 
 release: ## Runs the release workflow.
 	@VERSION=$$(poetry version -s) && git commit --allow-empty  -m "Bump version to $$VERSION" && git tag release/v$$VERSION && \
- 	git push && git push --tags
+ 	git push origin HEAD && git push origin HEAD --tags
 
 build: ## Clean the dist dir and build the whl file
 	rm -rf dist
