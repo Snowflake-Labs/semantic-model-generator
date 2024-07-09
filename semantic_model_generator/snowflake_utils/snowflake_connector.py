@@ -16,6 +16,7 @@ from semantic_model_generator.snowflake_utils.utils import snowflake_connection
 ConnectionType = TypeVar("ConnectionType")
 # Append this to the end of the auto-generated comments to indicate that the comment was auto-generated.
 AUTOGEN_TOKEN = "__"
+_autogen_model = "llama3-8b"
 
 # This is the raw column name from snowflake information schema or desc table
 _COMMENT_COL = "COMMENT"
@@ -81,7 +82,7 @@ def _get_table_comment(
     conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
 ) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
-        return columns_df[_TABLE_COMMENT_COL].iloc[0]   # type: ignore[no-any-return]
+        return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
     else:
         # auto-generate table comment if it is not provided.
         try:
@@ -90,10 +91,8 @@ def _get_table_comment(
                 .execute(f"select get_ddl('table', '{table_name}');")
                 .fetchall()[0][0]
             )
-            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a description for the table. Only return the description without any other text."
-            complete_sql = (
-                f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
-            )
+            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
@@ -105,7 +104,7 @@ def _get_column_comment(
     conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
 ) -> str:
     if column_row[_COLUMN_COMMENT_ALIAS]:
-        return column_row[_COLUMN_COMMENT_ALIAS]    # type: ignore[no-any-return]
+        return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
     else:
         # auto-generate column comment if it is not provided.
         try:
@@ -113,10 +112,8 @@ def _get_column_comment(
 name: {column_row['COLUMN_NAME']};
 type: {column_row['DATA_TYPE']};
 values: {';'.join(column_values) if column_values else ""};
-Please provide a description for the column. Only return the description without any other text."""
-            complete_sql = (
-                f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
-            )
+Please provide a business description for the column. Only return the description without any other text."""
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
