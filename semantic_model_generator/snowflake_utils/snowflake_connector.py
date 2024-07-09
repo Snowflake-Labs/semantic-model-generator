@@ -14,6 +14,10 @@ from semantic_model_generator.snowflake_utils import env_vars
 from semantic_model_generator.snowflake_utils.utils import snowflake_connection
 
 ConnectionType = TypeVar("ConnectionType")
+# Append this to the end of the auto-generated comments to indicate that the comment was auto-generated.
+AUTOGEN_TOKEN = "__"
+_autogen_model = "llama3-8b"
+
 # This is the raw column name from snowflake information schema or desc table
 _COMMENT_COL = "COMMENT"
 _COLUMN_NAME_COL = "COLUMN_NAME"
@@ -74,6 +78,49 @@ OBJECT_DATATYPES = ["VARIANT", "ARRAY", "OBJECT", "GEOGRAPHY"]
 _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
+def _get_table_comment(
+    conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
+) -> str:
+    if columns_df[_TABLE_COMMENT_COL].iloc[0]:
+        return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
+    else:
+        # auto-generate table comment if it is not provided.
+        try:
+            tbl_ddl = (
+                conn.cursor()  # type: ignore[union-attr]
+                .execute(f"select get_ddl('table', '{table_name}');")
+                .fetchall()[0][0]
+            )
+            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
+            return str(cmt + AUTOGEN_TOKEN)
+        except Exception as e:
+            logger.warning(f"Unable to auto generate table comment: {e}")
+            return ""
+
+
+def _get_column_comment(
+    conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
+) -> str:
+    if column_row[_COLUMN_COMMENT_ALIAS]:
+        return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
+    else:
+        # auto-generate column comment if it is not provided.
+        try:
+            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}:
+name: {column_row['COLUMN_NAME']};
+type: {column_row['DATA_TYPE']};
+values: {';'.join(column_values) if column_values else ""};
+Please provide a business description for the column. Only return the description without any other text."""
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
+            return str(cmt + AUTOGEN_TOKEN)
+        except Exception as e:
+            logger.warning(f"Unable to auto generate column comment: {e}")
+            return ""
+
+
 def get_table_representation(
     conn: SnowflakeConnection,
     schema_name: str,
@@ -83,7 +130,7 @@ def get_table_representation(
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    table_comment = columns_df[_TABLE_COMMENT_COL].iloc[0]
+    table_comment = _get_table_comment(conn, table_name, columns_df)
 
     def _get_ndv_per_column(column_row: pd.Series, ndv_per_column: int) -> int:
         data_type = column_row[_DATATYPE_COL]
@@ -103,10 +150,8 @@ def get_table_representation(
             conn=conn,
             schema_name=schema_name,
             table_name=table_name,
-            column_name=column_row[_COLUMN_NAME_COL],
-            column_comment=column_row[_COLUMN_COMMENT_ALIAS],
+            column_row=column_row,
             column_index=col_index,
-            column_datatype=column_row[_DATATYPE_COL],
             ndv=_get_ndv_per_column(column_row, ndv_per_column),
         )
 
@@ -123,7 +168,10 @@ def get_table_representation(
         columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
 
     return Table(
-        id_=table_index, name=table_name, comment=table_comment, columns=columns
+        id_=table_index,
+        name=table_name,
+        comment=table_comment,
+        columns=columns,
     )
 
 
@@ -131,12 +179,12 @@ def _get_column_representation(
     conn: SnowflakeConnection,
     schema_name: str,
     table_name: str,
-    column_name: str,
-    column_comment: str,
+    column_row: pd.Series,
     column_index: int,
-    column_datatype: str,
     ndv: int,
 ) -> Column:
+    column_name = column_row[_COLUMN_NAME_COL]
+    column_datatype = column_row[_DATATYPE_COL]
     column_values = None
     if ndv > 0:
         # Pull sample values.
@@ -162,6 +210,8 @@ def _get_column_representation(
                     )
         except Exception as e:
             logger.error(f"unable to get values: {e}")
+
+    column_comment = _get_column_comment(conn, column_row, column_values)
 
     column = Column(
         id_=column_index,
