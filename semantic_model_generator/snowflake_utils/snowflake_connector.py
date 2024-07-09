@@ -153,6 +153,19 @@ def get_table_representation(
             return max(3, ndv_per_column)
         return ndv_per_column
 
+    def _get_ndv_per_column(column_row: pd.Series, ndv_per_column: int) -> int:
+        data_type = column_row[_DATATYPE_COL]
+        data_type = data_type.split("(")[0].strip().upper()
+        if data_type in DIMENSION_DATATYPES:
+            # For dimension columns, we will by default fetch at least 25 distinct values
+            # As we index all dimensional column sample values by default.
+            return max(25, ndv_per_column)
+        if data_type in TIME_MEASURE_DATATYPES:
+            return max(3, ndv_per_column)
+        if data_type in MEASURE_DATATYPES:
+            return max(3, ndv_per_column)
+        return ndv_per_column
+
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
             conn=conn,
