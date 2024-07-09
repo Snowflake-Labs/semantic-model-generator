@@ -81,7 +81,7 @@ def _get_table_comment(
     conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
 ) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
-        return columns_df[_TABLE_COMMENT_COL].iloc[0], False
+        return columns_df[_TABLE_COMMENT_COL].iloc[0]   # type: ignore[no-any-return]
     else:
         # auto-generate table comment if it is not provided.
         try:
@@ -95,7 +95,7 @@ def _get_table_comment(
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
             )
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
-            return cmt + AUTOGEN_TOKEN
+            return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
             return ""
@@ -105,7 +105,7 @@ def _get_column_comment(
     conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
 ) -> str:
     if column_row[_COLUMN_COMMENT_ALIAS]:
-        return column_row[_COLUMN_COMMENT_ALIAS], False
+        return column_row[_COLUMN_COMMENT_ALIAS]    # type: ignore[no-any-return]
     else:
         # auto-generate column comment if it is not provided.
         try:
@@ -118,7 +118,7 @@ Please provide a description for the column. Only return the description without
                 f"select SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', '{comment_prompt}')"
             )
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
-            return cmt + AUTOGEN_TOKEN
+            return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
             logger.warning(f"Unable to auto generate column comment: {e}")
             return ""
