@@ -302,9 +302,9 @@ class SnowflakeConnector:
             )
         return user
 
-    def _get_password(self) -> str:
+    def _get_password(self) -> Optional[str]:
         password = env_vars.SNOWFLAKE_PASSWORD
-        if not password:
+        if not password and self._get_authenticator().lower() != "externalbrowser":  # type: ignore[union-attr]
             raise ValueError(
                 "You need to set an env var for the snowflake password. export SNOWFLAKE_PASSWORD=<your-snowflake-password>"
             )
@@ -325,6 +325,10 @@ class SnowflakeConnector:
                 "No host set. Attempting to connect without. To set export SNOWFLAKE_HOST=<snowflake-host-name>"
             )
         return host
+
+    def _get_authenticator(self) -> Optional[str]:
+        auth = env_vars.SNOWFLAKE_AUTHENTICATOR
+        return auth
 
     @contextmanager
     def connect(
@@ -360,6 +364,7 @@ class SnowflakeConnector:
             role=self._get_role(),
             warehouse=self._get_warehouse(),
             host=self._get_host(),
+            authenticator=self._get_authenticator(),
         )
         if db_name:
             try:

@@ -59,6 +59,11 @@ os.environ['SNOWFLAKE_ACCOUNT_LOCATOR']='<your-snowflake-account-locator>'
 os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
 ```
 
+4. If you are using single sign-on authetication, you can leave password empty and set additional environ below:
+ ```python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'EXTERNALBROWSER'
+```
+
 ## Usage
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}` format. Each table in this list should be a physical table or a view present in your database.

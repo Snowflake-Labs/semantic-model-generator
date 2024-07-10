@@ -20,8 +20,8 @@ def create_fqn_table(fqn_str: str) -> FQNParts:
 
 def create_connection_parameters(
     user: str,
-    password: str,
     account: str,
+    password: Optional[str] = None,
     host: Optional[str] = None,
     role: Optional[str] = None,
     warehouse: Optional[str] = None,
@@ -29,9 +29,9 @@ def create_connection_parameters(
     schema: Optional[str] = None,
     authenticator: Optional[str] = None,
 ) -> Dict[str, str]:
-    connection_parameters: Dict[str, str] = dict(
-        user=user, password=password, account=account
-    )
+    connection_parameters: Dict[str, str] = dict(user=user, account=account)
+    if password:
+        connection_parameters["password"] = password
     if role:
         connection_parameters["role"] = role
     if warehouse:
@@ -54,11 +54,12 @@ def _connection(connection_parameters: Dict[str, str]) -> SnowflakeConnection:
 
 def snowflake_connection(
     user: str,
-    password: str,
     account: str,
     role: str,
     warehouse: str,
+    password: Optional[str] = None,
     host: Optional[str] = None,
+    authenticator: Optional[str] = None,
 ) -> SnowflakeConnection:
     """
     Returns a Snowflake Connection to the specified account.
@@ -71,5 +72,6 @@ def snowflake_connection(
             account=account,
             role=role,
             warehouse=warehouse,
+            authenticator=authenticator,
         )
     )
