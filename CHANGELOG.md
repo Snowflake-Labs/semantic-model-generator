@@ -2,9 +2,13 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.29] - 2024-07-10
+### Updates
+- Allow single sign on auth.
+
 ## [0.1.28] - 2024-07-09
 ### Updates
-- Allow auto-generation of descriptions for semantic models
+- Allow auto-generation of descriptions for semantic models.
 
 ## [0.1.27] - 2024-07-03
 ### Updates
