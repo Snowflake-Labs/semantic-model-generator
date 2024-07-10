@@ -732,39 +732,7 @@ def validate_and_upload_tmp_yaml() -> None:
 
     st.success("Successfully validated your model!")
     st.session_state["next_is_unlocked"] = True
-    time.sleep(1)
-    st.rerun()
 
-
-@st.experimental_dialog("Upload YAML to stage")  # type: ignore[misc]
-def user_upload_yaml() -> None:
-    """
-    Allow user to input a file_name and upload the file to stage accordingly.
-    Auto-revalidate the model if detects any semantic model changes since last validation.
-    """
-
-    def upload_handler(file_name: str) -> None:
-        with st.spinner(
-            f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
-        ):
-            upload_yaml(file_name)
-        st.success(
-            f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
-        )
-        time.sleep(1.5)
-        st.rerun()
-
-    if not st.session_state.validated and changed_from_last_validated_model():
-        with st.spinner(
-            "Your semantic model has changed since last validation. Re-validating before uploading..."
-        ):
-            validate_and_upload_tmp_yaml()
-
-    new_name = st.text_input(
-        "Enter the file name to upload (no need for .yaml suffix):"
-    )
-    if st.button("Submit Upload"):
-        upload_handler(new_name)
 
 
 def semantic_model_exists() -> bool:

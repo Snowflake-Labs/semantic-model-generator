@@ -13,7 +13,7 @@ from shared_utils import (
     add_logo,
     download_yaml,
     init_session_states,
-    user_upload_yaml,
+    upload_yaml, changed_from_last_validated_model, validate_and_upload_tmp_yaml,
 )
 from snowflake.connector import SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
@@ -332,7 +332,35 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 def upload_dialog(content: str) -> None:
     st.markdown("This will upload your YAML to the following Snowflake stage.")
     st.write(st.session_state.snowflake_stage.to_dict())
-    st.button("Let's do it!", on_click=user_upload_yaml)
+
+    def upload_handler(file_name: str) -> None:
+        if not st.session_state.validated and changed_from_last_validated_model():
+            with st.spinner(
+                    "Your semantic model has changed since last validation. Re-validating before uploading..."
+            ):
+                validate_and_upload_tmp_yaml()
+
+        st.session_state.semantic_model = yaml_to_semantic_model(content)
+        with st.spinner(
+                f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
+        ):
+            upload_yaml(file_name)
+        st.success(
+            f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
+        )
+        st.session_state.last_saved_yaml = content
+        time.sleep(1.5)
+        st.rerun()
+
+    new_name = st.text_input(
+        key="upload_yaml_final_name",
+        label="Enter the file name to upload (no need for .yaml suffix):"
+    )
+
+    if st.button("Submit Upload"):
+        upload_handler(new_name)
+
+
 
 
 def update_container(
@@ -408,14 +436,14 @@ def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
             update_container(status_container, "failed", prefix=title)
             exception_as_dialog(e)
 
+        st.session_state.semantic_model = yaml_to_semantic_model(content)
         st.session_state.last_saved_yaml = content
-    right.button(
+    if right.button(
         "Upload",
-        on_click=upload_dialog,
-        args=(content,),
         use_container_width=True,
         help=UPLOAD_HELP,
-    )
+    ):
+        upload_dialog(content)
 
 
 @st.experimental_dialog(
