@@ -88,7 +88,7 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
                 "content": [{"type": "text", "text": prompt}],
             },
         ],
-        "semantic_model": proto_to_yaml(st.session_state.semantic_model)
+        "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
 
     host = st.session_state.host_name
