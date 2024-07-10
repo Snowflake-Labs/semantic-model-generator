@@ -304,7 +304,7 @@ class SnowflakeConnector:
 
     def _get_password(self) -> str:
         password = env_vars.SNOWFLAKE_PASSWORD
-        if not password:
+        if not password and self._get_authenticator().lower() != "externalbrowser":
             raise ValueError(
                 "You need to set an env var for the snowflake password. export SNOWFLAKE_PASSWORD=<your-snowflake-password>"
             )
