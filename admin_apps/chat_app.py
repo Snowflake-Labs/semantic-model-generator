@@ -75,31 +75,28 @@ def pretty_print_sql(sql: str) -> str:
     return formatted_sql
 
 
-API_ENDPOINT = "https://{HOST}/api/v2/databases/{STAGE_DATABASE}/schemas/{STAGE_SCHEMA}/copilots/{STAGE}/chats/-/messages"
+API_ENDPOINT = "https://{HOST}/api/v2/cortex/analyst/message"
 
 
 @st.cache_data(ttl=60, show_spinner=False)
 def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
     """Calls the REST API and returns the response."""
     request_body = {
-        "role": "user",
-        "content": [{"type": "text", "text": prompt}],
-        "modelPath": get_file_name(),
+        "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": prompt}],
+            },
+        ],
+        "semantic_model": proto_to_yaml(st.session_state.semantic_model)
     }
 
-    HOST = st.session_state.host_name
-    STAGE_DATABASE = st.session_state.snowflake_stage.stage_database
-    STAGE_SCHEMA = st.session_state.snowflake_stage.stage_schema
-    STAGE = st.session_state.snowflake_stage.stage_name
-
+    host = st.session_state.host_name
     num_retry, max_retries = 0, 10
     while True:
         resp = requests.post(
             API_ENDPOINT.format(
-                HOST=HOST,
-                STAGE_DATABASE=STAGE_DATABASE,
-                STAGE_SCHEMA=STAGE_SCHEMA,
-                STAGE=STAGE,
+                HOST=host,
             ),
             json=request_body,
             headers={
@@ -127,7 +124,7 @@ def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
     with st.chat_message("assistant"):
         with st.spinner("Generating response..."):
             response = send_message(_conn=_conn, prompt=prompt)
-            content = response["messages"][-1]["content"]
+            content = response["message"]["content"]
             display_content(conn=_conn, content=content)
     st.session_state.messages.append({"role": "assistant", "content": content})
 
