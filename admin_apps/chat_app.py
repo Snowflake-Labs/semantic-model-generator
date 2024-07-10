@@ -153,20 +153,28 @@ def edit_verified_query(
     """Allow user to correct generated SQL and add to verfied queries.
     Note: Verified queries needs to be against logical table/column."""
 
+    # When opening the modal, we haven't run the query yet, so set this bit to False.
+    st.session_state["error_state"] = None
+    st.caption("**CHEAT SHEET**")
+    st.markdown(
+        "This section is useful for you to check available columns and expressions. **NOTE**: Only reference `Column Name` in your SQL, not `Column Expression`."
+    )
+    show_expr_for_ref(message_index)
+    st.markdown("")
+    st.divider()
+
     sql_without_cte = remove_ltable_cte(sql)
     st.markdown(
-        "You can edit the SQL below. Make sure to lookup the **Cheat sheet** below for tables/columns available."
+        "You can edit the SQL below. Make sure to use the `Column Name` column in the **Cheat sheet** above for tables/columns available."
     )
-    with st.form(key="sql-editor", border=False):
+
+    with st.container(border=False):
         st.caption("**SQL**")
         with st.container(border=True):
             user_updated_sql = st_monaco(
                 value=sql_without_cte, language="sql", height=200
             )
-            run = st.form_submit_button("Run", use_container_width=True)
-            save = st.form_submit_button(
-                "Save as verified query", use_container_width=True
-            )
+            run = st.button("Run", use_container_width=True)
 
             if run:
                 try:
@@ -179,27 +187,29 @@ def edit_verified_query(
                         db_name=st.session_state.snowflake_stage.stage_database,
                         schema_name=st.session_state.snowflake_stage.stage_schema,
                     ) as connection:
+                        st.session_state["successful_sql"] = False
                         df = pd.read_sql(sql_to_execute, connection)
                         st.code(user_updated_sql)
                         st.caption("**Output data**")
                         st.dataframe(df)
+                        st.session_state["successful_sql"] = True
+
                 except Exception as e:
-                    raise ValueError(
-                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
-                    )
+                    st.session_state["error_state"] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
 
-            if save:
-                add_verified_query(question, user_updated_sql)
-                st.session_state.editing = False
-                st.session_state.confirmed_edits = False
+            if st.session_state["error_state"] is not None:
+                st.error(st.session_state["error_state"])
 
-    st.markdown("")
-    st.divider()
-    st.caption("**CHEAT SHEET**")
-    st.markdown(
-        "This section is useful for you to check available columns and expressions."
-    )
-    show_expr_for_ref(message_index)
+            elif st.session_state.get("successful_sql", False):
+                # Moved outside the `if run:` block to ensure it's always evaluated
+                save = st.button("Save as verified query", use_container_width=True,
+                                 disabled=not st.session_state.get("successful_sql", False))
+                if save:
+                    add_verified_query(question, user_updated_sql)
+                    st.session_state["editing"] = False
+                    st.session_state["confirmed_edits"] = True
+
+
 
 
 def add_verified_query(question: str, sql: str) -> None:
@@ -446,11 +456,6 @@ if "snowflake_stage" not in st.session_state:
 
 add_logo()
 
-with st.sidebar:
-    # Show app title (common to all pages)
-    st.title("Chat app 💬")
-    st.write("Your companion app to build a Snowflake semantic model.")
-
 if "last_saved_yaml" not in st.session_state:
     yaml = download_yaml(st.session_state.file_name)
     st.session_state["last_saved_yaml"] = yaml
@@ -484,8 +489,7 @@ FIRST_MESSAGE = f"""Welcome! 😊
 In this app, you can iteratively edit the semantic model YAML
 on the left side, and test it out in a chat setting here on the right side.
 
-Just so you know, I'm currently using the semantic model `{st.session_state.file_name}` that
-was last edited on `FILL_ME`.
+Just so you know, I'm currently using the semantic model `{st.session_state.file_name}`.
 
 How can I help you today?
 """
