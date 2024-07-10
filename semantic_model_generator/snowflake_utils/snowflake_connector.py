@@ -302,9 +302,9 @@ class SnowflakeConnector:
             )
         return user
 
-    def _get_password(self) -> str:
+    def _get_password(self) -> Optional[str]:
         password = env_vars.SNOWFLAKE_PASSWORD
-        if not password and self._get_authenticator().lower() != "externalbrowser":
+        if not password and self._get_authenticator().lower() != "externalbrowser":  # type: ignore[union-attr]
             raise ValueError(
                 "You need to set an env var for the snowflake password. export SNOWFLAKE_PASSWORD=<your-snowflake-password>"
             )
