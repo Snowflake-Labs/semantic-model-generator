@@ -59,6 +59,7 @@ def snowflake_connection(
     role: str,
     warehouse: str,
     host: Optional[str] = None,
+    authenticator: Optional[str] = None,
 ) -> SnowflakeConnection:
     """
     Returns a Snowflake Connection to the specified account.
@@ -71,5 +72,6 @@ def snowflake_connection(
             account=account,
             role=role,
             warehouse=warehouse,
+            authenticator=authenticator,
         )
     )

@@ -326,6 +326,10 @@ class SnowflakeConnector:
             )
         return host
 
+    def _get_authenticator(self) -> Optional[str]:
+        auth = env_vars.SNOWFLAKE_AUTHENTICATOR
+        return auth
+
     @contextmanager
     def connect(
         self, db_name: str, schema_name: Optional[str] = None
@@ -360,6 +364,7 @@ class SnowflakeConnector:
             role=self._get_role(),
             warehouse=self._get_warehouse(),
             host=self._get_host(),
+            authenticator=self._get_authenticator(),
         )
         if db_name:
             try:
