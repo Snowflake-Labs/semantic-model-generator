@@ -15,8 +15,10 @@ This folder contains a Streamlit app designed that is designed to help you manag
 
 ## Get started
 
-1. Make sure you've installed the requirements from the `pyproject.toml` file in the root of this repository
+1. Make sure you've installed the requirements from the `pyproject.toml` file in this `admin_apps/` directory. The admin app uses Poetry to manage and install dependencies. For full instructions on how to set up Poetry, see the root repo README.
 ```bash
+cd admin_apps/
+
 poetry install
 ```
 

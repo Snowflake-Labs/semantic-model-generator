@@ -27,7 +27,7 @@ setup: check-deps shell ## Install dependencies into your poetry environment.
 
 # app
 run_admin_app:
-	streamlit run admin_app/streamlit_app.py
+	streamlit run admin_apps/chat_app.py
 
 # Linting and formatting below.
 run_mypy:  ## Run mypy
