@@ -34,21 +34,21 @@ run_mypy:  ## Run mypy
 	mypy --config-file=mypy.ini .
 
 run_flake8:  ## Run flake8
-	flake8 --ignore=E203,E501,W503 --exclude=pyvenv,tmp,*_pb2.py,*_pb2.pyi,images/*/src .
+	flake8 --ignore=E203,E501,W503 --exclude=venv,pyvenv,tmp,*_pb2.py,*_pb2.pyi,images/*/src .
 
 check_black:  ## Check to see if files would be updated with black.
     # Exclude pyvenv and all generated protobuf code.
-	black --check --exclude="pyvenv|.*_pb2.py|.*_pb2.pyi" .
+	black --check --exclude="venv|pyvenv|.*_pb2.py|.*_pb2.pyi" .
 
 run_black:  ## Run black to format files.
     # Exclude pyvenv, tmp, and all generated protobuf code.
-	black --exclude="pyvenv|tmp|.*_pb2.py|.*_pb2.pyi" .
+	black --exclude="venv|pyvenv|tmp|.*_pb2.py|.*_pb2.pyi" .
 
 check_isort:  ## Check if files would be updated with isort.
-	isort --profile black --check --skip=pyvenv --skip-glob='*_pb2.py*' .
+	isort --profile black --check --skip=venv --skip=pyvenv --skip-glob='*_pb2.py*' .
 
 run_isort:  ## Run isort to update imports.
-	isort --profile black --skip=pyvenv --skip=tmp --skip-glob='*_pb2.py*' .
+	isort --profile black --skip=pyvenv --skip=venv --skip=tmp --skip-glob='*_pb2.py*' .
 
 
 fmt_lint: shell ## lint/fmt in current python environment

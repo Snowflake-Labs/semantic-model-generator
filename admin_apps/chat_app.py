@@ -11,9 +11,11 @@ from shared_utils import (
     SNOWFLAKE_ACCOUNT,
     SnowflakeStage,
     add_logo,
+    changed_from_last_validated_model,
     download_yaml,
     init_session_states,
-    upload_yaml, changed_from_last_validated_model, validate_and_upload_tmp_yaml,
+    upload_yaml,
+    validate_and_upload_tmp_yaml,
 )
 from snowflake.connector import SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
@@ -195,21 +197,24 @@ def edit_verified_query(
                         st.session_state["successful_sql"] = True
 
                 except Exception as e:
-                    st.session_state["error_state"] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    st.session_state["error_state"] = (
+                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    )
 
             if st.session_state["error_state"] is not None:
                 st.error(st.session_state["error_state"])
 
             elif st.session_state.get("successful_sql", False):
                 # Moved outside the `if run:` block to ensure it's always evaluated
-                save = st.button("Save as verified query", use_container_width=True,
-                                 disabled=not st.session_state.get("successful_sql", False))
+                save = st.button(
+                    "Save as verified query",
+                    use_container_width=True,
+                    disabled=not st.session_state.get("successful_sql", False),
+                )
                 if save:
                     add_verified_query(question, user_updated_sql)
                     st.session_state["editing"] = False
                     st.session_state["confirmed_edits"] = True
-
-
 
 
 def add_verified_query(question: str, sql: str) -> None:
@@ -336,13 +341,13 @@ def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
             with st.spinner(
-                    "Your semantic model has changed since last validation. Re-validating before uploading..."
+                "Your semantic model has changed since last validation. Re-validating before uploading..."
             ):
                 validate_and_upload_tmp_yaml()
 
         st.session_state.semantic_model = yaml_to_semantic_model(content)
         with st.spinner(
-                f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
+            f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
         ):
             upload_yaml(file_name)
         st.success(
@@ -354,13 +359,11 @@ def upload_dialog(content: str) -> None:
 
     new_name = st.text_input(
         key="upload_yaml_final_name",
-        label="Enter the file name to upload (no need for .yaml suffix):"
+        label="Enter the file name to upload (no need for .yaml suffix):",
     )
 
     if st.button("Submit Upload"):
         upload_handler(new_name)
-
-
 
 
 def update_container(

@@ -734,7 +734,6 @@ def validate_and_upload_tmp_yaml() -> None:
     st.session_state["next_is_unlocked"] = True
 
 
-
 def semantic_model_exists() -> bool:
     if "semantic_model" in st.session_state:
         if hasattr(st.session_state.semantic_model, "name"):
