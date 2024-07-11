@@ -44,7 +44,8 @@ jobs:
       - name: Install admin app dependencies using Poetry
         working-directory: admin_apps
         run: |
-          $HOME/.local/bin/poetry install --no-interaction
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Test
         run: |
