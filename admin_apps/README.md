@@ -1,6 +1,9 @@
 # Admin apps
 
-This folder contains a Streamlit app designed that is designed to help you manage your semantic models for the Cortex Analyst feature.
+This folder contains a Streamlit app designed that is designed to help you iterate your semantic models for the Cortex Analyst feature.
+
+The Chat App currently points to an existing semantic model on stage, allow you to chat against it, test the result and modify for verified queries.
+
 
 <table border="0">
    <tr>
@@ -19,8 +22,11 @@ This folder contains a Streamlit app designed that is designed to help you manag
 ```bash
 cd admin_apps/
 
+# When setup for the first time
 poetry install
 ```
+
+2. run ```poetry shell``` to activiate the environment
 
 2. Inside the `admin_apps/` directory, run the following command:
 
@@ -28,4 +34,4 @@ poetry install
 streamlit run chat_app.py  # for the Chat app
 ```
 
-3. Enjoy!
+3. Enjoy! 

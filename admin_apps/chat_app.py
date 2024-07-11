@@ -459,10 +459,10 @@ def set_up_requirements() -> None:
     )
     host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
     user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
-    stage_database = st.text_input("Stage database", value="SNOWFLAKE_SEMANTIC_CONTEXT")
-    stage_schema = st.text_input("Stage schema", value="DEFINITIONS")
-    stage_name = st.text_input("Stage name", value="TEST")
-    file_name = st.text_input("File name", value="revenue_timeseries_no_pk.yaml")
+    stage_database = st.text_input("Stage database", value="")
+    stage_schema = st.text_input("Stage schema", value="")
+    stage_name = st.text_input("Stage name", value="")
+    file_name = st.text_input("File name", value="<your_file>.yaml")
     if st.button("Submit"):
         st.session_state["snowflake_stage"] = SnowflakeStage(
             stage_database=stage_database,
