@@ -398,7 +398,7 @@ def exception_as_dialog(e: Exception) -> None:
 
 # TODO: how to properly mark fragment back?
 # @st.experimental_fragment
-def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
+def yaml_editor(yaml_str: str) -> None:
     """
     Editor for YAML content. Meant to be used on the left side
     of the app.
@@ -416,34 +416,39 @@ def yaml_editor(yaml_str: str, status_container: DeltaGenerator) -> None:
         language="yaml",
     )
 
+    button_container = st.container()
+    status_container_title = "**Edit**"
+    status_container = st.empty()
+
+    with button_container:
+        left, right, _ = st.columns((1, 1, 2))
+        if left.button("Save", use_container_width=True, help=SAVE_HELP):
+            # Validate new content
+            try:
+                validate(content, snowflake_account=st.session_state.account_name)
+                st.session_state["validated"] = True
+                update_container(status_container, "success", prefix=status_container_title)
+            except Exception as e:
+                st.session_state["validated"] = False
+                update_container(status_container, "failed", prefix=status_container_title)
+                exception_as_dialog(e)
+
+            st.session_state.semantic_model = yaml_to_semantic_model(content)
+            st.session_state.last_saved_yaml = content
+        if right.button(
+            "Upload",
+            use_container_width=True,
+            help=UPLOAD_HELP,
+        ):
+            upload_dialog(content)
+
     # When no change, show success
     if content == st.session_state.last_saved_yaml:
-        update_container(status_container, "success", prefix=title)
+        update_container(status_container, "success", prefix=status_container_title)
 
     else:
-        update_container(status_container, "editing", prefix=title)
+        update_container(status_container, "editing", prefix=status_container_title)
         st.session_state["validated"] = False
-
-    left, right, _ = st.columns((1, 1, 2))
-    if left.button("Save", use_container_width=True, help=SAVE_HELP):
-        # Validate new content
-        try:
-            validate(content, snowflake_account=st.session_state.account_name)
-            st.session_state["validated"] = True
-            update_container(status_container, "success", prefix=title)
-        except Exception as e:
-            st.session_state["validated"] = False
-            update_container(status_container, "failed", prefix=title)
-            exception_as_dialog(e)
-
-        st.session_state.semantic_model = yaml_to_semantic_model(content)
-        st.session_state.last_saved_yaml = content
-    if right.button(
-        "Upload",
-        use_container_width=True,
-        help=UPLOAD_HELP,
-    ):
-        upload_dialog(content)
 
 
 @st.experimental_dialog(
@@ -506,11 +511,8 @@ you think your semantic model is doing great and should be pushed to prod! Note 
 the semantic model must be validated to be uploaded."""
 
 with yaml_container:
-    title_container = st.empty()
-    title = "**Edit**"
     yaml_editor(
         proto_to_yaml(st.session_state["semantic_model"]),
-        status_container=title_container,
     )
 
 FIRST_MESSAGE = f"""Welcome! 😊
