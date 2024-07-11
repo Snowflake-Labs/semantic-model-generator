@@ -189,9 +189,9 @@ def edit_verified_query(
                         st.session_state["successful_sql"] = True
 
                 except Exception as e:
-                    st.session_state[
-                        "error_state"
-                    ] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    st.session_state["error_state"] = (
+                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    )
 
             if st.session_state["error_state"] is not None:
                 st.error(st.session_state["error_state"])
