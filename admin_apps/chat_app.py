@@ -218,6 +218,7 @@ def add_verified_query(question: str, sql: str) -> None:
     """Save verified question and SQL into an in-memory list with additional details."""
     # Verified queries follow the Snowflake definitions.
     verified_query = semantic_model_pb2.VerifiedQuery(
+        name=question,
         question=question,
         sql=sql,
         verified_by=st.session_state["user_name"],
