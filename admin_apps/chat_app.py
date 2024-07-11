@@ -194,9 +194,9 @@ def edit_verified_query(
                         st.session_state["successful_sql"] = True
 
                 except Exception as e:
-                    st.session_state["error_state"] = (
-                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
-                    )
+                    st.session_state[
+                        "error_state"
+                    ] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
 
             if st.session_state["error_state"] is not None:
                 st.error(st.session_state["error_state"])
@@ -428,10 +428,14 @@ def yaml_editor(yaml_str: str) -> None:
             try:
                 validate(content, snowflake_account=st.session_state.account_name)
                 st.session_state["validated"] = True
-                update_container(status_container, "success", prefix=status_container_title)
+                update_container(
+                    status_container, "success", prefix=status_container_title
+                )
             except Exception as e:
                 st.session_state["validated"] = False
-                update_container(status_container, "failed", prefix=status_container_title)
+                update_container(
+                    status_container, "failed", prefix=status_container_title
+                )
                 exception_as_dialog(e)
 
             st.session_state.semantic_model = yaml_to_semantic_model(content)

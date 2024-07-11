@@ -163,7 +163,12 @@ python -m semantic_model_generator.validate_model \
 
 ## admin-app
 
-Please follow the README instructions inside the `admin_apps/` directory.
+To install the admin app dependencies, please run 
+```bash
+make setup_admin_app
+```
+
+from the root repo directory. This will install dependencies from the base wheel as well as admin-app specific dependencies.
 
 ## Examples
 

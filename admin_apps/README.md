@@ -18,20 +18,20 @@ The Chat App currently points to an existing semantic model on stage, allow you 
 
 ## Get started
 
-1. Make sure you've installed the requirements from the `pyproject.toml` file in this `admin_apps/` directory. The admin app uses Poetry to manage and install dependencies. For full instructions on how to set up Poetry, see the root repo README.
+1. Install all dependencies by running the following Makefile command from the root repo:
 ```bash
-cd admin_apps/
-
-# When setup for the first time
-poetry install
+make setup_admin_app
 ```
-
-2. run ```poetry shell``` to activiate the environment
 
 2. Inside the `admin_apps/` directory, run the following command:
 
 ```bash
 streamlit run chat_app.py  # for the Chat app
+```
+
+Alternatively, you can use the Make target from the root directory:
+```bash
+make run_admin_app
 ```
 
 3. Enjoy! 
