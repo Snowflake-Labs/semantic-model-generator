@@ -92,26 +92,21 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
     }
 
     host = st.session_state.host_name
-    num_retry, max_retries = 0, 10
-    while True:
-        resp = requests.post(
-            API_ENDPOINT.format(
-                HOST=host,
-            ),
-            json=request_body,
-            headers={
-                "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
-                "Content-Type": "application/json",
-            },
-        )
-        if resp.status_code < 400:
-            json_resp: Dict[str, Any] = resp.json()
-            return json_resp
-        else:
-            if num_retry >= max_retries:
-                resp.raise_for_status()
-            num_retry += 1
-        time.sleep(1)
+    resp = requests.post(
+        API_ENDPOINT.format(
+            HOST=host,
+        ),
+        json=request_body,
+        headers={
+            "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
+            "Content-Type": "application/json",
+        },
+    )
+    if resp.status_code < 400:
+        json_resp: Dict[str, Any] = resp.json()
+        return json_resp
+    else:
+        raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")
 
 
 def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
