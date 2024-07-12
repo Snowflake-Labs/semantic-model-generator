@@ -2,7 +2,7 @@
 
 This folder contains a Streamlit app designed that is designed to help you iterate your semantic models for the Cortex Analyst feature.
 
-The Chat App currently points to an existing semantic model on stage, allow you to chat against it, test the result and modify for verified queries.
+The iteration app currently points to an existing semantic model on stage, allow you to chat against it, test the result and modify for verified queries.
 
 
 <table border="0">
@@ -11,7 +11,7 @@ The Chat App currently points to an existing semantic model on stage, allow you 
      <td><img src="https://github.com/Snowflake-Labs/semantic-model-generator/assets/103658138/d96a4255-9e82-41ba-8a82-dcb87353b667" width="500"></td>
   </tr>
   <tr>
-      <td><strong>Chat app</strong> · so you can iterate on your semantic model by trying it live in a chat UI!</td>
+      <td><strong>Iteration app</strong> · so you can iterate on your semantic model by trying it live in a chat UI!</td>
       <td><strong>(coming soon) Builder app</strong> · so you can build your semantic model and edit tables, measures and dimensions from a UI</td>
    </tr>
 <table>
@@ -26,7 +26,7 @@ make setup_admin_app
 2. Inside the `admin_apps/` directory, run the following command:
 
 ```bash
-streamlit run chat_app.py  # for the Chat app
+streamlit run iteration_app.py  # for the Iteration app
 ```
 
 Alternatively, you can use the Make target from the root directory:

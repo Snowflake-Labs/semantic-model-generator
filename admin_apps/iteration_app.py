@@ -37,7 +37,7 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
 )
 from semantic_model_generator.validate_model import validate
 
-st.set_page_config(layout="wide", page_icon="💬", page_title="Chat app")
+st.set_page_config(layout="wide", page_icon="💬", page_title="Iteration app")
 init_session_states()
 
 
@@ -452,7 +452,7 @@ def yaml_editor(yaml_str: str) -> None:
 
 
 @st.experimental_dialog(
-    "Welcome to the Chat app! 💬",
+    "Welcome to the Iteration app! 💬",
     width="large",
 )
 def set_up_requirements() -> None:
