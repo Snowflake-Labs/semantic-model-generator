@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
     steps:
       - name: Check out the code
         uses: actions/checkout@v4
@@ -40,6 +40,11 @@ jobs:
       - name: Install dependencies using Poetry
         run: |
           $HOME/.local/bin/poetry install --no-interaction
+
+      - name: Install admin app dependencies using Poetry
+        working-directory: admin_apps
+        run: |
+          pip install -r requirements.txt
 
       - name: Test
         run: |

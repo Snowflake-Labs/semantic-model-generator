@@ -163,17 +163,12 @@ python -m semantic_model_generator.validate_model \
 
 ## admin-app
 
-### Generation and validation using admin app
-
-1. Ensure you have installed the Python package.
+To install the admin app dependencies, please run 
 ```bash
-pip install dist/*.whl
-```
-2. Start the admin streamlit app on your local.
-```bash
-make run_admin_app
+make setup_admin_app
 ```
 
+from the root repo directory. This will install dependencies from the base wheel as well as admin-app specific dependencies.
 
 ## Examples
 
