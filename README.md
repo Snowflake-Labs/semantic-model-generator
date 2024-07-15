@@ -314,9 +314,9 @@ You should follow the setup commands from usage-cli to install poetry and create
 
 1. Checkout a new branch from main. You should name this branch `release/vYYYY-MM-DD`.
 2. Bump the poetry:
-    * `poetry version patch` - increments `0.1.x` to `0.1.(x+1)`
-    * `poetry version minor` - increments `0.x.0` to `0.(x+1).0`
-    * `poetry version major` - increments `x.0.0` to `(x+1).0.0`
+    * `poetry version patch`
+    * `poetry version minor`
+    * `poetry version major`
 3. Update the `CHANGELOG.md` adding a relevant header for your version number along with a description of the changes made.
 4. Run `make build` to create a new .whl file.
 5. Push your files for approval.
