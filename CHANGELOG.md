@@ -2,6 +2,10 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.30] - 2024-07-12
+### Updates
+- Restrict Python version to < 3.12 in order to avoid issues with pyarrow dependency.
+
 ## [0.1.29] - 2024-07-10
 ### Updates
 - Allow single sign on auth.
