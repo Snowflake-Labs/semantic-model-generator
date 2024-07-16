@@ -189,9 +189,9 @@ def edit_verified_query(
                         st.session_state["successful_sql"] = True
 
                 except Exception as e:
-                    st.session_state["error_state"] = (
-                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
-                    )
+                    st.session_state[
+                        "error_state"
+                    ] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
 
             if st.session_state["error_state"] is not None:
                 st.error(st.session_state["error_state"])
@@ -295,7 +295,14 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
     }
 
     st.session_state.ctx_table_col_expr_dict = ctx_table_col_expr_dict
+    FIRST_MESSAGE = f"""Welcome! 😊
+    In this app, you can iteratively edit the semantic model YAML
+    on the left side, and test it out in a chat setting here on the right side.
 
+    Just so you know, I'm currently using the semantic model `{st.session_state.semantic_model.name}`.
+
+    How can I help you today?
+    """
     if len(st.session_state.messages) == 0:
         st.session_state.messages = [
             {
@@ -457,52 +464,47 @@ def yaml_editor(yaml_str: str) -> None:
     width="large",
 )
 def set_up_requirements() -> None:
-    st.markdown(
-        "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
-    )
-    account_name = st.text_input(
-        "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
-    )
-    host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
-    user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
-    stage_database = st.text_input("Stage database", value="")
-    stage_schema = st.text_input("Stage schema", value="")
-    stage_name = st.text_input("Stage name", value="")
-    file_name = st.text_input("File name", value="<your_file>.yaml")
-    if st.button("Submit"):
-        st.session_state["snowflake_stage"] = SnowflakeStage(
-            stage_database=stage_database,
-            stage_schema=stage_schema,
-            stage_name=stage_name,
+    if "yaml" in st.session_state:
+        # If we have a YAML, we're using the builder flow, so there's no need to load from stage.
+        st.markdown(
+            "Before we can start chatting with our model, let's set up the upload destination for your YAML. We won't upload it just yet, but we'll need this info later."
         )
-        st.session_state["account_name"] = account_name
-        st.session_state["host_name"] = host_name
-        st.session_state["user_name"] = user_name
-        st.session_state["file_name"] = file_name
-        st.rerun()
+        stage_database = st.text_input("Stage database", value="")
+        stage_schema = st.text_input("Stage schema", value="")
+        stage_name = st.text_input("Stage name", value="")
+        if st.button("Submit"):
+            st.session_state["snowflake_stage"] = SnowflakeStage(
+                stage_database=stage_database,
+                stage_schema=stage_schema,
+                stage_name=stage_name,
+            )
+            st.rerun()
+    else:
+        # Otherwise, we should collect the prebuilt YAML location from the user so that we can download it.
+        st.markdown(
+            "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
+        )
+        account_name = st.text_input(
+            "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
+        )
+        host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
+        user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
+        stage_database = st.text_input("Stage database", value="")
+        stage_schema = st.text_input("Stage schema", value="")
+        stage_name = st.text_input("Stage name", value="")
+        file_name = st.text_input("File name", value="<your_file>.yaml")
+        if st.button("Submit"):
+            st.session_state["snowflake_stage"] = SnowflakeStage(
+                stage_database=stage_database,
+                stage_schema=stage_schema,
+                stage_name=stage_name,
+            )
+            st.session_state["account_name"] = account_name
+            st.session_state["host_name"] = host_name
+            st.session_state["user_name"] = user_name
+            st.session_state["file_name"] = file_name
+            st.rerun()
 
-
-# First, user must set up some requirements (stage, host, user, etc.)
-
-if "snowflake_stage" not in st.session_state:
-    set_up_requirements()
-    st.stop()
-
-add_logo()
-
-if "last_saved_yaml" not in st.session_state:
-    yaml = download_yaml(st.session_state.file_name)
-    st.session_state["last_saved_yaml"] = yaml
-    st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
-if "yaml" not in st.session_state:
-    yaml = download_yaml(st.session_state.file_name)
-    st.session_state["yaml"] = yaml
-    st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
-
-# Now, user can interact with both panels
-left, right = st.columns(2)
-yaml_container = left.container(height=760)
-chat_container = right.container(height=760)
 
 SAVE_HELP = """Save changes to the active semantic model in this app. This is
 useful so you can then play with it in the chat panel on the right side."""
@@ -511,24 +513,38 @@ UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whe
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
 
-with yaml_container:
-    yaml_editor(
-        proto_to_yaml(st.session_state["semantic_model"]),
-    )
 
-FIRST_MESSAGE = f"""Welcome! 😊
-In this app, you can iteratively edit the semantic model YAML
-on the left side, and test it out in a chat setting here on the right side.
+# First, user must set up some requirements (stage, host, user, etc.)
+def show() -> None:
+    if "snowflake_stage" not in st.session_state:
+        set_up_requirements()
+        st.stop()
 
-Just so you know, I'm currently using the semantic model `{st.session_state.file_name}`.
+    add_logo()
 
-How can I help you today?
-"""
+    if "last_saved_yaml" not in st.session_state:
+        yaml = download_yaml(st.session_state.file_name)
+        st.session_state["last_saved_yaml"] = yaml
+        st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
+    if "yaml" not in st.session_state:
+        yaml = download_yaml(st.session_state.file_name)
+        st.session_state["yaml"] = yaml
+        st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
 
-with chat_container:
-    st.markdown("**Chat**")
-    with connector.connect(
-        db_name=st.session_state.snowflake_stage.stage_database,
-        schema_name=st.session_state.snowflake_stage.stage_schema,
-    ) as conn:
-        chat_and_edit_vqr(conn)
+    # Now, user can interact with both panels
+    left, right = st.columns(2)
+    yaml_container = left.container(height=760)
+    chat_container = right.container(height=760)
+
+    with yaml_container:
+        yaml_editor(
+            proto_to_yaml(st.session_state["semantic_model"]),
+        )
+
+    with chat_container:
+        st.markdown("**Chat**")
+        with connector.connect(
+            db_name=st.session_state.snowflake_stage.stage_database,
+            schema_name=st.session_state.snowflake_stage.stage_schema,
+        ) as conn:
+            chat_and_edit_vqr(conn)
