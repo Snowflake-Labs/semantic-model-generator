@@ -8,11 +8,11 @@ tables:
       schema: ADDRESS
       table: ALIAS
     filters:
-      - name: '  ' # <FILL-OUT>
+      - name: ALIAS
         synonyms:
-          - '  ' # <FILL-OUT>
-        description: '  ' # <FILL-OUT>
-        expr: '  ' # <FILL-OUT>
+          - 'an alias for something'
+        description: text
+        expr: ALIAS
     dimensions:
       - name: ALIAS
         synonyms:
