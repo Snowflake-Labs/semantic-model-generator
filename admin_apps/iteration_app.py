@@ -303,7 +303,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 
     How can I help you today?
     """
-    if len(st.session_state.messages) == 0:
+    if "messages" not in st.session_state or len(st.session_state.messages) == 0:
         st.session_state.messages = [
             {
                 "role": "assistant",
