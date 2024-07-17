@@ -38,6 +38,8 @@ measure: ColumnKind
 time_dimension: ColumnKind
 OPTIONAL_FIELD_NUMBER: _ClassVar[int]
 optional: _descriptor.FieldDescriptor
+SQL_EXPRESSION_FIELD_NUMBER: _ClassVar[int]
+sql_expression: _descriptor.FieldDescriptor
 
 class Dimension(_message.Message):
     __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values", "cortex_search_service_name")

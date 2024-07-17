@@ -6,6 +6,7 @@
 
 
 from typing import Dict
+import sqlglot
 
 from google.protobuf.descriptor import Descriptor, EnumDescriptor, FieldDescriptor
 from strictyaml import Bool, Decimal, Enum, Int, Map, Optional, Seq, Str, Validator
@@ -22,6 +23,15 @@ scalar_type_map = {
 }
 
 
+class SqlExpression(Str):  # type: ignore
+    def validate_scalar(self, chunk):  # type: ignore
+        try:
+            sqlglot.parse_one(chunk.contents, dialect=sqlglot.dialects.Snowflake)
+        except Exception:
+            chunk.expecting_but_found("", "invalid SQL expression")
+        return chunk.contents
+
+
 def create_schema_for_message(
     message: Descriptor, precomputed_types: Dict[str, Validator]
 ) -> Validator:
@@ -29,7 +39,7 @@ def create_schema_for_message(
         return precomputed_types[message.name]
     message_schema = {}
     for k, v in message.fields_by_name.items():
-        if is_optional_field(v):
+        if _is_optional_field(v):
             message_schema[Optional(k)] = create_schema_for_field(v, precomputed_types)
         else:
             message_schema[k] = create_schema_for_field(v, precomputed_types)
@@ -49,6 +59,10 @@ def create_schema_for_field(
         field_type = create_schema_for_enum(
             field_descriptor.enum_type, precomputed_types
         )
+    elif field_descriptor.type == FieldDescriptor.TYPE_STRING and _is_sql_expression(
+            field_descriptor
+    ):
+        field_type = SqlExpression()
     elif field_descriptor.type in scalar_type_map:
         field_type = scalar_type_map[field_descriptor.type]()
     else:
@@ -60,16 +74,24 @@ def create_schema_for_field(
     return field_type
 
 
-def is_optional_field(field_descriptor: FieldDescriptor) -> bool:
-    optional_option = list(
+def _is_optional_field(field_descriptor: FieldDescriptor) -> bool:
+    return _has_field_option(field_descriptor, "optional")
+
+
+def _is_sql_expression(field_descriptor: FieldDescriptor) -> bool:
+    return _has_field_option(field_descriptor, "sql_expression")
+
+
+def _has_field_option(field_descriptor: FieldDescriptor, option_name: str) -> bool:
+    option = list(
         filter(
-            lambda o: o[0].name == "optional",
+            lambda o: o[0].name == option_name,
             field_descriptor.GetOptions().ListFields(),
         )
     )
-    # ListFields returns a list of (FieldDescriptor, value) tuples. This checks that the `optional` option is present
+    # ListFields returns a list of (FieldDescriptor, value) tuples. This checks that the given option is present
     #  and that its value is True
-    return len(optional_option) > 0 and optional_option[0][1]
+    return len(option) > 0 and option[0][1]
 
 
 def create_schema_for_enum(

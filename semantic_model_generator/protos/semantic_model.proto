@@ -13,6 +13,7 @@ package semantic_model_generator;
 // Any fields with the `optional` option, are not required during YAML validation.
 extend google.protobuf.FieldOptions {
   optional bool optional = 51234;
+  optional bool sql_expression = 51235;
 }
 
 // AggregationType defines a list of various aggregations.
@@ -39,7 +40,7 @@ message Dimension {
     string description = 3 [(optional) = true];
     // The SQL expression defining this dimension. Could simply be a physical column name
     // or an arbitrary SQL expression over one or more columns of the physical table.
-    string expr = 4;
+    string expr = 4 [(sql_expression) = true];
     // The data type of this dimension.
     string data_type = 5;
     // If true, assume that this dimension has unique values.
@@ -63,7 +64,7 @@ message TimeDimension {
     // The SQL expression defining this time dimension. Could simply be a physical
     // column name or an arbitrary SQL expression over one or more columns of the
     // physical table.
-    string expr = 4;
+    string expr = 4 [(sql_expression) = true];
     // The data type of this time dimension.
     string data_type = 5;
     // If true, assume that this time dimension has unique values.
@@ -85,7 +86,7 @@ message Measure {
     // The SQL expression defining this measure. Could simply be a physical column
     // name or an arbitrary SQL expression over one or more physical columns of
     // the underlying physical table.
-    string expr = 4;
+    string expr = 4 [(sql_expression) = true];
     // The data type of this measure.
     string data_type = 5;
     // If no aggregation is specified, then this is the default aggregation
@@ -105,7 +106,7 @@ message NamedFilter {
     // is typically used for.
     string description = 3 [(optional) = true];
     // The SQL expression of this filter.
-    string expr = 4;
+    string expr = 4 [(sql_expression) = true];
 }
 
 // FullyQualifiedTable is used to represent three part table names -
@@ -181,7 +182,7 @@ message Column {
     string description = 3 [(optional) = true];
     // The SQL expression for this column. Could simply be a base table column name
     // or an arbitrary SQL expression over one or more columns of the base table.
-    string expr = 4;
+    string expr = 4 [(sql_expression) = true];
     // The data type of this column.
     // TODO(nsehrawat): Consider creating an enum instead, with all snowflake support data types.
     string data_type = 5;
@@ -207,7 +208,7 @@ message VerifiedQuery {
     // The question being answered.
     string question = 3;
     // The correct SQL query for answering the question.
-    string sql = 4;
+    string sql = 4 [(sql_expression) = true];
     // Timestamp at which the query was last verified - measures in seconds since epoch, in UTC.
     int64 verified_at = 5 [(optional) = true];
     // Name of the person who verified this query.
