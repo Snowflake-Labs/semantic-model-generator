@@ -7,6 +7,7 @@ import yaml
 from semantic_model_generator.data_processing import proto_utils
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.generate_model import (
+    _AUTOGEN_COMMENT_WARNING,
     _to_snake_case,
     generate_base_semantic_model_from_snowflake,
     raw_schema_to_semantic_context,
@@ -383,9 +384,14 @@ def test_generate_base_context_with_placeholder_comments(
 
     mock_file.assert_called_once_with(output_path, "w")
     # Assert file save called with placeholder comments added.
-    mock_file().write.assert_called_once_with(
-        "name: my awesome semantic model\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
-    )
+    expected_calls = [
+        call(_AUTOGEN_COMMENT_WARNING),
+        call(
+            "name: my awesome semantic model\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n"
+        ),
+    ]
+    mock_file().write.assert_has_calls(expected_calls)
+    assert mock_file().write.call_count == 2
 
 
 @patch("builtins.open", new_callable=mock_open)
@@ -411,11 +417,16 @@ def test_generate_base_context_with_placeholder_comments_cross_database_cross_sc
     )
 
     mock_file.assert_called_once_with(output_path, "w")
+    expected_calls = [
+        call(_AUTOGEN_COMMENT_WARNING),
+        call(
+            "name: Another Incredible Semantic Model\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: PRODUCTS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: A_DIFFERENT_DATABASE\n      schema: A_DIFFERENT_SCHEMA\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: SKU\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
+        ),
+    ]
 
     # Assert file save called with placeholder comments added along with sample values and cross-database
-    mock_file().write.assert_called_once_with(
-        "name: Another Incredible Semantic Model\ntables:\n  - name: ALIAS\n    description: some table comment\n    base_table:\n      database: TEST_DB\n      schema: SCHEMA_TEST\n      table: ALIAS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    dimensions:\n      - name: ZIP_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: some column comment\n        expr: ZIP_CODE\n        data_type: TEXT\n    time_dimensions:\n      - name: BAD_ALIAS\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: BAD_ALIAS\n        data_type: TIMESTAMP\n    measures:\n      - name: AREA_CODE\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: AREA_CODE\n        data_type: NUMBER\n      - name: CBSA\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: CBSA\n        data_type: NUMBER\n  - name: PRODUCTS\n    description: '  ' # <FILL-OUT>\n    base_table:\n      database: A_DIFFERENT_DATABASE\n      schema: A_DIFFERENT_SCHEMA\n      table: PRODUCTS\n    filters:\n      - name: '  ' # <FILL-OUT>\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: '  ' # <FILL-OUT>\n    measures:\n      - name: SKU\n        synonyms:\n          - '  ' # <FILL-OUT>\n        description: '  ' # <FILL-OUT>\n        expr: SKU\n        data_type: NUMBER\n        sample_values:\n          - '1'\n          - '2'\n          - '3'\n"
-    )
+    mock_file().write.assert_has_calls(expected_calls)
+    assert mock_file().write.call_count == 2
 
 
 @patch("semantic_model_generator.generate_model.logger")
