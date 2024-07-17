@@ -121,7 +121,7 @@ python -m semantic_model_generator.generate_model \
 
 #### Additional Fields to Fill Out
 
-**Important**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context. 
+**IMPORTANT**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time to fill these out with your business context, or else subsequent validation of your model will fail. 
 
 By default, the generated semantic model will contain all columns from the provided tables/views. However, it's highly encouraged to only keep relevant columns and drop any unwanted columns from the generated semantic model.
 
