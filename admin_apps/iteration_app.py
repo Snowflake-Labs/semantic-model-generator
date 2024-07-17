@@ -426,6 +426,8 @@ def yaml_editor(yaml_str: str) -> None:
                 update_container(
                     status_container, "success", prefix=status_container_title
                 )
+                st.session_state.semantic_model = yaml_to_semantic_model(content)
+                st.session_state.last_saved_yaml = content
             except Exception as e:
                 st.session_state["validated"] = False
                 update_container(
@@ -433,8 +435,7 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 exception_as_dialog(e)
 
-            st.session_state.semantic_model = yaml_to_semantic_model(content)
-            st.session_state.last_saved_yaml = content
+            st.rerun()
         if right.button(
             "Upload",
             use_container_width=True,
