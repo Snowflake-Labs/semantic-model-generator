@@ -1,5 +1,6 @@
 import pytest
 from strictyaml import YAMLValidationError
+
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 
 

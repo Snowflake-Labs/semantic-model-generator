@@ -6,8 +6,8 @@
 
 
 from typing import Dict
-import sqlglot
 
+import sqlglot
 from google.protobuf.descriptor import Descriptor, EnumDescriptor, FieldDescriptor
 from strictyaml import Bool, Decimal, Enum, Int, Map, Optional, Seq, Str, Validator
 
@@ -26,7 +26,7 @@ scalar_type_map = {
 class SqlExpression(Str):  # type: ignore
     def validate_scalar(self, chunk):  # type: ignore
         try:
-            sqlglot.parse_one(chunk.contents, dialect=sqlglot.dialects.Snowflake)
+            sqlglot.parse_one(chunk.contents, dialect=sqlglot.dialects.Snowflake)  # type: ignore
         except Exception:
             chunk.expecting_but_found("", "invalid SQL expression")
         return chunk.contents
@@ -60,7 +60,7 @@ def create_schema_for_field(
             field_descriptor.enum_type, precomputed_types
         )
     elif field_descriptor.type == FieldDescriptor.TYPE_STRING and _is_sql_expression(
-            field_descriptor
+        field_descriptor
     ):
         field_type = SqlExpression()
     elif field_descriptor.type in scalar_type_map:
