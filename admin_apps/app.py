@@ -4,6 +4,9 @@ import streamlit as st
 
 from admin_apps import builder_app, iteration_app
 
+# set_page_config must be run as the first Streamlit command on the page.
+st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
+
 
 def onboarding_dialog() -> None:
     st.write(

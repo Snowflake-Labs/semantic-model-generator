@@ -65,7 +65,7 @@ def init_session_states() -> None:
         st.session_state.semantic_model = semantic_model_pb2.SemanticModel()
     # validated stores the status if the generated yaml has ever been validated.
     if "validated" not in st.session_state:
-        st.session_state.validated = False
+        st.session_state.validated = None
     # last_validated_model stores the proto (without verfied queries) from last successful validation.
     if "last_validated_model" not in st.session_state:
         st.session_state.last_validated_model = semantic_model_pb2.SemanticModel()

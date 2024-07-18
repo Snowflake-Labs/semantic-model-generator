@@ -38,8 +38,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
 from semantic_model_generator.validate_model import validate
 
 
-
-
 @st.cache_resource
 def get_connector() -> SnowflakeConnector:
     return SnowflakeConnector(
@@ -296,12 +294,8 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 
         st.session_state.ctx_table_col_expr_dict = ctx_table_col_expr_dict
 
-    FIRST_MESSAGE = f"""Welcome! 😊
-    In this app, you can iteratively edit the semantic model YAML
-    on the left side, and test it out in a chat setting here on the right side.
+    FIRST_MESSAGE = "Welcome! 😊 In this app, you can iteratively edit the semantic model YAML on the left side, and test it out in a chat setting here on the right side. How can I help you today?"
 
-    How can I help you today?
-    """
     if "messages" not in st.session_state or len(st.session_state.messages) == 0:
         st.session_state.messages = [
             {
@@ -322,7 +316,14 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
                     conn=_conn, content=message["content"], message_index=message_index
                 )
 
-    if user_input := st.chat_input("What is your question?", disabled=not st.session_state["validated"]):
+    chat_placeholder = (
+        "What is your question?"
+        if st.session_state["validated"]
+        else "Please validate your semantic model before chatting."
+    )
+    if user_input := st.chat_input(
+        chat_placeholder, disabled=not st.session_state["validated"]
+    ):
         with messages:
             process_message(_conn=_conn, prompt=user_input)
 
@@ -334,9 +335,6 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 
 @st.experimental_dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
-    st.markdown("This will upload your YAML to the following Snowflake stage.")
-    st.write(st.session_state.snowflake_stage.to_dict())
-
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
             with st.spinner(
@@ -356,13 +354,31 @@ def upload_dialog(content: str) -> None:
         time.sleep(1.5)
         st.rerun()
 
-    new_name = st.text_input(
-        key="upload_yaml_final_name",
-        label="Enter the file name to upload (no need for .yaml suffix):",
-    )
+    if "snowflake_stage" in st.session_state:
+        st.markdown("This will upload your YAML to the following Snowflake stage.")
+        st.write(st.session_state.snowflake_stage.to_dict())
+        new_name = st.text_input(
+            key="upload_yaml_final_name",
+            label="Enter the file name to upload (no need for .yaml suffix):",
+        )
 
-    if st.button("Submit Upload"):
-        upload_handler(new_name)
+        if st.button("Submit Upload"):
+            upload_handler(new_name)
+    else:
+        st.markdown("Please enter the destination of your YAML file.")
+        with st.form("upload_form"):
+            stage_database = st.text_input("Stage database", value="")
+            stage_schema = st.text_input("Stage schema", value="")
+            stage_name = st.text_input("Stage name", value="")
+            new_name = st.text_input("File name", value="")
+
+            if st.form_submit_button("Submit Upload"):
+                st.session_state["snowflake_stage"] = SnowflakeStage(
+                    stage_database=stage_database,
+                    stage_schema=stage_schema,
+                    stage_name=stage_name,
+                )
+                upload_handler(new_name)
 
 
 def update_container(
@@ -434,6 +450,7 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 st.session_state.semantic_model = yaml_to_semantic_model(content)
                 st.session_state.last_saved_yaml = content
+                st.rerun()
             except Exception as e:
                 st.session_state["validated"] = False
                 update_container(
@@ -441,7 +458,6 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 exception_as_dialog(e)
 
-            st.rerun()
         if right.button(
             "Upload",
             use_container_width=True,
@@ -450,12 +466,13 @@ def yaml_editor(yaml_str: str) -> None:
             upload_dialog(content)
 
     # When no change, show success
-    if "last_saved_yaml" in st.session_state and content == st.session_state.last_saved_yaml:
+    print(st.session_state.validated)
+    if st.session_state.validated:
         update_container(status_container, "success", prefix=status_container_title)
-
+    elif st.session_state.validated is not None and not st.session_state.validated:
+        update_container(status_container, "failed", prefix=status_container_title)
     else:
         update_container(status_container, "editing", prefix=status_container_title)
-        st.session_state["validated"] = False
 
 
 @st.experimental_dialog(
@@ -514,11 +531,14 @@ the semantic model must be validated to be uploaded."""
 
 
 # First, user must set up some requirements (stage, host, user, etc.)
+
+
 def show() -> None:
-    st.set_page_config(layout="wide", page_icon="💬", page_title="Iteration app")
     init_session_states()
 
-    if "snowflake_stage" not in st.session_state:
+    # If the user is jumping straight into the iteration flow and not coming from the builder flow,
+    # we need to collect credentials and load YAML from stage.
+    if "snowflake_stage" not in st.session_state and "yaml" not in st.session_state:
         set_up_requirements()
         st.stop()
 
@@ -544,14 +564,10 @@ def show() -> None:
             editor_contents = proto_to_yaml(st.session_state["semantic_model"])
         else:
             editor_contents = st.session_state["yaml"]
-            st.session_state["validated"] = False
 
         yaml_editor(editor_contents)
 
     with chat_container:
         st.markdown("**Chat**")
-        with connector.connect(
-            db_name=st.session_state.snowflake_stage.stage_database,
-            schema_name=st.session_state.snowflake_stage.stage_schema,
-        ) as conn:
+        with connector.connect(db_name="") as conn:
             chat_and_edit_vqr(conn)
