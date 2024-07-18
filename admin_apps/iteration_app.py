@@ -9,6 +9,7 @@ import sqlglot
 import streamlit as st
 from shared_utils import (
     SNOWFLAKE_ACCOUNT,
+    GeneratorAppScreen,
     SnowflakeStage,
     add_logo,
     changed_from_last_validated_model,
@@ -478,10 +479,7 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "editing", prefix=status_container_title)
 
 
-@st.experimental_dialog(
-    "Welcome to the Iteration app! 💬",
-    width="large",
-)
+@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
@@ -509,6 +507,7 @@ def set_up_requirements() -> None:
         st.session_state["host_name"] = host_name
         st.session_state["user_name"] = user_name
         st.session_state["file_name"] = file_name
+        st.session_state["page"] = GeneratorAppScreen.ITERATION
         st.rerun()
 
 
@@ -528,35 +527,33 @@ def show() -> None:
         # we need to collect credentials and load YAML from stage.
         # If coming from the builder flow, there's no need to collect this information until the user wants to upload.
         set_up_requirements()
-        st.stop()
+    else:
+        add_logo()
+        if "yaml" not in st.session_state:
+            # Only proceed to download the YAML from stage if we don't have one from the builder flow.
+            yaml = download_yaml(st.session_state.file_name)
+            st.session_state["yaml"] = yaml
+            st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
+            if "last_saved_yaml" not in st.session_state:
+                st.session_state["last_saved_yaml"] = yaml
 
-    add_logo()
+        left, right = st.columns(2)
+        yaml_container = left.container(height=760)
+        chat_container = right.container(height=760)
 
-    if "yaml" not in st.session_state:
-        # Only proceed to download the YAML from stage if we don't have one from the builder flow.
-        yaml = download_yaml(st.session_state.file_name)
-        st.session_state["yaml"] = yaml
-        st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
-        if "last_saved_yaml" not in st.session_state:
-            st.session_state["last_saved_yaml"] = yaml
+        with yaml_container:
+            # Attempt to use the semantic model stored in the session state.
+            # If there is not one present (e.g. they are coming from the builder flow and haven't filled out the
+            # placeholders yet), we should still let them edit, so use the raw YAML.
+            if st.session_state.semantic_model.name != "":
+                editor_contents = proto_to_yaml(st.session_state["semantic_model"])
+            else:
+                editor_contents = st.session_state["yaml"]
 
-    left, right = st.columns(2)
-    yaml_container = left.container(height=760)
-    chat_container = right.container(height=760)
+            yaml_editor(editor_contents)
 
-    with yaml_container:
-        # Attempt to use the semantic model stored in the session state.
-        # If there is not one present (e.g. they are coming from the builder flow and haven't filled out the
-        # placeholders yet), we should still let them edit, so use the raw YAML.
-        if st.session_state.semantic_model.name != "":
-            editor_contents = proto_to_yaml(st.session_state["semantic_model"])
-        else:
-            editor_contents = st.session_state["yaml"]
-
-        yaml_editor(editor_contents)
-
-    with chat_container:
-        st.markdown("**Chat**")
-        # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
-        with connector.connect(db_name="") as conn:
-            chat_and_edit_vqr(conn)
+        with chat_container:
+            st.markdown("**Chat**")
+            # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
+            with connector.connect(db_name="") as conn:
+                chat_and_edit_vqr(conn)

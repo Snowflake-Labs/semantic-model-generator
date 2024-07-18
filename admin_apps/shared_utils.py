@@ -31,12 +31,13 @@ LOGO_URL_SMALL = (
 
 class GeneratorAppScreen(str, Enum):
     """
-    Enum defining page states for the app.
+    Enum defining different pages in the app.
+    There are two full page experiences - "onboarding" and "iteration", and the builder flow is simply a popup
+    that leads into the iteration flow.
     """
 
-    BUILDER = "builder"
-    ITERATION = "iteration"
     ONBOARDING = "onboarding"
+    ITERATION = "iteration"
 
 
 def add_logo() -> None:

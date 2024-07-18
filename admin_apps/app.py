@@ -12,26 +12,48 @@ if __name__ == "__main__":
     from admin_apps import builder_app, iteration_app
 
     def onboarding_dialog() -> None:
-        st.write(
-            "Welcome to the Semantic Model Generator! Here, we can help you create or edit a semantic model. What would you like to do?"
+        """
+        Renders the initial screen where users can choose to create a new semantic model or edit an existing one.
+        """
+        st.markdown(
+            """
+                <div style="text-align: center;">
+                    <h1>Welcome to the Snowflake Semantic Model Generator! ❄️</h1>
+                    <p>Let's get started. What would you like to do?</p>
+                </div>
+            """,
+            unsafe_allow_html=True,
         )
-        if st.button("Create a new semantic model"):
-            st.session_state["page"] = GeneratorAppScreen.BUILDER
-            st.rerun()
-        elif st.button("Edit an existing semantic model"):
-            st.session_state["page"] = GeneratorAppScreen.ITERATION
-            st.rerun()
+
+        st.markdown("<div style='margin: 20px;'></div>", unsafe_allow_html=True)
+
+        _, center, _ = st.columns([1, 2, 1])
+        with center:
+            if st.button(
+                "**🛠 Create a new semantic model**",
+                use_container_width=True,
+                type="primary",
+            ):
+                builder_app.show()
+            st.write("")
+            if st.button(
+                "**✏️ Edit an existing semantic model**",
+                use_container_width=True,
+                type="primary",
+            ):
+                iteration_app.show()
 
     # Populating common state between builder and iteration apps.
     st.session_state["account_name"] = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
     st.session_state["host_name"] = os.environ.get("SNOWFLAKE_HOST")
     st.session_state["user_name"] = os.environ.get("SNOWFLAKE_USER")
 
+    # When the app first loads, show the onboarding screen.
     if "page" not in st.session_state:
         st.session_state["page"] = GeneratorAppScreen.ONBOARDING
 
-    if st.session_state["page"] == GeneratorAppScreen.BUILDER:
-        builder_app.show()
+    # Depending on the page state, we either show the onboarding menu or the chat app flow.
+    # The builder flow is simply an intermediate dialog before the iteration flow.
     if st.session_state["page"] == GeneratorAppScreen.ITERATION:
         iteration_app.show()
     else:
