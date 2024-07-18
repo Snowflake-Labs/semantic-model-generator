@@ -485,30 +485,31 @@ def set_up_requirements() -> None:
     Collects existing YAML location from the user so that we can download it.
     """
     # Otherwise, we should collect the prebuilt YAML location from the user so that we can download it.
-    st.markdown(
-        "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
-    )
-    account_name = st.text_input(
-        "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
-    )
-    host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
-    user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
-    stage_database = st.text_input("Stage database", value="")
-    stage_schema = st.text_input("Stage schema", value="")
-    stage_name = st.text_input("Stage name", value="")
-    file_name = st.text_input("File name", value="<your_file>.yaml")
-    if st.button("Submit"):
-        st.session_state["snowflake_stage"] = SnowflakeStage(
-            stage_database=stage_database,
-            stage_schema=stage_schema,
-            stage_name=stage_name,
+    with st.form("download_yaml_requirements"):
+        st.markdown(
+            "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
         )
-        st.session_state["account_name"] = account_name
-        st.session_state["host_name"] = host_name
-        st.session_state["user_name"] = user_name
-        st.session_state["file_name"] = file_name
-        st.session_state["page"] = GeneratorAppScreen.ITERATION
-        st.rerun()
+        account_name = st.text_input(
+            "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
+        )
+        host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
+        user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
+        stage_database = st.text_input("Stage database", value="")
+        stage_schema = st.text_input("Stage schema", value="")
+        stage_name = st.text_input("Stage name", value="")
+        file_name = st.text_input("File name", value="<your_file>.yaml")
+        if st.form_submit_button("Submit"):
+            st.session_state["snowflake_stage"] = SnowflakeStage(
+                stage_database=stage_database,
+                stage_schema=stage_schema,
+                stage_name=stage_name,
+            )
+            st.session_state["account_name"] = account_name
+            st.session_state["host_name"] = host_name
+            st.session_state["user_name"] = user_name
+            st.session_state["file_name"] = file_name
+            st.session_state["page"] = GeneratorAppScreen.ITERATION
+            st.rerun()
 
 
 SAVE_HELP = """Save changes to the active semantic model in this app. This is

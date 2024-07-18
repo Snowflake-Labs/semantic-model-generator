@@ -25,7 +25,7 @@ if __name__ == "__main__":
             unsafe_allow_html=True,
         )
 
-        st.markdown("<div style='margin: 20px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin: 60px;'></div>", unsafe_allow_html=True)
 
         _, center, _ = st.columns([1, 2, 1])
         with center:
@@ -35,7 +35,7 @@ if __name__ == "__main__":
                 type="primary",
             ):
                 builder.show()
-            st.write("")
+            st.markdown("")
             if st.button(
                 "**✏️ Edit an existing semantic model**",
                 use_container_width=True,
