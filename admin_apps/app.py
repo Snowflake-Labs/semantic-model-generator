@@ -9,7 +9,7 @@ st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model G
 
 
 if __name__ == "__main__":
-    from admin_apps import builder_app, iteration_app
+    from admin_apps.journeys import builder, iteration
 
     def onboarding_dialog() -> None:
         """
@@ -34,14 +34,14 @@ if __name__ == "__main__":
                 use_container_width=True,
                 type="primary",
             ):
-                builder_app.show()
+                builder.show()
             st.write("")
             if st.button(
                 "**✏️ Edit an existing semantic model**",
                 use_container_width=True,
                 type="primary",
             ):
-                iteration_app.show()
+                iteration.show()
 
     # Populating common state between builder and iteration apps.
     st.session_state["account_name"] = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
@@ -55,6 +55,6 @@ if __name__ == "__main__":
     # Depending on the page state, we either show the onboarding menu or the chat app flow.
     # The builder flow is simply an intermediate dialog before the iteration flow.
     if st.session_state["page"] == GeneratorAppScreen.ITERATION:
-        iteration_app.show()
+        iteration.show()
     else:
         onboarding_dialog()
