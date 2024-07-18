@@ -37,8 +37,7 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
 )
 from semantic_model_generator.validate_model import validate
 
-st.set_page_config(layout="wide", page_icon="💬", page_title="Iteration app")
-init_session_states()
+
 
 
 @st.cache_resource
@@ -288,18 +287,18 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
     messages = st.container(height=600, border=False)
 
     # Convert semantic model to column format to be backward compatible with some old utils.
-    st.session_state.ctx = context_to_column_format(st.session_state.semantic_model)
-    ctx_table_col_expr_dict = {
-        logical_table_name(t): {c.name: c.expr for c in t.columns}
-        for t in st.session_state.ctx.tables
-    }
+    if "semantic_model" in st.session_state:
+        st.session_state.ctx = context_to_column_format(st.session_state.semantic_model)
+        ctx_table_col_expr_dict = {
+            logical_table_name(t): {c.name: c.expr for c in t.columns}
+            for t in st.session_state.ctx.tables
+        }
 
-    st.session_state.ctx_table_col_expr_dict = ctx_table_col_expr_dict
+        st.session_state.ctx_table_col_expr_dict = ctx_table_col_expr_dict
+
     FIRST_MESSAGE = f"""Welcome! 😊
     In this app, you can iteratively edit the semantic model YAML
     on the left side, and test it out in a chat setting here on the right side.
-
-    Just so you know, I'm currently using the semantic model `{st.session_state.semantic_model.name}`.
 
     How can I help you today?
     """
@@ -323,7 +322,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
                     conn=_conn, content=message["content"], message_index=message_index
                 )
 
-    if user_input := st.chat_input("What is your question?"):
+    if user_input := st.chat_input("What is your question?", disabled=not st.session_state["validated"]):
         with messages:
             process_message(_conn=_conn, prompt=user_input)
 
@@ -451,7 +450,7 @@ def yaml_editor(yaml_str: str) -> None:
             upload_dialog(content)
 
     # When no change, show success
-    if content == st.session_state.last_saved_yaml:
+    if "last_saved_yaml" in st.session_state and content == st.session_state.last_saved_yaml:
         update_container(status_container, "success", prefix=status_container_title)
 
     else:
@@ -516,20 +515,21 @@ the semantic model must be validated to be uploaded."""
 
 # First, user must set up some requirements (stage, host, user, etc.)
 def show() -> None:
+    st.set_page_config(layout="wide", page_icon="💬", page_title="Iteration app")
+    init_session_states()
+
     if "snowflake_stage" not in st.session_state:
         set_up_requirements()
         st.stop()
 
     add_logo()
 
-    if "last_saved_yaml" not in st.session_state:
-        yaml = download_yaml(st.session_state.file_name)
-        st.session_state["last_saved_yaml"] = yaml
-        st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
     if "yaml" not in st.session_state:
         yaml = download_yaml(st.session_state.file_name)
         st.session_state["yaml"] = yaml
         st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
+        if "last_saved_yaml" not in st.session_state:
+            st.session_state["last_saved_yaml"] = yaml
 
     # Now, user can interact with both panels
     left, right = st.columns(2)
@@ -537,9 +537,16 @@ def show() -> None:
     chat_container = right.container(height=760)
 
     with yaml_container:
-        yaml_editor(
-            proto_to_yaml(st.session_state["semantic_model"]),
-        )
+        # Attempt to use the semantic model stored in the session state.
+        # If there is not one present (e.g. they are coming from the builder flow and haven't filled out the
+        # placeholders yet), we should still let them edit, so use the raw YAML.
+        if st.session_state.semantic_model.name != "":
+            editor_contents = proto_to_yaml(st.session_state["semantic_model"])
+        else:
+            editor_contents = st.session_state["yaml"]
+            st.session_state["validated"] = False
+
+        yaml_editor(editor_contents)
 
     with chat_container:
         st.markdown("**Chat**")

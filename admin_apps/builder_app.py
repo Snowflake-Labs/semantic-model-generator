@@ -1,6 +1,5 @@
 import streamlit as st
 
-from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 from semantic_model_generator.generate_model import (
     generate_and_validate_model_from_snowflake,
 )
@@ -32,9 +31,7 @@ def table_selector_dialog() -> None:
                     n_sample_values=sample_values,  # type: ignore
                 )
 
-                st.session_state["last_saved_yaml"] = yaml_str
                 st.session_state["yaml"] = yaml_str
-                st.session_state["semantic_model"] = yaml_to_semantic_model(yaml_str)
                 st.session_state["page"] = "iteration"
                 st.rerun()
 
