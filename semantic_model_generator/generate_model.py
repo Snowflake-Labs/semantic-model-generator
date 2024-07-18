@@ -304,7 +304,7 @@ def generate_base_semantic_model_from_snowflake(
     else:  # Assume user gives correct path.
         write_path = output_yaml_path
 
-    yaml_str = generate_and_validate_model_from_snowflake(
+    yaml_str = generate_model_str_from_snowflake(
         base_tables,
         snowflake_account=snowflake_account,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
@@ -321,7 +321,7 @@ def generate_base_semantic_model_from_snowflake(
     return None
 
 
-def generate_and_validate_model_from_snowflake(
+def generate_model_str_from_snowflake(
     base_tables: List[str],
     snowflake_account: str,
     semantic_model_name: str,
@@ -334,7 +334,6 @@ def generate_and_validate_model_from_snowflake(
         base_tables : Fully qualified names of Snowflake tables to include in the semantic context.
         snowflake_account: Identifier of the Snowflake account.
         semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
-        output_yaml_path: Path for the output YAML file. If None, defaults to 'semantic_model_generator/output_models/YYYYMMDDHHMMSS_<semantic_model_name>.yaml'.
         n_sample_values: The number of sample values to populate for all columns.
 
     Returns:

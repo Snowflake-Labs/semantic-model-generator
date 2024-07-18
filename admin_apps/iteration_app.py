@@ -186,9 +186,9 @@ def edit_verified_query(
                         st.session_state["successful_sql"] = True
 
                 except Exception as e:
-                    st.session_state[
-                        "error_state"
-                    ] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    st.session_state["error_state"] = (
+                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    )
 
             if st.session_state["error_state"] is not None:
                 st.error(st.session_state["error_state"])
@@ -355,16 +355,20 @@ def upload_dialog(content: str) -> None:
         st.rerun()
 
     if "snowflake_stage" in st.session_state:
-        st.markdown("This will upload your YAML to the following Snowflake stage.")
-        st.write(st.session_state.snowflake_stage.to_dict())
-        new_name = st.text_input(
-            key="upload_yaml_final_name",
-            label="Enter the file name to upload (no need for .yaml suffix):",
-        )
+        # When opening the iteration app directly, we collect stage information already when downloading the YAML.
+        # We only need to ask for the new file name in this case.
+        with st.form("upload_form_name_only"):
+            st.markdown("This will upload your YAML to the following Snowflake stage.")
+            st.write(st.session_state.snowflake_stage.to_dict())
+            new_name = st.text_input(
+                key="upload_yaml_final_name",
+                label="Enter the file name to upload (no need for .yaml suffix):",
+            )
 
-        if st.button("Submit Upload"):
-            upload_handler(new_name)
+            if st.form_submit_button("Submit Upload"):
+                upload_handler(new_name)
     else:
+        # If coming from the builder flow, we need to ask the user for the exact stage path to upload to.
         st.markdown("Please enter the destination of your YAML file.")
         with st.form("upload_form"):
             stage_database = st.text_input("Stage database", value="")
@@ -465,8 +469,7 @@ def yaml_editor(yaml_str: str) -> None:
         ):
             upload_dialog(content)
 
-    # When no change, show success
-    print(st.session_state.validated)
+    # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
         update_container(status_container, "success", prefix=status_container_title)
     elif st.session_state.validated is not None and not st.session_state.validated:
@@ -480,46 +483,33 @@ def yaml_editor(yaml_str: str) -> None:
     width="large",
 )
 def set_up_requirements() -> None:
-    if "yaml" in st.session_state:
-        # If we have a YAML, we're using the builder flow, so there's no need to load from stage.
-        st.markdown(
-            "Before we can start chatting with our model, let's set up the upload destination for your YAML. We won't upload it just yet, but we'll need this info later."
+    """
+    Collects existing YAML location from the user so that we can download it.
+    """
+    # Otherwise, we should collect the prebuilt YAML location from the user so that we can download it.
+    st.markdown(
+        "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
+    )
+    account_name = st.text_input(
+        "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
+    )
+    host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
+    user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
+    stage_database = st.text_input("Stage database", value="")
+    stage_schema = st.text_input("Stage schema", value="")
+    stage_name = st.text_input("Stage name", value="")
+    file_name = st.text_input("File name", value="<your_file>.yaml")
+    if st.button("Submit"):
+        st.session_state["snowflake_stage"] = SnowflakeStage(
+            stage_database=stage_database,
+            stage_schema=stage_schema,
+            stage_name=stage_name,
         )
-        stage_database = st.text_input("Stage database", value="")
-        stage_schema = st.text_input("Stage schema", value="")
-        stage_name = st.text_input("Stage name", value="")
-        if st.button("Submit"):
-            st.session_state["snowflake_stage"] = SnowflakeStage(
-                stage_database=stage_database,
-                stage_schema=stage_schema,
-                stage_name=stage_name,
-            )
-            st.rerun()
-    else:
-        # Otherwise, we should collect the prebuilt YAML location from the user so that we can download it.
-        st.markdown(
-            "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
-        )
-        account_name = st.text_input(
-            "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
-        )
-        host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
-        user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
-        stage_database = st.text_input("Stage database", value="")
-        stage_schema = st.text_input("Stage schema", value="")
-        stage_name = st.text_input("Stage name", value="")
-        file_name = st.text_input("File name", value="<your_file>.yaml")
-        if st.button("Submit"):
-            st.session_state["snowflake_stage"] = SnowflakeStage(
-                stage_database=stage_database,
-                stage_schema=stage_schema,
-                stage_name=stage_name,
-            )
-            st.session_state["account_name"] = account_name
-            st.session_state["host_name"] = host_name
-            st.session_state["user_name"] = user_name
-            st.session_state["file_name"] = file_name
-            st.rerun()
+        st.session_state["account_name"] = account_name
+        st.session_state["host_name"] = host_name
+        st.session_state["user_name"] = user_name
+        st.session_state["file_name"] = file_name
+        st.rerun()
 
 
 SAVE_HELP = """Save changes to the active semantic model in this app. This is
@@ -530,28 +520,26 @@ you think your semantic model is doing great and should be pushed to prod! Note 
 the semantic model must be validated to be uploaded."""
 
 
-# First, user must set up some requirements (stage, host, user, etc.)
-
-
 def show() -> None:
     init_session_states()
 
-    # If the user is jumping straight into the iteration flow and not coming from the builder flow,
-    # we need to collect credentials and load YAML from stage.
     if "snowflake_stage" not in st.session_state and "yaml" not in st.session_state:
+        # If the user is jumping straight into the iteration flow and not coming from the builder flow,
+        # we need to collect credentials and load YAML from stage.
+        # If coming from the builder flow, there's no need to collect this information until the user wants to upload.
         set_up_requirements()
         st.stop()
 
     add_logo()
 
     if "yaml" not in st.session_state:
+        # Only proceed to download the YAML from stage if we don't have one from the builder flow.
         yaml = download_yaml(st.session_state.file_name)
         st.session_state["yaml"] = yaml
         st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
         if "last_saved_yaml" not in st.session_state:
             st.session_state["last_saved_yaml"] = yaml
 
-    # Now, user can interact with both panels
     left, right = st.columns(2)
     yaml_container = left.container(height=760)
     chat_container = right.container(height=760)
@@ -569,5 +557,6 @@ def show() -> None:
 
     with chat_container:
         st.markdown("**Chat**")
+        # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
         with connector.connect(db_name="") as conn:
             chat_and_edit_vqr(conn)

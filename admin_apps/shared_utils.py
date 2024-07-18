@@ -4,6 +4,7 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from io import StringIO
 from typing import Optional
 
@@ -26,6 +27,16 @@ LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snow
 LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
+
+
+class GeneratorAppScreen(str, Enum):
+    """
+    Enum defining page states for the app.
+    """
+
+    BUILDER = "builder"
+    ITERATION = "iteration"
+    ONBOARDING = "onboarding"
 
 
 def add_logo() -> None:

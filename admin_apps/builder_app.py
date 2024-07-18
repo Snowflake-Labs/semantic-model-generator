@@ -1,12 +1,15 @@
 import streamlit as st
 
-from semantic_model_generator.generate_model import (
-    generate_and_validate_model_from_snowflake,
-)
+from admin_apps.shared_utils import GeneratorAppScreen
+from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 
 
 @st.experimental_dialog("Selecting your tables", width="large")
 def table_selector_dialog() -> None:
+    """
+    Renders a dialog box for the user to input the tables they want to use in their semantic model.
+    """
+
     st.write(
         "Please fill out the following fields to start building your semantic model."
     )
@@ -22,17 +25,18 @@ def table_selector_dialog() -> None:
 
         submit = st.form_submit_button("Submit")
         if submit:
-            # Set common state variables with iteration app, in order to prevent dupe inputs.
             with st.spinner("Generating model..."):
-                yaml_str = generate_and_validate_model_from_snowflake(
+                yaml_str = generate_model_str_from_snowflake(
                     base_tables=[table.strip() for table in tables.split(",")],
                     snowflake_account=st.session_state["account_name"],
                     semantic_model_name=model_name,
                     n_sample_values=sample_values,  # type: ignore
                 )
 
+                # Set the YAML session state so that the iteration app has access to the generated contents,
+                # then proceed to the iteration screen.
                 st.session_state["yaml"] = yaml_str
-                st.session_state["page"] = "iteration"
+                st.session_state["page"] = GeneratorAppScreen.ITERATION
                 st.rerun()
 
 
