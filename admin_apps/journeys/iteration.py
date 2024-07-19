@@ -363,7 +363,7 @@ def upload_dialog(content: str) -> None:
             st.write(st.session_state.snowflake_stage.to_dict())
             new_name = st.text_input(
                 key="upload_yaml_final_name",
-                label="Enter the file name to upload (no need for .yaml suffix):",
+                label="Enter the file name to upload (omit .yaml suffix):",
             )
 
             if st.form_submit_button("Submit Upload"):
@@ -375,7 +375,7 @@ def upload_dialog(content: str) -> None:
             stage_database = st.text_input("Stage database", value="")
             stage_schema = st.text_input("Stage schema", value="")
             stage_name = st.text_input("Stage name", value="")
-            new_name = st.text_input("File name", value="")
+            new_name = st.text_input("File name (omit .yaml suffix)", value="")
 
             if st.form_submit_button("Submit Upload"):
                 st.session_state["snowflake_stage"] = SnowflakeStage(
