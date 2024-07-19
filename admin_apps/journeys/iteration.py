@@ -493,6 +493,7 @@ def set_up_requirements() -> None:
         st.markdown(
             "Fill in the Snowflake stage details to download your existing YAML file."
         )
+        # TODO: Make these dropdown selectors by fetching all dbs/schemas similar to table approach?
         stage_database = st.text_input("Stage database", value="")
         stage_schema = st.text_input("Stage schema", value="")
         stage_name = st.text_input("Stage name", value="")
