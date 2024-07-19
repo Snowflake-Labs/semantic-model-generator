@@ -2,10 +2,10 @@ import streamlit as st
 
 from admin_apps.shared_utils import GeneratorAppScreen
 from semantic_model_generator.snowflake_utils.env_vars import (
-    assert_required_env_vars,
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
+    assert_required_env_vars,
 )
 
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
