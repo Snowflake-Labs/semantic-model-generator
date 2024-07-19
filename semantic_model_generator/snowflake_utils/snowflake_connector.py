@@ -244,6 +244,23 @@ def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
     return pd.concat([tables, views], axis=0)
 
 
+def fetch_table_names(conn: SnowflakeConnection) -> list[str]:
+    """
+    Fetches all tables that the current user has access to, throughout all db/schema.
+    Args:
+        conn: SnowflakeConnection to run the query
+
+    Returns: a list of fully qualified table names.
+    """
+
+    query = "show tables;"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    results = cursor.fetchall()
+    # Each row in the result has columns (created_on, table_name, database_name, schema_name, ...)
+    return [f"{result[2]}.{result[3]}.{result[1]}" for result in results]
+
+
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection,
     table_schema: Optional[str] = None,
