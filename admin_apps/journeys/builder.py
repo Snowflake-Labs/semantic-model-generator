@@ -52,7 +52,9 @@ def table_selector_dialog() -> None:
             "Submit", use_container_width=True, type="primary"
         )
         if submit:
-            if not tables:
+            if not model_name:
+                st.error("Please provide a name for your semantic model.")
+            elif not tables:
                 st.error("Please select at least one table to proceed.")
             else:
                 with st.spinner("Generating model..."):
