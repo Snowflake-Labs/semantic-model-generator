@@ -208,8 +208,8 @@ CREATE TABLE sales.public.sd_data
     dt    DATETIME,
     cat   VARCHAR(255),
     loc   VARCHAR(255),
-    cntry VARCHAR(255)
-        chn VARCHAR (50),
+    cntry VARCHAR(255),
+    chn   VARCHAR(50),
     amt   DECIMAL(10, 2),
     unts  INT,
     cst   DECIMAL(10, 2)
