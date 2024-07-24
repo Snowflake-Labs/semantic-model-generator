@@ -1,6 +1,6 @@
 import streamlit as st
 
-from admin_apps.shared_utils import GeneratorAppScreen
+from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
 from semantic_model_generator.snowflake_utils.env_vars import (
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
@@ -72,6 +72,7 @@ if __name__ == "__main__":
                 iteration.show()
 
     verify_environment_setup()
+    get_snowflake_connection()
 
     # Populating common state between builder and iteration apps.
     st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR

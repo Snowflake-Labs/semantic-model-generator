@@ -349,7 +349,7 @@ class SnowflakeConnector:
 
     @contextmanager
     def connect(
-        self, db_name: str, schema_name: Optional[str] = None
+        self, db_name: str, schema_name: Optional[str] = None, keep_alive: bool = False
     ) -> Generator[SnowflakeConnection, None, None]:
         """Opens a connection to the database and optional schema.
 
@@ -362,14 +362,15 @@ class SnowflakeConnector:
         Args:
             db_name: The name of the database to connect to.
             schema_name: The name of the schema to connect to. Primarily needed for Snowflake databases.
+            keep_alive: Set to true if you want to skip closing the connection when this method terminates.
         """
         conn = None
         try:
             conn = self._open_connection(db_name, schema_name=schema_name)
             yield conn
         finally:
-            if conn is not None:
-                self._close_connection(connection=conn)
+            if not keep_alive and conn is not None:
+                self._close_connection(conn)
 
     def _open_connection(
         self, db_name: str, schema_name: Optional[str] = None
@@ -443,3 +444,11 @@ class SnowflakeConnector:
                     f"Expected a dict for row object. Instead passed {row}"
                 )
         return out_dict
+
+
+def set_database(conn: SnowflakeConnection, db_name: str) -> None:
+    conn.cursor().execute(f"USE DATABASE {db_name}")
+
+
+def set_schema(conn: SnowflakeConnection, schema_name: str) -> None:
+    conn.cursor().execute(f"USE SCHEMA {schema_name}")

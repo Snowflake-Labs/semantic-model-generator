@@ -4,6 +4,7 @@ from typing import List, Optional
 
 import jsonargparse
 from loguru import logger
+from snowflake.connector import SnowflakeConnection
 
 from semantic_model_generator.data_processing import data_types, proto_utils
 from semantic_model_generator.protos import semantic_model_pb2
@@ -16,6 +17,8 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     get_table_representation,
     get_valid_schemas_tables_columns_df,
+    set_database,
+    set_schema,
 )
 from semantic_model_generator.snowflake_utils.utils import create_fqn_table
 from semantic_model_generator.validate.context_length import validate_context_length
@@ -148,6 +151,7 @@ def raw_schema_to_semantic_context(
     snowflake_account: str,
     semantic_model_name: str,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
+    conn: SnowflakeConnection = None,
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -168,10 +172,7 @@ def raw_schema_to_semantic_context(
     Raises:
     - AssertionError: If no valid tables are found in the specified schema.
     """
-    connector = SnowflakeConnector(
-        account_name=snowflake_account,
-        max_workers=1,
-    )
+
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
     table_objects = []
     unique_database_schema: List[str] = []
@@ -183,37 +184,47 @@ def raw_schema_to_semantic_context(
         if fqn_databse_schema not in unique_database_schema:
             unique_database_schema.append(fqn_databse_schema)
 
-        with connector.connect(
-            db_name=fqn_table.database, schema_name=fqn_table.schema_name
-        ) as conn:
-            logger.info(f"Pulling column information from {fqn_table}")
-            valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
-                conn=conn,
-                table_schema=fqn_table.schema_name,
-                table_names=[fqn_table.table],
-            )
-            assert not valid_schemas_tables_columns_df.empty
-
-            # get the valid columns for this table.
-            valid_columns_df_this_table = valid_schemas_tables_columns_df[
-                valid_schemas_tables_columns_df["TABLE_NAME"] == fqn_table.table
-            ]
-
-            raw_table = get_table_representation(
-                conn=conn,
-                schema_name=fqn_table.schema_name,
-                table_name=fqn_table.table,
-                table_index=0,
-                ndv_per_column=n_sample_values,  # number of sample values to pull per column.
-                columns_df=valid_columns_df_this_table,
+        if conn is None:
+            connector = SnowflakeConnector(
+                account_name=snowflake_account,
                 max_workers=1,
             )
-            table_object = _raw_table_to_semantic_context_table(
-                database=fqn_table.database,
-                schema=fqn_table.schema_name,
-                raw_table=raw_table,
-            )
-            table_objects.append(table_object)
+            with connector.connect(
+                db_name=fqn_table.database, schema_name=fqn_table.schema_name
+            ) as new_conn:
+                conn = new_conn
+        else:
+            set_database(conn, fqn_table.database)
+            set_schema(conn, fqn_table.schema_name)
+
+        logger.info(f"Pulling column information from {fqn_table}")
+        valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
+            conn=conn,
+            table_schema=fqn_table.schema_name,
+            table_names=[fqn_table.table],
+        )
+        assert not valid_schemas_tables_columns_df.empty
+
+        # get the valid columns for this table.
+        valid_columns_df_this_table = valid_schemas_tables_columns_df[
+            valid_schemas_tables_columns_df["TABLE_NAME"] == fqn_table.table
+        ]
+
+        raw_table = get_table_representation(
+            conn=conn,
+            schema_name=fqn_table.schema_name,
+            table_name=fqn_table.table,
+            table_index=0,
+            ndv_per_column=n_sample_values,  # number of sample values to pull per column.
+            columns_df=valid_columns_df_this_table,
+            max_workers=1,
+        )
+        table_object = _raw_table_to_semantic_context_table(
+            database=fqn_table.database,
+            schema=fqn_table.schema_name,
+            raw_table=raw_table,
+        )
+        table_objects.append(table_object)
     # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
     context = semantic_model_pb2.SemanticModel(
         name=semantic_model_name, tables=table_objects
@@ -326,6 +337,7 @@ def generate_model_str_from_snowflake(
     snowflake_account: str,
     semantic_model_name: str,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
+    conn: SnowflakeConnection = None,
 ) -> str:
     """
     Generates a base semantic context from specified Snowflake tables and returns the raw string.
@@ -344,6 +356,7 @@ def generate_model_str_from_snowflake(
         snowflake_account=snowflake_account,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
+        conn=conn,
     )
     # Validate the generated yaml is within context limits.
     # We just throw a warning here to allow users to update.
