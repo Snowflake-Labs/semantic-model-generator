@@ -7,7 +7,7 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
-from shared_utils import (
+from admin_apps.shared_utils import (
     SNOWFLAKE_ACCOUNT,
     GeneratorAppScreen,
     SnowflakeStage,
