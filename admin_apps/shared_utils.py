@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import time
-import traceback
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -21,9 +20,9 @@ from semantic_model_generator.generate_model import raw_schema_to_semantic_conte
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    SnowflakeConnector,
     set_database,
     set_schema,
-    SnowflakeConnector,
 )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
@@ -38,6 +37,11 @@ LOGO_URL_SMALL = (
 
 @st.cache_resource
 def get_connector() -> SnowflakeConnector:
+    """
+    Instantiates a SnowflakeConnector using the provided credentials. This is mainly used to instantiate a
+    SnowflakeConnection which can execute queries.
+    Returns: SnowflakeConnector object
+    """
     return SnowflakeConnector(
         account_name=SNOWFLAKE_ACCOUNT,
         max_workers=1,
@@ -46,24 +50,12 @@ def get_connector() -> SnowflakeConnector:
 
 @st.cache_resource
 def get_snowflake_connection() -> SnowflakeConnection:
-    print("called")
-    # Capture the current stack trace
-    stack_trace = traceback.format_stack()
-    # Print the stack trace
-    print("Stack trace from where the function was called:")
-    for line in stack_trace:
-        print(line.strip())
-
-    with get_connector().connect(db_name="", keep_alive=True) as conn:
-        return conn
-
-
-@st.cache_resource
-def instantiate_snowflake_connection_with_db_schema(db_name: str, schema_name: str):
-    conn = get_snowflake_connection()
-    set_database(conn, db_name)
-    set_schema(conn, schema_name)
-    return conn
+    """
+    Opens a general connection to Snowflake using the provided SnowflakeConnector
+    Marked with st.cache_resource in order to reuse this connection across the app.
+    Returns: SnowflakeConnection
+    """
+    return get_connector().open_connection(db_name="")
 
 
 class GeneratorAppScreen(str, Enum):
@@ -632,6 +624,7 @@ def add_new_table() -> None:
                     ],
                     snowflake_account=SNOWFLAKE_ACCOUNT,
                     semantic_model_name="foo",  # A placeholder name that's not used anywhere.
+                    conn=get_snowflake_connection(),
                 )
             except Exception as ex:
                 st.error(f"Error adding table: {ex}")

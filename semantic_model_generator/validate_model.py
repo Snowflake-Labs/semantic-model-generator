@@ -1,3 +1,5 @@
+from typing import Optional
+
 import jsonargparse
 from loguru import logger
 from snowflake.connector import SnowflakeConnection
@@ -29,13 +31,14 @@ def load_yaml(yaml_path: str) -> str:
 
 
 def validate(
-    yaml_str: str, snowflake_account: str, conn: SnowflakeConnection = None
+    yaml_str: str, snowflake_account: str, conn: Optional[SnowflakeConnection] = None
 ) -> None:
     """
     For now, validate just ensures that the yaml is correctly formatted and we can parse into our protos.
 
     yaml_str: yaml content in string format.
     snowflake_account: str The name of the snowflake account.
+    conn: SnowflakeConnection optional Snowflake connection to pass in. If none is present, one is created.
 
     TODO: ensure that all expressions are valid by running a query containing all columns and expressions.
     """
@@ -46,22 +49,18 @@ def validate(
 
     model_in_column_format = context_to_column_format(model)
 
+    if conn is None:
+        connector = SnowflakeConnector(
+            account_name=snowflake_account,
+            max_workers=1,
+        )
+        conn = connector.open_connection(db_name="")
+
     for table in model_in_column_format.tables:
         logger.info(f"Checking logical table: {table.name}")
         # Each table can be a different database/schema.
-        # Create new connection for each one.
-        if conn is None:
-            connector = SnowflakeConnector(
-                account_name=snowflake_account,
-                max_workers=1,
-            )
-            with connector.connect(
-                db_name=table.base_table.database, schema_name=table.base_table.schema
-            ) as unique_connection:
-                conn = unique_connection
-        else:
-            set_database(conn, table.base_table.database)
-            set_schema(conn, table.base_table.schema)
+        set_database(conn, table.base_table.database)
+        set_schema(conn, table.base_table.schema)
         try:
             validate_all_cols(table)
             sqls = generate_select(table, 1)
@@ -75,19 +74,6 @@ def validate(
 
     for vq in model.verified_queries:
         logger.info(f"Checking verified queries for: {vq.question}")
-        if conn is None:
-            connector = SnowflakeConnector(
-                account_name=snowflake_account,
-                max_workers=1,
-            )
-            with connector.connect(
-                db_name=table.base_table.database, schema_name=table.base_table.schema
-            ) as unique_connection:
-                conn = unique_connection
-        else:
-            set_database(conn, table.base_table.database)
-            set_schema(conn, table.base_table.schema)
-
         try:
             vqr_with_ctes = expand_all_logical_tables_as_ctes(
                 vq.sql, model_in_column_format
@@ -101,11 +87,9 @@ def validate(
     logger.info("Successfully validated!")
 
 
-def validate_from_local_path(
-    yaml_path: str, snowflake_account: str, conn: SnowflakeConnection
-) -> None:
+def validate_from_local_path(yaml_path: str, snowflake_account: str) -> None:
     yaml_str = load_yaml(yaml_path)
-    validate(yaml_str, snowflake_account, conn)
+    validate(yaml_str, snowflake_account)
 
 
 if __name__ == "__main__":

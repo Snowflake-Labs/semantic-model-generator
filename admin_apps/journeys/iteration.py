@@ -11,7 +11,6 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
 from admin_apps.shared_utils import (
-    SNOWFLAKE_ACCOUNT,
     GeneratorAppScreen,
     SnowflakeStage,
     add_logo,

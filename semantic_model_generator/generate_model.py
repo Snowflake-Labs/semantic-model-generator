@@ -150,8 +150,8 @@ def raw_schema_to_semantic_context(
     base_tables: List[str],
     snowflake_account: str,
     semantic_model_name: str,
+    conn: Optional[SnowflakeConnection] = None,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
-    conn: SnowflakeConnection = None,
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -160,6 +160,7 @@ def raw_schema_to_semantic_context(
     - base_tables  (list[str]): Fully qualified table names to include in the semantic model.
     - snowflake_account (str): Snowflake account identifier.
     - semantic_model_name (str): A meaningful semantic model name.
+    - conn (optional, SnowflakeConnection): SnowflakeConnection to reuse. If not passed in, one is created.
     - n_sample_values (int): The number of sample values per col.
 
     Returns:
@@ -189,10 +190,9 @@ def raw_schema_to_semantic_context(
                 account_name=snowflake_account,
                 max_workers=1,
             )
-            with connector.connect(
+            conn = connector.open_connection(
                 db_name=fqn_table.database, schema_name=fqn_table.schema_name
-            ) as new_conn:
-                conn = new_conn
+            )
         else:
             set_database(conn, fqn_table.database)
             set_schema(conn, fqn_table.schema_name)
@@ -320,6 +320,7 @@ def generate_base_semantic_model_from_snowflake(
         snowflake_account=snowflake_account,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
+        conn=None,  # Instantiate a new connection.
     )
 
     with open(write_path, "w") as f:
@@ -336,8 +337,8 @@ def generate_model_str_from_snowflake(
     base_tables: List[str],
     snowflake_account: str,
     semantic_model_name: str,
+    conn: Optional[SnowflakeConnection] = None,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
-    conn: SnowflakeConnection = None,
 ) -> str:
     """
     Generates a base semantic context from specified Snowflake tables and returns the raw string.
@@ -346,6 +347,7 @@ def generate_model_str_from_snowflake(
         base_tables : Fully qualified names of Snowflake tables to include in the semantic context.
         snowflake_account: Identifier of the Snowflake account.
         semantic_model_name: The human readable model name. This should be semantically meaningful to an organization.
+        conn: SnowflakeConnection to reuse. If not passed in, one is created.
         n_sample_values: The number of sample values to populate for all columns.
 
     Returns:
