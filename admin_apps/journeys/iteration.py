@@ -7,6 +7,10 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
+from snowflake.connector import SnowflakeConnection
+from streamlit.delta_generator import DeltaGenerator
+from streamlit_monaco import st_monaco
+
 from admin_apps.shared_utils import (
     SNOWFLAKE_ACCOUNT,
     GeneratorAppScreen,
@@ -18,10 +22,6 @@ from admin_apps.shared_utils import (
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
-from snowflake.connector import SnowflakeConnection
-from streamlit.delta_generator import DeltaGenerator
-from streamlit_monaco import st_monaco
-
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
     expand_all_logical_tables_as_ctes,
