@@ -24,10 +24,13 @@ The app currently supports two types of flows:
 make setup_admin_app
 ```
 
-2. Inside the `admin_apps/` directory, run the following command:
+2. Run the following command from the root repo:
 
 ```bash
-python -m streamlit run app.py 
+python -m streamlit run admin_apps/app.py 
+
+# Depending on how your python is installed, you may need to specify the python version e.g:
+python3.11 -m streamlit run admin_apps/app.py
 ```
 
 Alternatively, you can use the Make target from the root directory:
