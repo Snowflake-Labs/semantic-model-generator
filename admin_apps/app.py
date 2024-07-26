@@ -1,4 +1,5 @@
 import streamlit as st
+from snowflake.connector import DatabaseError
 
 from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
 from semantic_model_generator.snowflake_utils.env_vars import (
@@ -27,6 +28,17 @@ Please follow the [setup instructions](https://github.com/Snowflake-Labs/semanti
     st.stop()
 
 
+@st.experimental_dialog(title="Connection Error")
+def failed_connection_popup() -> None:
+    """
+    Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.
+    """
+    st.markdown(
+        f"""It looks like the credentials provided for `{SNOWFLAKE_USER}` could not be used to connect to the account `{SNOWFLAKE_ACCOUNT_LOCATOR}` at host `{SNOWFLAKE_HOST}`. Please verify your credentials in the environment variables and try again."""
+    )
+    st.stop()
+
+
 def verify_environment_setup() -> None:
     """
     Ensures that the correct environment variables are set before proceeding.
@@ -34,6 +46,12 @@ def verify_environment_setup() -> None:
     missing_env_vars = assert_required_env_vars()
     if missing_env_vars:
         env_setup_popup(missing_env_vars)
+
+    # Instantiate the Snowflake connection that gets reused throughout the app.
+    try:
+        get_snowflake_connection()
+    except DatabaseError:
+        failed_connection_popup()
 
 
 if __name__ == "__main__":
