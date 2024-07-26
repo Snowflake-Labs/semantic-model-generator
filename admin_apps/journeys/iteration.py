@@ -16,6 +16,7 @@ from admin_apps.shared_utils import (
     add_logo,
     changed_from_last_validated_model,
     download_yaml,
+    get_snowflake_connection,
     init_session_states,
     upload_yaml,
     validate_and_upload_tmp_yaml,
