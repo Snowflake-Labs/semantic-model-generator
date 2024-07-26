@@ -29,4 +29,12 @@ def assert_required_env_vars() -> list[str]:
     if not SNOWFLAKE_PASSWORD and not SNOWFLAKE_AUTHENTICATOR:
         missing_env_vars.append("SNOWFLAKE_PASSWORD/SNOWFLAKE_AUTHENTICATOR")
 
+    # Assert that SNOWFLAKE_PASSWORD is required unless the user is using the externalbrowser authenticator
+    if (
+        SNOWFLAKE_AUTHENTICATOR
+        and SNOWFLAKE_AUTHENTICATOR.lower() != "externalbrowser"
+        and not SNOWFLAKE_PASSWORD
+    ):
+        missing_env_vars.append("SNOWFLAKE_PASSWORD")
+
     return missing_env_vars
