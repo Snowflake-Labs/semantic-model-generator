@@ -14,8 +14,7 @@ Or, if you want to see what a semantic model looks like, skip to [Examples](#exa
 
 ## Setup
 
-We currently leverage credentials saved as environment variables. Note, `host` is optional depending on your Snowflake
-deployment.
+We currently leverage credentials saved as environment variables.
 
 A. To find your Account locator, please execute the following sql command in your account.
 
@@ -29,6 +28,8 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility
   on API.
 * It typically follows format of: `https://<accountlocator>.<region>.<cloud>.snowflakecomputing.com`
+* `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
+  your Snowflake deployment. We would recommend setting it regardless.
 
 
 1. To set these on Mac OS/Linux:
