@@ -4,6 +4,7 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from io import StringIO
 from typing import Optional
 
@@ -26,6 +27,17 @@ LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snow
 LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
+
+
+class GeneratorAppScreen(str, Enum):
+    """
+    Enum defining different pages in the app.
+    There are two full page experiences - "onboarding" and "iteration", and the builder flow is simply a popup
+    that leads into the iteration flow.
+    """
+
+    ONBOARDING = "onboarding"
+    ITERATION = "iteration"
 
 
 def add_logo() -> None:
@@ -65,7 +77,7 @@ def init_session_states() -> None:
         st.session_state.semantic_model = semantic_model_pb2.SemanticModel()
     # validated stores the status if the generated yaml has ever been validated.
     if "validated" not in st.session_state:
-        st.session_state.validated = False
+        st.session_state.validated = None
     # last_validated_model stores the proto (without verfied queries) from last successful validation.
     if "last_validated_model" not in st.session_state:
         st.session_state.last_validated_model = semantic_model_pb2.SemanticModel()
