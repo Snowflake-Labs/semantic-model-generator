@@ -90,7 +90,6 @@ if __name__ == "__main__":
                 iteration.show()
 
     verify_environment_setup()
-    get_snowflake_connection()
 
     # Populating common state between builder and iteration apps.
     st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR

@@ -320,7 +320,6 @@ def generate_base_semantic_model_from_snowflake(
         snowflake_account=snowflake_account,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
-        conn=None,  # Instantiate a new connection.
     )
 
     with open(write_path, "w") as f:
