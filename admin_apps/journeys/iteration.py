@@ -1,5 +1,4 @@
 import json
-import os
 import time
 from typing import Any, Dict, List, Optional
 
@@ -33,6 +32,11 @@ from semantic_model_generator.data_processing.proto_utils import (
     yaml_to_semantic_model,
 )
 from semantic_model_generator.protos import semantic_model_pb2
+from semantic_model_generator.snowflake_utils.env_vars import (
+    SNOWFLAKE_ACCOUNT_LOCATOR,
+    SNOWFLAKE_HOST,
+    SNOWFLAKE_USER,
+)
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
 )
@@ -487,13 +491,9 @@ def set_up_requirements() -> None:
     # Otherwise, we should collect the prebuilt YAML location from the user so that we can download it.
     with st.form("download_yaml_requirements"):
         st.markdown(
-            "Before we get started, let's make sure we have everything set up. If you'd like to populate these values by default, please follow the [environment variable setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/README.md#setup)."
+            "Fill in the Snowflake stage details to download your existing YAML file."
         )
-        account_name = st.text_input(
-            "Account", value=os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
-        )
-        host_name = st.text_input("Host", value=os.environ.get("SNOWFLAKE_HOST"))
-        user_name = st.text_input("User", value=os.environ.get("SNOWFLAKE_USER"))
+        # TODO: Make these dropdown selectors by fetching all dbs/schemas similar to table approach?
         stage_database = st.text_input("Stage database", value="")
         stage_schema = st.text_input("Stage schema", value="")
         stage_name = st.text_input("Stage name", value="")
@@ -504,9 +504,9 @@ def set_up_requirements() -> None:
                 stage_schema=stage_schema,
                 stage_name=stage_name,
             )
-            st.session_state["account_name"] = account_name
-            st.session_state["host_name"] = host_name
-            st.session_state["user_name"] = user_name
+            st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
+            st.session_state["host_name"] = SNOWFLAKE_HOST
+            st.session_state["user_name"] = SNOWFLAKE_USER
             st.session_state["file_name"] = file_name
             st.session_state["page"] = GeneratorAppScreen.ITERATION
             st.rerun()

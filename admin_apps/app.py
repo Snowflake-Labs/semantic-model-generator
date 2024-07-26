@@ -1,11 +1,39 @@
-import os
-
 import streamlit as st
 
 from admin_apps.shared_utils import GeneratorAppScreen
+from semantic_model_generator.snowflake_utils.env_vars import (
+    SNOWFLAKE_ACCOUNT_LOCATOR,
+    SNOWFLAKE_HOST,
+    SNOWFLAKE_USER,
+    assert_required_env_vars,
+)
 
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
 st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
+
+
+@st.experimental_dialog(title="Setup")
+def env_setup_popup(missing_env_vars: list[str]) -> None:
+    """
+    Renders a dialog box to prompt the user to set the required environment variables.
+    Args:
+        missing_env_vars: A list of missing environment variables.
+    """
+    formatted_missing_env_vars = "\n".join(f"- **{s}**" for s in missing_env_vars)
+    st.markdown(
+        f"""Oops! It looks like the following required environment variables are missing: \n{formatted_missing_env_vars}\n\n
+Please follow the [setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator?tab=readme-ov-file#setup) to properly configure your environment. Restart this app after you've set the required environment variables."""
+    )
+    st.stop()
+
+
+def verify_environment_setup() -> None:
+    """
+    Ensures that the correct environment variables are set before proceeding.
+    """
+    missing_env_vars = assert_required_env_vars()
+    if missing_env_vars:
+        env_setup_popup(missing_env_vars)
 
 
 if __name__ == "__main__":
@@ -43,10 +71,12 @@ if __name__ == "__main__":
             ):
                 iteration.show()
 
+    verify_environment_setup()
+
     # Populating common state between builder and iteration apps.
-    st.session_state["account_name"] = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR")
-    st.session_state["host_name"] = os.environ.get("SNOWFLAKE_HOST")
-    st.session_state["user_name"] = os.environ.get("SNOWFLAKE_USER")
+    st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
+    st.session_state["host_name"] = SNOWFLAKE_HOST
+    st.session_state["user_name"] = SNOWFLAKE_USER
 
     # When the app first loads, show the onboarding screen.
     if "page" not in st.session_state:
