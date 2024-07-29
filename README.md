@@ -71,12 +71,14 @@ is set, the default is `snowflake`, which uses standard username/password suppor
 
 1. Username and Password
 
+**Note**: If you have MFA enabled, using this default authenticator should send a push notification to your device.
+
 ```bash
 # no SNOWFLAKE_AUTHENTICATOR needed
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 ```
 
-2. Username/Password with MFA
+2. Username/Password with MFA passcode
 
 Using a passcode from your authenticator app:
 
