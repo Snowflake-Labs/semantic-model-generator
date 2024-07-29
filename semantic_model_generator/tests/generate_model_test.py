@@ -189,6 +189,10 @@ def mock_snowflake_connection_env(monkeypatch):
         SnowflakeConnector, "_get_host", return_value="test_host"
     ), patch.object(
         SnowflakeConnector, "_get_authenticator", return_value="test_authenticator"
+    ), patch.object(
+        SnowflakeConnector, "_get_mfa_passcode", return_value="123456"
+    ), patch.object(
+        SnowflakeConnector, "_is_mfa_passcode_in_password", return_value=False
     ):
         yield
 
@@ -360,6 +364,8 @@ def test_raw_schema_to_semantic_context(
         warehouse="test_warehouse",
         host="test_host",
         authenticator="test_authenticator",
+        passcode="123456",
+        passcode_in_password=False,
     )
 
 
