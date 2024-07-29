@@ -31,17 +31,8 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 * `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
   your Snowflake deployment. We would recommend setting it regardless.
 
-We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. For
-example:
-
-```bash
-SNOWFLAKE_ROLE="<your-snowflake-role>"
-SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
-SNOWFLAKE_USER="<your-snowflake-user>"
-SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
-SNOWFLAKE_HOST="<your-snowflake-host>"
-# ... other variables
-```
+We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. See the
+examples in [`.env.example`](.env.example) for reference.
 
 However, if you would like to set these variables directly in your shell/Python environment,
 
