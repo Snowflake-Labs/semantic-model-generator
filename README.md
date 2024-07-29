@@ -38,7 +38,6 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 export SNOWFLAKE_ROLE="<your-snowflake-role>"
 export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
 export SNOWFLAKE_USER="<your-snowflake-user>"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
@@ -49,7 +48,6 @@ export SNOWFLAKE_HOST="<your-snowflake-host>"
 set SNOWFLAKE_ROLE=<your-snowflake-role>
 set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
 set SNOWFLAKE_USER=<your-snowflake-user>
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
 set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
@@ -63,15 +61,33 @@ import os
 os.environ['SNOWFLAKE_ROLE'] = '<your-snowflake-role>'
 os.environ['SNOWFLAKE_WAREHOUSE'] = '<your-snowflake-warehouse>'
 os.environ['SNOWFLAKE_USER'] = '<your-snowflake-user>'
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
 os.environ['SNOWFLAKE_ACCOUNT_LOCATOR'] = '<your-snowflake-account-locator>'
 os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
 ```
 
-4. If you are using single sign-on authetication, you can leave password empty and set additional environ below:
+Our semantic model generators currently support three types of authentication. If no `SNOWFLAKE_AUTHENTICATOR`
+environment variable
+is set, the default is `snowflake`, which uses standard username/password support.
 
- ```python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'EXTERNALBROWSER'
+1. Username and Password
+
+```bash
+# no SNOWFLAKE_AUTHENTICATOR needed
+export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+```
+
+2. Username/Password with MFA
+
+```bash
+export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+```
+
+3. Single Sign-On (SSO) with Okta
+
+```bash
+# no SNOWFLAKE_PASSWORD needed
+export SNOWFLAKE_AUTHENTICATOR="externalbrowser"
 ```
 
 ## Usage
