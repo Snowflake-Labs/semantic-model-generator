@@ -30,7 +30,7 @@ def create_connection_parameters(
     authenticator: Optional[str] = None,
     passcode: Optional[str] = None,
     passcode_in_password: Optional[bool] = None,
-) -> Dict[str, str]:
+) -> Dict[str, str | bool]:
     connection_parameters: Dict[str, str | bool] = dict(user=user, account=account)
     if password:
         connection_parameters["password"] = password
@@ -53,7 +53,7 @@ def create_connection_parameters(
     return connection_parameters
 
 
-def _connection(connection_parameters: Dict[str, str]) -> SnowflakeConnection:
+def _connection(connection_parameters: Dict[str, str | bool]) -> SnowflakeConnection:
     # https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect
     return connect(**connection_parameters)
 

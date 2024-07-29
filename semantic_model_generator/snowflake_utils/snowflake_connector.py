@@ -355,7 +355,7 @@ class SnowflakeConnector:
         passcode_in_password = env_vars.SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD
         if not passcode_in_password:
             return False
-        return env_vars.SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD.lower() == "true"
+        return passcode_in_password.lower() == "true"
 
     @contextmanager
     def connect(
