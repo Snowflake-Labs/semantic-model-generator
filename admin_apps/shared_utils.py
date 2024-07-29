@@ -10,6 +10,7 @@ from typing import Optional
 
 import pandas as pd
 import streamlit as st
+from snowflake.connector import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
@@ -18,6 +19,11 @@ from semantic_model_generator.data_processing.proto_utils import (
 from semantic_model_generator.generate_model import raw_schema_to_semantic_context
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    SnowflakeConnector,
+    set_database,
+    set_schema,
+)
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -27,6 +33,29 @@ LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snow
 LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
+
+
+@st.cache_resource
+def get_connector() -> SnowflakeConnector:
+    """
+    Instantiates a SnowflakeConnector using the provided credentials. This is mainly used to instantiate a
+    SnowflakeConnection which can execute queries.
+    Returns: SnowflakeConnector object
+    """
+    return SnowflakeConnector(
+        account_name=SNOWFLAKE_ACCOUNT,
+        max_workers=1,
+    )
+
+
+@st.cache_resource
+def get_snowflake_connection() -> SnowflakeConnection:
+    """
+    Opens a general connection to Snowflake using the provided SnowflakeConnector
+    Marked with st.cache_resource in order to reuse this connection across the app.
+    Returns: SnowflakeConnection
+    """
+    return get_connector().open_connection(db_name="")
 
 
 class GeneratorAppScreen(str, Enum):
@@ -595,6 +624,7 @@ def add_new_table() -> None:
                     ],
                     snowflake_account=SNOWFLAKE_ACCOUNT,
                     semantic_model_name="foo",  # A placeholder name that's not used anywhere.
+                    conn=get_snowflake_connection(),
                 )
             except Exception as ex:
                 st.error(f"Error adding table: {ex}")
@@ -688,19 +718,11 @@ def show_yaml_in_dialog() -> None:
     )
 
 
-def upload_yaml(file_name: str) -> None:
+def upload_yaml(file_name: str, conn: SnowflakeConnection) -> None:
     """util to upload the semantic model."""
     import os
     import tempfile
 
-    from semantic_model_generator.snowflake_utils.snowflake_connector import (
-        SnowflakeConnector,
-    )
-
-    connector = SnowflakeConnector(
-        account_name=SNOWFLAKE_ACCOUNT,
-        max_workers=1,
-    )
     yaml = proto_to_yaml(st.session_state.semantic_model)
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -709,23 +731,21 @@ def upload_yaml(file_name: str) -> None:
         with open(tmp_file_path, "w") as temp_file:
             temp_file.write(yaml)
 
-        with connector.connect(
-            db_name=st.session_state.snowflake_stage.stage_database,
-            schema_name=st.session_state.snowflake_stage.stage_schema,
-        ) as conn:
-            upload_sql = f"PUT file://{tmp_file_path} @{st.session_state.snowflake_stage.stage_name} AUTO_COMPRESS=FALSE OVERWRITE=TRUE"
-            conn.cursor().execute(upload_sql)
+        set_database(conn, st.session_state.snowflake_stage.stage_database)
+        set_schema(conn, st.session_state.snowflake_stage.stage_schema)
+        upload_sql = f"PUT file://{tmp_file_path} @{st.session_state.snowflake_stage.stage_name} AUTO_COMPRESS=FALSE OVERWRITE=TRUE"
+        conn.cursor().execute(upload_sql)
 
-            if file_name != _TMP_FILE_NAME:
-                # If the user did official uploading, delete the saved temp file from stage.
-                try:
-                    delete_tmp_sql = f"REMOVE @{st.session_state.snowflake_stage.stage_name}/{_TMP_FILE_NAME}.yaml"
-                    conn.cursor().execute(delete_tmp_sql)
-                except Exception:
-                    pass
+        if file_name != _TMP_FILE_NAME:
+            # If the user did official uploading, delete the saved temp file from stage.
+            try:
+                delete_tmp_sql = f"REMOVE @{st.session_state.snowflake_stage.stage_name}/{_TMP_FILE_NAME}.yaml"
+                conn.cursor().execute(delete_tmp_sql)
+            except Exception:
+                pass
 
 
-def validate_and_upload_tmp_yaml() -> None:
+def validate_and_upload_tmp_yaml(conn: SnowflakeConnection) -> None:
     """
     Validate the semantic model.
     If successfully validated, upload a temp file into stage, to allow chatting and adding VQR against it.
@@ -735,7 +755,7 @@ def validate_and_upload_tmp_yaml() -> None:
     yaml_str = proto_to_yaml(st.session_state.semantic_model)
     try:
         # whenever valid, upload to temp stage path.
-        validate(yaml_str, SNOWFLAKE_ACCOUNT)
+        validate(yaml_str, SNOWFLAKE_ACCOUNT, conn)
         # upload_yaml(_TMP_FILE_NAME)
         st.session_state.validated = True
         update_last_validated_model()
@@ -786,34 +806,23 @@ def model_is_validated() -> bool:
     return False
 
 
-def download_yaml(file_name: str) -> str:
+def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
     """util to download a semantic YAML from a stage."""
     import os
     import tempfile
 
-    from semantic_model_generator.snowflake_utils.snowflake_connector import (
-        SnowflakeConnector,
-    )
-
-    connector = SnowflakeConnector(
-        account_name=SNOWFLAKE_ACCOUNT,
-        max_workers=1,
-    )
-
     with tempfile.TemporaryDirectory() as temp_dir:
-        with connector.connect(
-            db_name=st.session_state.snowflake_stage.stage_database,
-            schema_name=st.session_state.snowflake_stage.stage_schema,
-        ) as conn:
-            # Downloads the YAML to {temp_dir}/{file_name}.
-            download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
-            conn.cursor().execute(download_yaml_sql)
+        set_database(conn, st.session_state.snowflake_stage.stage_database)
+        set_schema(conn, st.session_state.snowflake_stage.stage_schema)
+        # Downloads the YAML to {temp_dir}/{file_name}.
+        download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
+        conn.cursor().execute(download_yaml_sql)
 
-            tmp_file_path = os.path.join(temp_dir, f"{file_name}")
-            with open(tmp_file_path, "r") as temp_file:
-                # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
-                yaml_str = temp_file.read()
-                return yaml_str
+        tmp_file_path = os.path.join(temp_dir, f"{file_name}")
+        with open(tmp_file_path, "r") as temp_file:
+            # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
+            yaml_str = temp_file.read()
+            return yaml_str
 
 
 @dataclass

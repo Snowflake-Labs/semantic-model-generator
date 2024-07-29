@@ -365,13 +365,13 @@ class SnowflakeConnector:
         """
         conn = None
         try:
-            conn = self._open_connection(db_name, schema_name=schema_name)
+            conn = self.open_connection(db_name, schema_name=schema_name)
             yield conn
         finally:
             if conn is not None:
-                self._close_connection(connection=conn)
+                self._close_connection(conn)
 
-    def _open_connection(
+    def open_connection(
         self, db_name: str, schema_name: Optional[str] = None
     ) -> SnowflakeConnection:
         connection = snowflake_connection(
@@ -384,19 +384,10 @@ class SnowflakeConnector:
             authenticator=self._get_authenticator(),
         )
         if db_name:
-            try:
-                connection.cursor().execute(f"USE DATABASE {db_name}")
-            except Exception as e:
-                raise ValueError(
-                    f"Could not connect to database {db_name}. Does the database exist in {self.account_name}?"
-                ) from e
+            set_database(connection, db_name=db_name)
         if schema_name:
-            try:
-                connection.cursor().execute(f"USE SCHEMA {schema_name}")
-            except Exception as e:
-                raise ValueError(
-                    f"Could not connect to schema {schema_name}. Does the schema exist in the {db_name} database?"
-                ) from e
+            set_schema(connection, schema_name=schema_name)
+
         if _QUERY_TAG:
             connection.cursor().execute(f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'")
         connection.cursor().execute(
@@ -443,3 +434,21 @@ class SnowflakeConnector:
                     f"Expected a dict for row object. Instead passed {row}"
                 )
         return out_dict
+
+
+def set_database(conn: SnowflakeConnection, db_name: str) -> None:
+    try:
+        conn.cursor().execute(f"USE DATABASE {db_name}")
+    except Exception as e:
+        raise ValueError(
+            f"Could not connect to database {db_name}. Does the database exist in the account?"
+        ) from e
+
+
+def set_schema(conn: SnowflakeConnection, schema_name: str) -> None:
+    try:
+        conn.cursor().execute(f"USE SCHEMA {schema_name}")
+    except Exception as e:
+        raise ValueError(
+            f"Could not connect to schema {schema_name}. Does the schema exist in the selected database?"
+        ) from e

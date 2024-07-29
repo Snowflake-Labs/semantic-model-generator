@@ -11,12 +11,12 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
 from admin_apps.shared_utils import (
-    SNOWFLAKE_ACCOUNT,
     GeneratorAppScreen,
     SnowflakeStage,
     add_logo,
     changed_from_last_validated_model,
     download_yaml,
+    get_snowflake_connection,
     init_session_states,
     upload_yaml,
     validate_and_upload_tmp_yaml,
@@ -38,20 +38,10 @@ from semantic_model_generator.snowflake_utils.env_vars import (
     SNOWFLAKE_USER,
 )
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    SnowflakeConnector,
+    set_database,
+    set_schema,
 )
 from semantic_model_generator.validate_model import validate
-
-
-@st.cache_resource
-def get_connector() -> SnowflakeConnector:
-    return SnowflakeConnector(
-        account_name=SNOWFLAKE_ACCOUNT,
-        max_workers=1,
-    )
-
-
-connector = get_connector()
 
 
 def get_file_name() -> str:
@@ -178,17 +168,20 @@ def edit_verified_query(
                         user_updated_sql, st.session_state.ctx
                     )
 
-                    # TODO: figure out how to reuse the original connection, it's closed by this point
-                    with connector.connect(
-                        db_name=st.session_state.snowflake_stage.stage_database,
-                        schema_name=st.session_state.snowflake_stage.stage_schema,
-                    ) as connection:
-                        st.session_state["successful_sql"] = False
-                        df = pd.read_sql(sql_to_execute, connection)
-                        st.code(user_updated_sql)
-                        st.caption("**Output data**")
-                        st.dataframe(df)
-                        st.session_state["successful_sql"] = True
+                    connection = get_snowflake_connection()
+                    if "snowflake_stage" in st.session_state:
+                        set_database(
+                            connection, st.session_state.snowflake_stage.stage_database
+                        )
+                        set_schema(
+                            connection, st.session_state.snowflake_stage.stage_schema
+                        )
+                    st.session_state["successful_sql"] = False
+                    df = pd.read_sql(sql_to_execute, connection)
+                    st.code(user_updated_sql)
+                    st.caption("**Output data**")
+                    st.dataframe(df)
+                    st.session_state["successful_sql"] = True
 
                 except Exception as e:
                     st.session_state["error_state"] = (
@@ -345,13 +338,13 @@ def upload_dialog(content: str) -> None:
             with st.spinner(
                 "Your semantic model has changed since last validation. Re-validating before uploading..."
             ):
-                validate_and_upload_tmp_yaml()
+                validate_and_upload_tmp_yaml(conn=get_snowflake_connection())
 
         st.session_state.semantic_model = yaml_to_semantic_model(content)
         with st.spinner(
             f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
         ):
-            upload_yaml(file_name)
+            upload_yaml(file_name, conn=get_snowflake_connection())
         st.success(
             f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
         )
@@ -452,7 +445,11 @@ def yaml_editor(yaml_str: str) -> None:
         if left.button("Save", use_container_width=True, help=SAVE_HELP):
             # Validate new content
             try:
-                validate(content, snowflake_account=st.session_state.account_name)
+                validate(
+                    content,
+                    snowflake_account=st.session_state.account_name,
+                    conn=get_snowflake_connection(),
+                )
                 st.session_state["validated"] = True
                 update_container(
                     status_container, "success", prefix=status_container_title
@@ -532,7 +529,7 @@ def show() -> None:
         add_logo()
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
-            yaml = download_yaml(st.session_state.file_name)
+            yaml = download_yaml(st.session_state.file_name, get_snowflake_connection())
             st.session_state["yaml"] = yaml
             st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
             if "last_saved_yaml" not in st.session_state:
@@ -556,5 +553,4 @@ def show() -> None:
         with chat_container:
             st.markdown("**Chat**")
             # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
-            with connector.connect(db_name="") as conn:
-                chat_and_edit_vqr(conn)
+            chat_and_edit_vqr(get_snowflake_connection())

@@ -1,13 +1,10 @@
 import streamlit as st
 
-from admin_apps.journeys.iteration import get_connector
-from admin_apps.shared_utils import GeneratorAppScreen
+from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
 from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_table_names,
 )
-
-connector = get_connector()
 
 
 @st.cache_resource(show_spinner=False)
@@ -18,8 +15,7 @@ def get_available_tables() -> list[str]:
     Returns: list of fully qualified table names
     """
 
-    with connector.connect(db_name="") as conn:
-        return fetch_table_names(conn)
+    return fetch_table_names(get_snowflake_connection())
 
 
 @st.experimental_dialog("Selecting your tables", width="large")
@@ -63,6 +59,7 @@ def table_selector_dialog() -> None:
                         snowflake_account=st.session_state["account_name"],
                         semantic_model_name=model_name,
                         n_sample_values=sample_values,  # type: ignore
+                        conn=get_snowflake_connection(),
                     )
 
                     # Set the YAML session state so that the iteration app has access to the generated contents,
