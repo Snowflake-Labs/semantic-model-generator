@@ -31,8 +31,21 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 * `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
   your Snowflake deployment. We would recommend setting it regardless.
 
+We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. For
+example:
 
-1. To set these on Mac OS/Linux:
+```bash
+SNOWFLAKE_ROLE="<your-snowflake-role>"
+SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
+SNOWFLAKE_USER="<your-snowflake-user>"
+SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
+SNOWFLAKE_HOST="<your-snowflake-host>"
+# ... other variables
+```
+
+However, if you would like to set these variables directly in your shell/Python environment,
+
+1. MacOS/Linux syntax:
 
 ```bash
 export SNOWFLAKE_ROLE="<your-snowflake-role>"
@@ -42,7 +55,7 @@ export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-2. To set these on Windows:
+2. Windows syntax:
 
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
@@ -52,7 +65,7 @@ set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
-3. To set these within a Python environment:
+3. Python syntax:
 
 ```python
 import os
@@ -75,7 +88,7 @@ is set, the default is `snowflake`, which uses standard username/password suppor
 
 ```bash
 # no SNOWFLAKE_AUTHENTICATOR needed
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 ```
 
 2. Username/Password with MFA passcode
@@ -83,26 +96,26 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 Using a passcode from your authenticator app:
 
 ```bash
-export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 
 # if your authenticator app says "123 456", enter "123456" (no spaces)
-export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" 
+SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" 
 ```
 
 Using a passcode embedded in the password:
 
 ```bash
-export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-export SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
+SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
 ```
 
 3. Single Sign-On (SSO) with Okta
 
 ```bash
 # no SNOWFLAKE_PASSWORD needed
-export SNOWFLAKE_AUTHENTICATOR="externalbrowser"
+SNOWFLAKE_AUTHENTICATOR="externalbrowser"
 ```
 
 ## Usage
