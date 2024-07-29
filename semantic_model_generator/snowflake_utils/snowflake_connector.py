@@ -351,6 +351,9 @@ class SnowflakeConnector:
         passcode = env_vars.SNOWFLAKE_MFA_PASSCODE
         return passcode
 
+    def _is_mfa_passcode_in_password(self) -> bool:
+        return env_vars.SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD.lower() == "true"
+
     @contextmanager
     def connect(
         self, db_name: str, schema_name: Optional[str] = None
@@ -387,6 +390,7 @@ class SnowflakeConnector:
             host=self._get_host(),
             authenticator=self._get_authenticator(),
             passcode=self._get_mfa_passcode(),
+            passcode_in_password=self._is_mfa_passcode_in_password(),
         )
         if db_name:
             set_database(connection, db_name=db_name)

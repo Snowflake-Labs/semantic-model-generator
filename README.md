@@ -78,10 +78,22 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 
 2. Username/Password with MFA
 
+Using a passcode from your authenticator app:
+
 ```bash
 export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" # if your authenticator app says "123 456", enter "123456" (no spaces)
+
+# if your authenticator app says "123 456", enter "123456" (no spaces)
+export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" 
+```
+
+Using a passcode embedded in the password:
+
+```bash
+export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+export SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
 ```
 
 3. Single Sign-On (SSO) with Okta
