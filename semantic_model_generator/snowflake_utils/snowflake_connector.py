@@ -348,7 +348,7 @@ class SnowflakeConnector:
         return auth
 
     def _get_mfa_passcode(self) -> Optional[str]:
-        passcode = env_vars.SNOWFLAKE_PASSCODE
+        passcode = env_vars.SNOWFLAKE_MFA_PASSCODE
         return passcode
 
     @contextmanager
