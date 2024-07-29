@@ -49,7 +49,10 @@ def verify_environment_setup() -> None:
 
     # Instantiate the Snowflake connection that gets reused throughout the app.
     try:
-        get_snowflake_connection()
+        with st.spinner(
+            "Validating your connection to Snowflake. If you are using MFA, please check your authenticator app for a push notification."
+        ):
+            get_snowflake_connection()
     except DatabaseError:
         failed_connection_popup()
 
