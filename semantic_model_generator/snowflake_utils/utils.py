@@ -28,6 +28,7 @@ def create_connection_parameters(
     database: Optional[str] = None,
     schema: Optional[str] = None,
     authenticator: Optional[str] = None,
+    passcode: Optional[str] = None,
 ) -> Dict[str, str]:
     connection_parameters: Dict[str, str] = dict(user=user, account=account)
     if password:
@@ -44,6 +45,8 @@ def create_connection_parameters(
         connection_parameters["authenticator"] = authenticator
     if host:
         connection_parameters["host"] = host
+    if passcode:
+        connection_parameters["passcode"] = passcode
     return connection_parameters
 
 
@@ -60,6 +63,7 @@ def snowflake_connection(
     password: Optional[str] = None,
     host: Optional[str] = None,
     authenticator: Optional[str] = None,
+    passcode: Optional[str] = None,
 ) -> SnowflakeConnection:
     """
     Returns a Snowflake Connection to the specified account.
@@ -73,5 +77,6 @@ def snowflake_connection(
             role=role,
             warehouse=warehouse,
             authenticator=authenticator,
+            passcode=passcode,
         )
     )

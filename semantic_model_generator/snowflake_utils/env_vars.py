@@ -8,6 +8,7 @@ SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
 SNOWFLAKE_HOST = os.getenv("SNOWFLAKE_HOST")
 SNOWFLAKE_AUTHENTICATOR = os.getenv("SNOWFLAKE_AUTHENTICATOR")
 SNOWFLAKE_ACCOUNT_LOCATOR = os.getenv("SNOWFLAKE_ACCOUNT_LOCATOR")
+SNOWFLAKE_PASSCODE = os.getenv("SNOWFLAKE_PASSCODE")  # optional, only required for MFA
 
 
 def assert_required_env_vars() -> list[str]:
