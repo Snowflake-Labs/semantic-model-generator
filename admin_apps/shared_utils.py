@@ -48,7 +48,7 @@ def get_connector() -> SnowflakeConnector:
     )
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def get_snowflake_connection() -> SnowflakeConnection:
     """
     Opens a general connection to Snowflake using the provided SnowflakeConnector
