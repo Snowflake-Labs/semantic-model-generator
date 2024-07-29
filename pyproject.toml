@@ -22,6 +22,7 @@ sqlglot = "^23.10.0"
 strictyaml = "^1.7.3"
 streamlit-nightly = "^1.35.1.dev20240609"
 numpy = "^1.24.4"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"
