@@ -12,13 +12,13 @@ _MAX_SAMPLE_VALUES = 3
 
 ProtoMsg = TypeVar("ProtoMsg", bound=Message)
 
-# Max total tokens is 8200.
+# Max total tokens is 32800.
 # We reserve 500 tokens for response (average response is 300 tokens).
-# So the prompt token limit is 7700.
+# So the prompt token limit is 32300.
 # We reserve 1220 tokens for model instructions, separate from the semantic model.
-# Thus, the semantic model will get about 6480 tokens,
+# Thus, the semantic model will get about 31080 tokens,
 # with some more discounting for retrieved literals.
-_TOTAL_PROMPT_TOKEN_LIMIT = 7700
+_TOTAL_PROMPT_TOKEN_LIMIT = 32300
 _BASE_INSTRUCTION_TOKEN_LENGTH = 1220
 #  Estimated 10 tokens per literals since each literal is presented as a filter expression
 #  (i.e. table.column = 'literal').
