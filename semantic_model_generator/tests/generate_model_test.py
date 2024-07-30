@@ -165,7 +165,7 @@ _TABLE_THAT_EXCEEDS_CONTEXT = Table(
             values=["1", "2", "3"],
             comment=None,
         )
-        for i in range(200)
+        for i in range(800)
     ],
     comment=None,
 )
@@ -532,8 +532,8 @@ def test_generate_base_context_from_table_that_has_too_long_context(
     mock_logger.warning.assert_called_once_with(
         "WARNING 🚨: "
         "The Semantic model is too large. \n"
-        "Passed size is 41701 characters. "
-        "We need you to remove 16180 characters in your semantic model. "
+        "Passed size is 166501 characters. "
+        "We need you to remove 42580 characters in your semantic model. "
         "Please check: \n "
         "(1) If you have long descriptions that can be truncated. \n "
         "(2) If you can remove some columns that are not used within your tables. \n "
