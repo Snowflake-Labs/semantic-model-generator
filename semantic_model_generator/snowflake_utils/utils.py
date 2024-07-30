@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
@@ -30,8 +30,10 @@ def create_connection_parameters(
     authenticator: Optional[str] = None,
     passcode: Optional[str] = None,
     passcode_in_password: Optional[bool] = None,
-) -> Dict[str, str | bool]:
-    connection_parameters: Dict[str, str | bool] = dict(user=user, account=account)
+) -> Dict[str, Union[str, bool]]:
+    connection_parameters: Dict[str, Union[str, bool]] = dict(
+        user=user, account=account
+    )
     if password:
         connection_parameters["password"] = password
     if role:
@@ -53,7 +55,9 @@ def create_connection_parameters(
     return connection_parameters
 
 
-def _connection(connection_parameters: Dict[str, str | bool]) -> SnowflakeConnection:
+def _connection(
+    connection_parameters: Dict[str, Union[str, bool]]
+) -> SnowflakeConnection:
     # https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect
     return connect(**connection_parameters)
 
