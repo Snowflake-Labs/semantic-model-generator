@@ -7,6 +7,7 @@ You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to p
 ### Updates
 
 - Bump context length validation limit.
+- Fix union type hints for support with Python <3.10.
 
 ## [0.1.31] - 2024-07-29
 
