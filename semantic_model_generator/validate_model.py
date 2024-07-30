@@ -45,7 +45,7 @@ def validate(
 
     model = yaml_to_semantic_model(yaml_str)
     # Validate the context length doesn't exceed max we can support.
-    validate_context_length(model, throw_error=True)
+    validate_context_length(model, throw_error=False)
 
     model_in_column_format = context_to_column_format(model)
 
