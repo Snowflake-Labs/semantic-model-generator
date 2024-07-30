@@ -2,6 +2,13 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.32] - 2024-07-30
+
+### Updates
+
+- Bump context length validation limit.
+- Fix union type hints for support with Python <3.10.
+
 ## [0.1.31] - 2024-07-29
 
 ### Updates
