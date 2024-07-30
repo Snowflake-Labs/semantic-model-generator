@@ -2,6 +2,12 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.32] - 2024-07-30
+
+### Updates
+
+- Bump context length validation limit.
+
 ## [0.1.31] - 2024-07-29
 
 ### Updates
