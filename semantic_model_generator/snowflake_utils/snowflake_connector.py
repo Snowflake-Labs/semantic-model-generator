@@ -288,19 +288,21 @@ def fetch_tables_views_in_schema(
 
     Returns: a list of fully qualified table names.
     """
-
     query = f"show tables in schema {schema_name};"
     cursor = conn.cursor()
     cursor.execute(query)
     tables = cursor.fetchall()
+    # Each row in the result has columns (created_on, table_name, database_name, schema_name, ...)
+    results = [f"{result[2]}.{result[3]}.{result[1]}" for result in tables]
 
     query = f"show views in schema {schema_name};"
     cursor = conn.cursor()
     cursor.execute(query)
     views = cursor.fetchall()
+    # Each row in the result has columns (created_on, view_name, reserved, database_name, schema_name, ...)
+    results += [f"{result[3]}.{result[4]}.{result[1]}" for result in views]
 
-    # Each row in the result has columns (created_on, table_name, database_name, schema_name, ...)
-    return [f"{result[2]}.{result[3]}.{result[1]}" for result in tables + views]
+    return results
 
 
 def get_valid_schemas_tables_columns_df(
