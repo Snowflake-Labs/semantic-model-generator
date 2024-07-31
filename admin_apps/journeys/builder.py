@@ -28,9 +28,15 @@ def table_selector_dialog() -> None:
         "Please fill out the following fields to start building your semantic model."
     )
     with st.form("table_selector_form"):
-        model_name = st.text_input("Semantic Model Name")
+        model_name = st.text_input(
+            "Semantic Model Name (no .yaml suffix)",
+            help="The name of the semantic model you are creating. This is separate from the filename, which we will set later.",
+        )
         sample_values = st.selectbox(
-            "Number of sample values", list(range(1, 11)), index=0
+            "Maximum number of sample values per column",
+            list(range(1, 40)),
+            index=0,
+            help="NOTE: For dimensions, time measures, and measures, we enforce a minimum of 25, 3, and 3 sample values respectively.",
         )
         st.markdown("")
 
