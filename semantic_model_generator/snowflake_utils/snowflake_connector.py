@@ -305,6 +305,43 @@ def fetch_tables_views_in_schema(
     return results
 
 
+def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[str]:
+    """
+    Fetches all stages that the current user has access to in the current schema
+    Args:
+        conn: SnowflakeConnection to run the query
+        schema_name: The name of the schema to connect to.
+
+    Returns: a list of fully qualified stage names
+    """
+
+    query = f"show stages in schema {schema_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    stages = cursor.fetchall()
+
+    return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
+
+
+def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str) -> list[str]:
+    """
+    Fetches all yaml files that the current user has access to in the current stage
+    Args:
+        conn: SnowflakeConnection to run the query
+        stage_name: The fully qualified name of the stage to connect to.
+
+    Returns: a list of yaml file names
+    """
+
+    query = f"list @{stage_name} pattern='.*\\.yaml';"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    yaml_files = cursor.fetchall()
+
+    # The file name is prefixed with "@{stage_name}/", so we need to remove that prefix.
+    return [result[0].split("/")[-1] for result in yaml_files]
+
+
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection,
     table_schema: Optional[str] = None,
