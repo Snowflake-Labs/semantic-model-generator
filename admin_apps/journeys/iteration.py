@@ -374,13 +374,16 @@ def upload_dialog(content: str) -> None:
         stage_selector_container()
         new_name = st.text_input("File name (omit .yaml suffix)", value="")
 
-        if st.button(
-            "Submit Upload",
-            disabled=not st.session_state["selected_iteration_database"]
-            or not st.session_state["selected_iteration_schema"]
-            or not st.session_state["selected_iteration_stage"]
-            or not new_name,
-        ):
+        if st.button("Submit Upload"):
+            if (
+                not st.session_state["selected_iteration_database"]
+                or not st.session_state["selected_iteration_schema"]
+                or not st.session_state["selected_iteration_stage"]
+                or not new_name
+            ):
+                st.error("Please fill in all fields.")
+                return
+
             st.session_state["snowflake_stage"] = SnowflakeStage(
                 stage_database=st.session_state["selected_iteration_database"],
                 stage_schema=st.session_state["selected_iteration_schema"],
