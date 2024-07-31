@@ -277,9 +277,11 @@ def fetch_schemas_in_database(conn: SnowflakeConnection, db_name: str) -> List[s
     return [f"{result[4]}.{result[1]}" for result in results]
 
 
-def fetch_tables_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[str]:
+def fetch_tables_views_in_schema(
+    conn: SnowflakeConnection, schema_name: str
+) -> list[str]:
     """
-    Fetches all tables that the current user has access to in the current schema
+    Fetches all tables and views that the current user has access to in the current schema
     Args:
         conn: SnowflakeConnection to run the query
         schema_name: The name of the schema to connect to.
@@ -290,9 +292,15 @@ def fetch_tables_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     query = f"show tables in schema {schema_name};"
     cursor = conn.cursor()
     cursor.execute(query)
-    results = cursor.fetchall()
+    tables = cursor.fetchall()
+
+    query = f"show views in schema {schema_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    views = cursor.fetchall()
+
     # Each row in the result has columns (created_on, table_name, database_name, schema_name, ...)
-    return [f"{result[2]}.{result[3]}.{result[1]}" for result in results]
+    return [f"{result[2]}.{result[3]}.{result[1]}" for result in tables + views]
 
 
 def get_valid_schemas_tables_columns_df(

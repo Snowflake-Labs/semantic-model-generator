@@ -7,7 +7,7 @@ from semantic_model_generator.generate_model import generate_model_str_from_snow
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_databases,
     fetch_schemas_in_database,
-    fetch_tables_in_schema,
+    fetch_tables_views_in_schema,
 )
 
 
@@ -19,7 +19,7 @@ def get_available_tables(schema: str) -> list[str]:
     Returns: list of fully qualified table names
     """
 
-    return fetch_tables_in_schema(get_snowflake_connection(), schema)
+    return fetch_tables_views_in_schema(get_snowflake_connection(), schema)
 
 
 @st.cache_resource(show_spinner=False)
@@ -150,7 +150,7 @@ def table_selector_dialog() -> None:
         elif not st.session_state["selected_tables"]:
             st.error("Please select at least one table to proceed.")
         else:
-            with st.spinner("Generating model..."):
+            with st.spinner("Generating model. This may take a minute or two..."):
                 yaml_str = generate_model_str_from_snowflake(
                     base_tables=st.session_state["selected_tables"],
                     snowflake_account=st.session_state["account_name"],
