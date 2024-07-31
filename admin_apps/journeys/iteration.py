@@ -517,26 +517,19 @@ def stage_selector_container() -> None:
     When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
     Returns: None
     """
-    if "selected_iteration_database" not in st.session_state:
-        st.session_state["selected_iteration_database"] = ""
-
-    if "selected_iteration_schema" not in st.session_state:
-        st.session_state["selected_iteration_schema"] = ""
-
-    if "selected_iteration_stage" not in st.session_state:
-        st.session_state["selected_iteration_stage"] = ""
-
     available_schemas = []
     available_stages = []
 
     # First, retrieve all databases that the user has access to.
     stage_database = st.selectbox(
-        "Stage database", options=get_available_databases(), index=None
+        "Stage database",
+        options=get_available_databases(),
+        index=None,
+        key="selected_iteration_database",
     )
     if stage_database:
         # When a valid database is selected, fetch the available schemas in that database.
         try:
-            st.session_state["selected_iteration_database"] = stage_database
             set_database(get_snowflake_connection(), stage_database)
             available_schemas = get_available_schemas(stage_database)
         except (ValueError, ProgrammingError):
@@ -547,19 +540,23 @@ def stage_selector_container() -> None:
         "Stage schema",
         options=available_schemas,
         index=None,
+        key="selected_iteration_schema",
     )
     if stage_schema:
         # When a valid schema is selected, fetch the available stages in that schema.
         try:
-            st.session_state["selected_iteration_schema"] = stage_schema
             set_schema(get_snowflake_connection(), stage_schema)
             available_stages = get_available_stages(stage_schema)
         except (ValueError, ProgrammingError):
             st.error("Insufficient permissions to read from the selected schema.")
             st.stop()
 
-    stage_name = st.selectbox("Stage name", options=available_stages, index=None)
-    st.session_state["selected_iteration_stage"] = stage_name
+    st.selectbox(
+        "Stage name",
+        options=available_stages,
+        index=None,
+        key="selected_iteration_stage",
+    )
 
 
 @st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
