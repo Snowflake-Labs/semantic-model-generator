@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
-from snowflake.connector import SnowflakeConnection, ProgrammingError
+from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
@@ -39,10 +39,10 @@ from semantic_model_generator.snowflake_utils.env_vars import (
     SNOWFLAKE_USER,
 )
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    set_database,
-    set_schema,
     fetch_stages_in_schema,
     fetch_yaml_names_in_stage,
+    set_database,
+    set_schema,
 )
 from semantic_model_generator.validate_model import validate
 
@@ -371,48 +371,20 @@ def upload_dialog(content: str) -> None:
     else:
         # If coming from the builder flow, we need to ask the user for the exact stage path to upload to.
         st.markdown("Please enter the destination of your YAML file.")
-        available_schemas = []
-        available_stages = []
-        stage_database = st.selectbox(
-            "Stage database", options=get_available_databases(), index=None
-        )
-        if stage_database:
-            # When a valid database is selected, fetch the available schemas in that database.
-            try:
-                set_database(get_snowflake_connection(), stage_database)
-                available_schemas = get_available_schemas(stage_database)
-            except (ValueError, ProgrammingError):
-                st.error("Insufficient permissions to read from the selected database.")
-                st.stop()
-
-        stage_schema = st.selectbox(
-            "Stage schema",
-            options=available_schemas,
-            index=None,
-        )
-        if stage_schema:
-            # When a valid schema is selected, fetch the available stages in that schema.
-            try:
-                set_schema(get_snowflake_connection(), stage_schema)
-                available_stages = get_available_stages(stage_schema)
-            except (ValueError, ProgrammingError):
-                st.error("Insufficient permissions to read from the selected schema.")
-                st.stop()
-
-        stage_name = st.selectbox("Stage schema", options=available_stages, index=None)
+        stage_selector_container()
         new_name = st.text_input("File name (omit .yaml suffix)", value="")
 
         if st.button(
             "Submit Upload",
-            disabled=not stage_database
-            or not stage_schema
-            or not stage_name
+            disabled=not st.session_state["selected_iteration_database"]
+            or not st.session_state["selected_iteration_schema"]
+            or not st.session_state["selected_iteration_stage"]
             or not new_name,
         ):
             st.session_state["snowflake_stage"] = SnowflakeStage(
-                stage_database=stage_database,  # type: ignore
-                stage_schema=stage_schema,  # type: ignore
-                stage_name=stage_name,  # type: ignore
+                stage_database=st.session_state["selected_iteration_database"],
+                stage_schema=st.session_state["selected_iteration_schema"],
+                stage_name=st.session_state["selected_iteration_stage"],
             )
             upload_handler(new_name)
 
@@ -539,18 +511,14 @@ def get_yamls_from_stage(stage: str) -> List[str]:
     return fetch_yaml_names_in_stage(get_snowflake_connection(), stage)
 
 
-@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
-def set_up_requirements() -> None:
+def stage_selector_container() -> None:
     """
-    Collects existing YAML location from the user so that we can download it.
+    Common component that encapsulates db/schema/stage selection for the admin app.
+    When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
     """
-    st.markdown(
-        "Fill in the Snowflake stage details to download your existing YAML file."
-    )
-
     available_schemas = []
     available_stages = []
-    available_files = []
 
     # First, retrieve all databases that the user has access to.
     stage_database = st.selectbox(
@@ -559,6 +527,7 @@ def set_up_requirements() -> None:
     if stage_database:
         # When a valid database is selected, fetch the available schemas in that database.
         try:
+            st.session_state["selected_iteration_database"] = stage_database
             set_database(get_snowflake_connection(), stage_database)
             available_schemas = get_available_schemas(stage_database)
         except (ValueError, ProgrammingError):
@@ -573,17 +542,48 @@ def set_up_requirements() -> None:
     if stage_schema:
         # When a valid schema is selected, fetch the available stages in that schema.
         try:
+            st.session_state["selected_iteration_schema"] = stage_schema
             set_schema(get_snowflake_connection(), stage_schema)
             available_stages = get_available_stages(stage_schema)
         except (ValueError, ProgrammingError):
             st.error("Insufficient permissions to read from the selected schema.")
             st.stop()
 
-    stage_name = st.selectbox("Stage schema", options=available_stages, index=None)
-    if stage_name:
+    stage_name = st.selectbox("Stage name", options=available_stages, index=None)
+    st.session_state["selected_iteration_stage"] = stage_name
+
+
+@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
+def set_up_requirements() -> None:
+    """
+    Collects existing YAML location from the user so that we can download it.
+    """
+    st.markdown(
+        "Fill in the Snowflake stage details to download your existing YAML file."
+    )
+
+    if "selected_iteration_database" not in st.session_state:
+        st.session_state["selected_iteration_database"] = ""
+
+    if "selected_iteration_schema" not in st.session_state:
+        st.session_state["selected_iteration_schema"] = ""
+
+    if "selected_iteration_stage" not in st.session_state:
+        st.session_state["selected_iteration_stage"] = ""
+
+    stage_selector_container()
+
+    # Based on the currently selected stage, show a dropdown of YAML files for the user to pick from.
+    available_files = []
+    if (
+        "selected_iteration_stage" in st.session_state
+        and st.session_state["selected_iteration_stage"]
+    ):
         # When a valid stage is selected, fetch the available YAML files in that stage.
         try:
-            available_files = get_yamls_from_stage(stage_name)
+            available_files = get_yamls_from_stage(
+                st.session_state["selected_iteration_stage"]
+            )
         except (ValueError, ProgrammingError):
             st.error("Insufficient permissions to read from the selected stage.")
             st.stop()
@@ -592,15 +592,15 @@ def set_up_requirements() -> None:
 
     if st.button(
         "Submit",
-        disabled=not stage_database
-        or not stage_schema
-        or not stage_name
+        disabled=not st.session_state["selected_iteration_database"]
+        or not st.session_state["selected_iteration_schema"]
+        or not st.session_state["selected_iteration_stage"]
         or not file_name,
     ):
         st.session_state["snowflake_stage"] = SnowflakeStage(
-            stage_database=stage_database,  # type: ignore
-            stage_schema=stage_schema,  # type: ignore
-            stage_name=stage_name,  # type: ignore
+            stage_database=st.session_state["selected_iteration_database"],
+            stage_schema=st.session_state["selected_iteration_schema"],
+            stage_name=st.session_state["selected_iteration_stage"],
         )
         st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
         st.session_state["host_name"] = SNOWFLAKE_HOST
