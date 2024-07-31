@@ -6,7 +6,6 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
-from loguru import logger
 from snowflake.connector import SnowflakeConnection, ProgrammingError
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
@@ -372,19 +371,50 @@ def upload_dialog(content: str) -> None:
     else:
         # If coming from the builder flow, we need to ask the user for the exact stage path to upload to.
         st.markdown("Please enter the destination of your YAML file.")
-        with st.form("upload_form"):
-            stage_database = st.text_input("Stage database", value="")
-            stage_schema = st.text_input("Stage schema", value="")
-            stage_name = st.text_input("Stage name", value="")
-            new_name = st.text_input("File name (omit .yaml suffix)", value="")
+        available_schemas = []
+        available_stages = []
+        stage_database = st.selectbox(
+            "Stage database", options=get_available_databases(), index=None
+        )
+        if stage_database:
+            # When a valid database is selected, fetch the available schemas in that database.
+            try:
+                set_database(get_snowflake_connection(), stage_database)
+                available_schemas = get_available_schemas(stage_database)
+            except (ValueError, ProgrammingError):
+                st.error("Insufficient permissions to read from the selected database.")
+                st.stop()
 
-            if st.form_submit_button("Submit Upload"):
-                st.session_state["snowflake_stage"] = SnowflakeStage(
-                    stage_database=stage_database,
-                    stage_schema=stage_schema,
-                    stage_name=stage_name,
-                )
-                upload_handler(new_name)
+        stage_schema = st.selectbox(
+            "Stage schema",
+            options=available_schemas,
+            index=None,
+        )
+        if stage_schema:
+            # When a valid schema is selected, fetch the available stages in that schema.
+            try:
+                set_schema(get_snowflake_connection(), stage_schema)
+                available_stages = get_available_stages(stage_schema)
+            except (ValueError, ProgrammingError):
+                st.error("Insufficient permissions to read from the selected schema.")
+                st.stop()
+
+        stage_name = st.selectbox("Stage schema", options=available_stages, index=None)
+        new_name = st.text_input("File name (omit .yaml suffix)", value="")
+
+        if st.button(
+            "Submit Upload",
+            disabled=not stage_database
+            or not stage_schema
+            or not stage_name
+            or not new_name,
+        ):
+            st.session_state["snowflake_stage"] = SnowflakeStage(
+                stage_database=stage_database,  # type: ignore
+                stage_schema=stage_schema,  # type: ignore
+                stage_name=stage_name,  # type: ignore
+            )
+            upload_handler(new_name)
 
 
 def update_container(
@@ -549,7 +579,7 @@ def set_up_requirements() -> None:
             st.error("Insufficient permissions to read from the selected schema.")
             st.stop()
 
-    stage_name = st.selectbox("Stage schema", options=available_stages)
+    stage_name = st.selectbox("Stage schema", options=available_stages, index=None)
     if stage_name:
         # When a valid stage is selected, fetch the available YAML files in that stage.
         try:
