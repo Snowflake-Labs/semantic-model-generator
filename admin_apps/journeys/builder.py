@@ -1,8 +1,8 @@
 import streamlit as st
+from loguru import logger
 from snowflake.connector import ProgrammingError
 
 from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
-from loguru import logger
 from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_databases,
