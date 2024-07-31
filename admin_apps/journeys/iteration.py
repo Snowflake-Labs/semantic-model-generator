@@ -517,6 +517,15 @@ def stage_selector_container() -> None:
     When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
     Returns: None
     """
+    if "selected_iteration_database" not in st.session_state:
+        st.session_state["selected_iteration_database"] = ""
+
+    if "selected_iteration_schema" not in st.session_state:
+        st.session_state["selected_iteration_schema"] = ""
+
+    if "selected_iteration_stage" not in st.session_state:
+        st.session_state["selected_iteration_stage"] = ""
+
     available_schemas = []
     available_stages = []
 
@@ -561,15 +570,6 @@ def set_up_requirements() -> None:
     st.markdown(
         "Fill in the Snowflake stage details to download your existing YAML file."
     )
-
-    if "selected_iteration_database" not in st.session_state:
-        st.session_state["selected_iteration_database"] = ""
-
-    if "selected_iteration_schema" not in st.session_state:
-        st.session_state["selected_iteration_schema"] = ""
-
-    if "selected_iteration_stage" not in st.session_state:
-        st.session_state["selected_iteration_stage"] = ""
 
     stage_selector_container()
 
