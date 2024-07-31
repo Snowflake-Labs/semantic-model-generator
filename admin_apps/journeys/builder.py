@@ -1,6 +1,8 @@
 import streamlit as st
+from snowflake.connector import ProgrammingError
 
 from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
+from loguru import logger
 from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_databases,
@@ -54,7 +56,13 @@ def update_schemas_and_tables() -> None:
     # Fetch the available schemas for the selected databases
     schemas = []
     for db in databases:
-        schemas.extend(get_available_schemas(db))
+        try:
+            schemas.extend(get_available_schemas(db))
+        except ProgrammingError:
+            logger.info(
+                f"Insufficient permissions to read from database {db}, skipping"
+            )
+
     st.session_state["available_schemas"] = schemas
 
     # Enforce that the previously selected schemas are still valid
@@ -75,7 +83,12 @@ def update_tables() -> None:
     # Fetch the available tables for the selected schemas
     tables = []
     for schema in schemas:
-        tables.extend(get_available_tables(schema))
+        try:
+            tables.extend(get_available_tables(schema))
+        except ProgrammingError:
+            logger.info(
+                f"Insufficient permissions to read from schema {schema}, skipping"
+            )
     st.session_state["available_tables"] = tables
 
     # Enforce that the previously selected tables are still valid
