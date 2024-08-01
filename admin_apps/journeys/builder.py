@@ -81,32 +81,38 @@ def table_selector_dialog() -> None:
             st.error("Please select at least one table to proceed.")
         else:
             with st.spinner("Generating model..."):
-                # yaml_str = generate_model_str_from_snowflake(
-                #     base_tables=tables,
-                #     snowflake_account=st.session_state["account_name"],
-                #     semantic_model_name=model_name,
-                #     n_sample_values=sample_values,  # type: ignore
-                #     conn=get_snowflake_connection(),
-                # )
-                yaml_str =  'abc'
-                # Set the YAML session state so that the iteration app has access to the generated contents,
-                # then proceed to the iteration screen.
-                # st.session_state["yaml"] = yaml_str
-                # st.session_state["page"] = GeneratorAppScreen.ITERATION
-                
+                yaml_str = generate_model_str_from_snowflake(
+                    base_tables=tables,
+                    snowflake_account=st.session_state["account_name"],
+                    semantic_model_name=model_name,
+                    n_sample_values=sample_values,  # type: ignore
+                    conn=get_snowflake_connection(),
+                )
                 if st.session_state["metadata_files"]:
-                    metadata_str = format_metadata_files(st.session_state["metadata_files"])
+                    metadata_str = format_metadata_files(st.session_state["metadata_files"]) # Make metadata string format-friendly for prompt
                     prompt_args = {
-                        "docs": get_cortex_analyst_docs(),
+                        "docs": get_cortex_analyst_docs(), # Scrape semantic file docs and pass as string
                         "initial_semantic_file": yaml_str,
                         "metadata_files": metadata_str
                     }
-                    response = refine_with_other_metadata(conn = get_snowflake_connection(),
-                                                          prompt_args = prompt_args)
+                    response, curate_error = refine_with_other_metadata(conn = get_snowflake_connection(),
+                                                                        prompt_args = prompt_args)
+                    if curate_error:
+                        st.warning(f"There was an error curating the semantic model. {curate_error}")
+                        st.session_state["yaml"] = yaml_str
+                    else:
+                        st.session_state["yaml"] = response
+                    st.text_area(response, response, height=500)
+                
+                else:
+                    st.session_state["yaml"] = yaml_str
+                
+                # Set the YAML session state so that the iteration app has access to the generated contents,
+                # then proceed to the iteration screen.
+                st.session_state["page"] = GeneratorAppScreen.ITERATION
+                
 
-                    # st.write(response)
-                    st.text_area("Prompt", response, height=500)
-                # st.rerun()
+                st.rerun()
 
 
 def show() -> None:

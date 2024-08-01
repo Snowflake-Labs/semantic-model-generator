@@ -1,5 +1,6 @@
 from typing import Optional
 from snowflake.connector import SnowflakeConnection
+from snowflake.snowpark.exceptions import SnowparkSQLException
 
 
 revise_semantic_prompt = """You are a data analyst tasked with revising a semantic file for your enterprise.
@@ -29,12 +30,11 @@ def run_cortex_complete(conn: SnowflakeConnection,
                         prompt_args: Optional[dict] = None) -> str:
     
     if prompt_args:
-        prompt = prompt.format(**prompt_args)# .replace("'", "\\'")
+        prompt = prompt.format(**prompt_args).replace("'", "\\'")
     complete_sql = f"SELECT snowflake.cortex.complete('{model}', '{prompt}')"
-    # response = conn.cursor().execute(complete_sql).fetchone()[0]
+    response = conn.cursor().execute(complete_sql).fetchone()[0]
 
-    # return response
-    return prompt
+    return response
 
 def format_metadata_files(metadata_files: dict) -> str:
     metadata_str = ""
@@ -73,5 +73,10 @@ def refine_with_other_metadata(conn: SnowflakeConnection,
                                prompt: str = revise_semantic_prompt,
                                prompt_args: Optional[dict] = None) -> str:
     
-    return run_cortex_complete(conn, model=model, prompt = prompt, prompt_args=prompt_args)
-                                            
+    error = '' # Used as a flag to enable builder workflow to continue with prior state
+    try:
+        response = run_cortex_complete(conn, model=model, prompt = prompt, prompt_args=prompt_args)
+        return response, error
+    except Exception as e:
+        error = f'Error encountered: {str(e)}'
+        return '', error                                       
