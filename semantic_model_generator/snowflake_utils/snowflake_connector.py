@@ -244,21 +244,65 @@ def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
     return pd.concat([tables, views], axis=0)
 
 
-def fetch_table_names(conn: SnowflakeConnection) -> list[str]:
+def fetch_databases(conn: SnowflakeConnection) -> List[str]:
     """
-    Fetches all tables that the current user has access to, throughout all db/schema.
+    Fetches all databases that the current user has access to
     Args:
         conn: SnowflakeConnection to run the query
 
-    Returns: a list of fully qualified table names.
-    """
+    Returns: a list of database names
 
-    query = "show tables;"
+    """
+    query = "show databases;"
     cursor = conn.cursor()
     cursor.execute(query)
     results = cursor.fetchall()
+    return [result[1] for result in results]
+
+
+def fetch_schemas_in_database(conn: SnowflakeConnection, db_name: str) -> List[str]:
+    """
+    Fetches all schemas that the current user has access to in the current database
+    Args:
+        conn: SnowflakeConnection to run the query
+        db_name: The name of the database to connect to.
+
+    Returns: a list of qualified schema names (db.schema)
+
+    """
+    query = f"show schemas in database {db_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    results = cursor.fetchall()
+    return [f"{result[4]}.{result[1]}" for result in results]
+
+
+def fetch_tables_views_in_schema(
+    conn: SnowflakeConnection, schema_name: str
+) -> list[str]:
+    """
+    Fetches all tables and views that the current user has access to in the current schema
+    Args:
+        conn: SnowflakeConnection to run the query
+        schema_name: The name of the schema to connect to.
+
+    Returns: a list of fully qualified table names.
+    """
+    query = f"show tables in schema {schema_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    tables = cursor.fetchall()
     # Each row in the result has columns (created_on, table_name, database_name, schema_name, ...)
-    return [f"{result[2]}.{result[3]}.{result[1]}" for result in results]
+    results = [f"{result[2]}.{result[3]}.{result[1]}" for result in tables]
+
+    query = f"show views in schema {schema_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    views = cursor.fetchall()
+    # Each row in the result has columns (created_on, view_name, reserved, database_name, schema_name, ...)
+    results += [f"{result[3]}.{result[4]}.{result[1]}" for result in views]
+
+    return results
 
 
 def get_valid_schemas_tables_columns_df(
