@@ -31,8 +31,12 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 * `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
   your Snowflake deployment. We would recommend setting it regardless.
 
+We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. See the
+examples in [`.env.example`](.env.example) for reference.
 
-1. To set these on Mac OS/Linux:
+However, if you would like to set these variables directly in your shell/Python environment,
+
+1. MacOS/Linux syntax:
 
 ```bash
 export SNOWFLAKE_ROLE="<your-snowflake-role>"
@@ -42,7 +46,7 @@ export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-2. To set these on Windows:
+2. Windows syntax:
 
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
@@ -52,7 +56,7 @@ set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
-3. To set these within a Python environment:
+3. Python syntax:
 
 ```python
 import os
@@ -75,7 +79,16 @@ is set, the default is `snowflake`, which uses standard username/password suppor
 
 ```bash
 # no SNOWFLAKE_AUTHENTICATOR needed
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+
+# MacOS/Linux
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+
+# Windows
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+
+# Python
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
 ```
 
 2. Username/Password with MFA passcode
@@ -83,26 +96,63 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 Using a passcode from your authenticator app:
 
 ```bash
+SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" # if your authenticator app reads "123 456", fill in "123456" (No spaces)
+
+# MacOS/Linux
 export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>"
 
-# if your authenticator app says "123 456", enter "123456" (no spaces)
-export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" 
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+set SNOWFLAKE_MFA_PASSCODE=<your-snowflake-mfa-passcode>
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+os.environ['SNOWFLAKE_MFA_PASSCODE'] = '<your-snowflake-mfa-passcode>'
 ```
 
 Using a passcode embedded in the password:
 
 ```bash
+SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
+
+# MacOS/Linux
 export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
+
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+set SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD=true
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+os.environ['SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD'] = 'true'
 ```
 
 3. Single Sign-On (SSO) with Okta
 
 ```bash
 # no SNOWFLAKE_PASSWORD needed
+SNOWFLAKE_AUTHENTICATOR="externalbrowser"
+
+# MacOS/Linux
 export SNOWFLAKE_AUTHENTICATOR="externalbrowser"
+
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=externalbrowser
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'externalbrowser'
 ```
 
 ## Usage
