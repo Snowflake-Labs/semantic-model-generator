@@ -469,13 +469,20 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 st.session_state.semantic_model = yaml_to_semantic_model(content)
                 st.session_state.last_saved_yaml = content
-                st.rerun()
             except Exception as e:
                 st.session_state["validated"] = False
                 update_container(
                     status_container, "failed", prefix=status_container_title
                 )
                 exception_as_dialog(e)
+
+            # Rerun the app if validation was successful.
+            # We shouldn't rerun if validation failed as the error popup would immediately dismiss.
+            # This must be done outside of the try/except because the generic Exception handling is catching the
+            # exception that st.rerun() properly raises to halt execution.
+            # This is fixed in later versions of Streamlit, but other refactors to the code are required to upgrade.
+            if st.session_state["validated"]:
+                st.rerun()
 
         if content:
             middle.download_button(
