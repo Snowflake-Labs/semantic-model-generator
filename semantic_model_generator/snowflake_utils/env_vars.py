@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 DEFAULT_SESSION_TIMEOUT_SEC = int(os.environ.get("SNOWFLAKE_SESSION_TIMEOUT_SEC", 120))
 SNOWFLAKE_ROLE = os.getenv("SNOWFLAKE_ROLE")
 SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE")

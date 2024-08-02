@@ -450,8 +450,12 @@ def yaml_editor(yaml_str: str) -> None:
     status_container = st.empty()
 
     with button_container:
-        left, right, _ = st.columns((1, 1, 2))
-        if left.button("Save", use_container_width=True, help=SAVE_HELP):
+        (
+            left,
+            middle,
+            right,
+        ) = st.columns(3)
+        if left.button("Validate", use_container_width=True, help=VALIDATE_HELP):
             # Validate new content
             try:
                 validate(
@@ -479,6 +483,16 @@ def yaml_editor(yaml_str: str) -> None:
             # This is fixed in later versions of Streamlit, but other refactors to the code are required to upgrade.
             if st.session_state["validated"]:
                 st.rerun()
+
+        if content:
+            middle.download_button(
+                label="Download",
+                data=content,
+                file_name="semantic_model.yaml",
+                mime="text/yaml",
+                use_container_width=True,
+                help=DOWNLOAD_HELP,
+            )
 
         if right.button(
             "Upload",
@@ -617,8 +631,12 @@ def set_up_requirements() -> None:
         st.rerun()
 
 
-SAVE_HELP = """Save changes to the active semantic model in this app. This is
+VALIDATE_HELP = """Save and validate changes to the active semantic model in this app. This is
 useful so you can then play with it in the chat panel on the right side."""
+
+DOWNLOAD_HELP = (
+    """Download the currently loaded semantic model to your local machine."""
+)
 
 UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whenever
 you think your semantic model is doing great and should be pushed to prod! Note that
