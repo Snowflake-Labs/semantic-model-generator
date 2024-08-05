@@ -22,7 +22,7 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility
   on API.
-* It typically follows format of: `https://<accountlocator>.<region>.<cloud>.snowflakecomputing.com`
+* It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit the `https://` prefix.
 * `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
   your Snowflake deployment. We would recommend setting it regardless.
 
