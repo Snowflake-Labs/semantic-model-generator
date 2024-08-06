@@ -9,7 +9,18 @@ from typing import Dict
 
 import sqlglot
 from google.protobuf.descriptor import Descriptor, EnumDescriptor, FieldDescriptor
-from strictyaml import Bool, Decimal, Enum, Int, Map, Optional, Seq, Str, Validator
+from strictyaml import (
+    Bool,
+    Decimal,
+    Enum,
+    Int,
+    Map,
+    Optional,
+    Seq,
+    Str,
+    Validator,
+    YAMLValidationError,
+)
 
 from semantic_model_generator.protos import semantic_model_pb2
 
@@ -30,6 +41,26 @@ class SqlExpression(Str):  # type: ignore
         except Exception:
             chunk.expecting_but_found("", "invalid SQL expression")
         return chunk.contents
+
+
+class VerifiedQueries(Seq):  # type: ignore
+    """
+    Validator for the verified_queries field.
+    We ensure that there are no duplicate verified queries, by checking for duplicate (question, sql) pairs.
+    """
+
+    def validate(self, chunk):  # type: ignore
+        super().validate(chunk)
+        seen_queries = set()
+        for query in chunk.contents:
+            qa_pair = (query["question"], query["sql"])
+            if qa_pair in seen_queries:
+                raise YAMLValidationError(
+                    context="Duplicate verified query found.",
+                    problem=query["name"],
+                    chunk=chunk,
+                )
+            seen_queries.add(qa_pair)
 
 
 def create_schema_for_message(
@@ -69,7 +100,10 @@ def create_schema_for_field(
         raise Exception(f"unsupported type: {field_descriptor.type}")
 
     if field_descriptor.label == FieldDescriptor.LABEL_REPEATED:
-        field_type = Seq(field_type)
+        if field_descriptor.name == "verified_queries":
+            field_type = VerifiedQueries(field_type)
+        else:
+            field_type = Seq(field_type)
 
     return field_type
 
