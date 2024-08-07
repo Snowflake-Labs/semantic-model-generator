@@ -90,6 +90,24 @@ def temp_invalid_yaml_too_long_context():
         yield tmp.name
 
 
+@pytest.fixture
+def temp_valid_yaml_with_verified_query():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(validate_yamls._VALID_YAML_WITH_SINGLE_VERIFIED_QUERY)
+        tmp.flush()
+        yield tmp.name
+
+
+@pytest.fixture
+def temp_invalid_yaml_duplicate_verified_queries():
+    """Create a temporary YAML file with the test data."""
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
+        tmp.write(validate_yamls._INVALID_YAML_DUPLICATE_VERIFIED_QUERIES)
+        tmp.flush()
+        yield tmp.name
+
+
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_valid_yaml_flow_style(
     mock_logger, temp_valid_yaml_file_flow_style, mock_snowflake_connection
@@ -247,3 +265,17 @@ def test_valid_yaml_many_sample_values(mock_logger, mock_snowflake_connection):
         tmp.write(yaml)
         tmp.flush()
         assert validate_from_local_path(tmp.name, account_name) is None
+
+
+@mock.patch("semantic_model_generator.validate_model.logger")
+def test_invalid_yaml_duplicate_verified_queries(
+    mock_logger, temp_invalid_yaml_duplicate_verified_queries, mock_snowflake_connection
+):
+    account_name = "snowflake test"
+    with pytest.raises(
+        YAMLValidationError,
+        match=r"Duplicate verified query found\.\n  in \"semantic model\", line \d+, column \d+:\n    verified_queries:\n    \^ \(line: \d+\)\ndaily cumulative expenses in 2023 dec\n  in \"semantic model\", line \d+, column \d+:\n      verified_by: renee\n    \^ \(line: \d+\)",
+    ):
+        validate_from_local_path(
+            temp_invalid_yaml_duplicate_verified_queries, account_name
+        )

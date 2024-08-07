@@ -49,9 +49,10 @@ tables:
         sample_values:
           - '631'
 """
-_LONG_VQR_CONTEXT = """
+
+_LONG_VQR_CONTEXT_TEMPLATE = """
   - name: "Max spend"
-    question: "Over the past week what was spend?"
+    question: "Over the past week what was spend from {index}?"
     verified_at: 1714497970
     verified_by: jonathan
     sql: "
@@ -75,8 +76,11 @@ ORDER BY
   Minute DESC;
     "
 """
-_VALID_YAML_LONG_VQR_CONTEXT = (
-    """name: my test semantic model
+
+# Generate 100 unique variations to avoid duplicate verified query error.
+long_vqr_contexts = [_LONG_VQR_CONTEXT_TEMPLATE.format(index=i) for i in range(100)]
+
+_VALID_YAML_LONG_VQR_CONTEXT = """name: my test semantic model
 tables:
   - name: ALIAS
     base_table:
@@ -119,8 +123,8 @@ tables:
         sample_values:
           - '631'
 verified_queries:
-"""
-    + _LONG_VQR_CONTEXT * 100
+""" + "\n".join(
+    long_vqr_contexts
 )
 
 
@@ -375,3 +379,66 @@ _VALID_YAML_MANY_SAMPLE_VALUES = semantic_model_pb2.SemanticModel(
         )
     ],
 )
+
+_VALID_YAML_WITH_SINGLE_VERIFIED_QUERY = """
+name: jaffle_shop
+tables:
+  - name: orders
+    description: Order overview data mart, offering key details for each order including
+      if it's a customer's first order and a food vs. drink item breakdown. One row
+      per order.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: orders
+    filters:
+      - name: large_order
+        expr: cogs > 100
+      - name: custom_filter
+        expr: my_udf(col1, col2)
+      - name: window_func
+        expr: COUNT(i) OVER (PARTITION BY p ORDER BY o) count_i_Range_Pre
+verified_queries:
+  - name: daily cumulative expenses in 2023 dec
+    question: daily cumulative expenses in 2023 dec
+    sql: " SELECT date, SUM(daily_cogs) OVER ( ORDER BY date ROWS BETWEEN UNBOUNDED
+      PRECEDING AND CURRENT ROW ) AS cumulative_cogs FROM __daily_revenue WHERE date
+      BETWEEN '2023-12-01' AND '2023-12-31' ORDER BY date DESC; "
+    verified_at: '1714752498'
+    verified_by: renee
+"""
+
+_INVALID_YAML_DUPLICATE_VERIFIED_QUERIES = """
+name: jaffle_shop
+tables:
+  - name: orders
+    description: Order overview data mart, offering key details for each order including
+      if it's a customer's first order and a food vs. drink item breakdown. One row
+      per order.
+    base_table:
+      database: autosql_dataset_dbt_jaffle_shop
+      schema: data
+      table: orders
+    filters:
+      - name: large_order
+        expr: cogs > 100
+      - name: custom_filter
+        expr: my_udf(col1, col2)
+      - name: window_func
+        expr: COUNT(i) OVER (PARTITION BY p ORDER BY o) count_i_Range_Pre
+verified_queries:
+  - name: daily cumulative expenses in 2023 dec
+    question: daily cumulative expenses in 2023 dec
+    sql: " SELECT date, SUM(daily_cogs) OVER ( ORDER BY date ROWS BETWEEN UNBOUNDED
+      PRECEDING AND CURRENT ROW ) AS cumulative_cogs FROM __daily_revenue WHERE date
+      BETWEEN '2023-12-01' AND '2023-12-31' ORDER BY date DESC; "
+    verified_at: '1714752498'
+    verified_by: renee
+  - name: daily cumulative expenses in 2023 dec
+    question: daily cumulative expenses in 2023 dec
+    sql: " SELECT date, SUM(daily_cogs) OVER ( ORDER BY date ROWS BETWEEN UNBOUNDED
+      PRECEDING AND CURRENT ROW ) AS cumulative_cogs FROM __daily_revenue WHERE date
+      BETWEEN '2023-12-01' AND '2023-12-31' ORDER BY date DESC; "
+    verified_at: '1714752498'
+    verified_by: renee
+"""
