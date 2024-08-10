@@ -1,11 +1,17 @@
 import streamlit as st
 
-from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
+from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection, upload_partner_semantic
 from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_table_names,
 )
-from admin_apps.curate_semantic import format_metadata_files, get_cortex_analyst_docs, refine_with_other_metadata
+from semantic_model_generator.data_processing.proto_utils import (
+    yaml_to_semantic_model,
+)
+from admin_apps.partner_semantic import (
+    load_yaml_file,
+    extract_key_values
+)
 
 
 @st.cache_resource(show_spinner=False)
@@ -45,31 +51,11 @@ def table_selector_dialog() -> None:
         placeholder="Select the tables you'd like to include in your semantic model.",
     )
 
-    has_semantic = st.radio("Do you have existing semantic or reporting layers?", ("No", "Yes"))
+    has_semantic = st.radio("Do you have an existing semantic for these tables(s) in a partner tool?", ("No", "Yes"))
     if has_semantic == "Yes":
-        metadata_files = st.file_uploader('Upload metadata files', 
-                                    accept_multiple_files=True)
-        if metadata_files:
-            metadata = {}                      
-            for uploaded_file in metadata_files:
-                fname = uploaded_file.name
-                metadata[fname] = {}
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    st.write(fname)
-                with c2:
-                    metadata[fname]['filename'] = st.text_input(f"filename_{fname}",
-                                             placeholder = "Descriptive filename",
-                                             label_visibility="collapsed")
-                with c3:
-                    metadata[fname]['platform'] = st.text_input(f"platform_{fname}",
-                                             placeholder = "Enter source platform",
-                                             label_visibility="collapsed")
-                metadata[fname]['contents'] = uploaded_file.read().decode('utf-8')
-            st.session_state["metadata_files"] = metadata
+        upload_partner_semantic()
     else:
-        st.session_state["metadata_files"] = None
-
+        st.session_state["partner_semantic"] = None
     st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
     submit = st.button(
         "Submit", use_container_width=True, type="primary"
@@ -88,30 +74,13 @@ def table_selector_dialog() -> None:
                     n_sample_values=sample_values,  # type: ignore
                     conn=get_snowflake_connection(),
                 )
-                if st.session_state["metadata_files"]:
-                    metadata_str = format_metadata_files(st.session_state["metadata_files"]) # Make metadata string format-friendly for prompt
-                    prompt_args = {
-                        "docs": get_cortex_analyst_docs(), # Scrape semantic file docs and pass as string
-                        "initial_semantic_file": yaml_str,
-                        "metadata_files": metadata_str
-                    }
-                    response, curate_error = refine_with_other_metadata(conn = get_snowflake_connection(),
-                                                                        prompt_args = prompt_args)
-                    if curate_error:
-                        st.warning(f"There was an error curating the semantic model. {curate_error}")
-                        st.session_state["yaml"] = yaml_str
-                    else:
-                        st.session_state["yaml"] = response
-                    st.text_area(response, response, height=500)
                 
-                else:
-                    st.session_state["yaml"] = yaml_str
+                st.session_state["yaml"] = yaml_str
                 
                 # Set the YAML session state so that the iteration app has access to the generated contents,
                 # then proceed to the iteration screen.
                 st.session_state["page"] = GeneratorAppScreen.ITERATION
                 
-
                 st.rerun()
 
 

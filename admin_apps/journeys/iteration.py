@@ -20,6 +20,7 @@ from admin_apps.shared_utils import (
     init_session_states,
     upload_yaml,
     validate_and_upload_tmp_yaml,
+    upload_partner_semantic,
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -42,6 +43,13 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     set_schema,
 )
 from semantic_model_generator.validate_model import validate
+
+from admin_apps.partner_semantic import (
+    load_yaml_file,
+    extract_key_values,
+    extract_expressions_from_sections,
+    make_field_df
+)
 
 
 def get_file_name() -> str:
@@ -382,6 +390,28 @@ def upload_dialog(content: str) -> None:
                 )
                 upload_handler(new_name)
 
+@st.experimental_dialog(f"Integrate partner tool semantic specs", width="large")
+def integrate_partner_semantics() -> None:
+    # User either came right to iteration app or did not upload partner semantic in builder
+    if 'partner_semantic' not in st.session_state:
+        upload_partner_semantic()
+    # User uploaded in builder or just uploaded while in iteration
+    if 'partner_semantic' in st.session_state:
+        st.write("Select which semantic layers to compare.")
+        c1, c2 = st.columns(2)
+        with c1: # TODO: Need to parser a semantic file for cortex analyst to run comparison
+            semantic_snowflake_tbl = st.selectbox("Snowflake", 
+                                                list(st.session_state.ctx_table_col_expr_dict.keys()))
+        with c2:
+            semantic_partner_tbl = st.selectbox("Partner", 
+                                                extract_key_values(st.session_state["partner_semantic"], 'name'))
+        if st.button("Compare"):
+            partner_view = [x for x in st.session_state["partner_semantic"] if x.get('name') == semantic_partner_tbl][0]
+            partner_fields = extract_expressions_from_sections(partner_view, ['dimensions', 'measures', 'entities'])
+            partner_fields_df = make_field_df(partner_fields)
+            st.dataframe(partner_fields_df, hide_index=True, use_container_width=True)
+            
+
 
 def update_container(
     container: DeltaGenerator, content: str, prefix: Optional[str]
@@ -441,7 +471,7 @@ def yaml_editor(yaml_str: str) -> None:
     status_container = st.empty()
 
     with button_container:
-        left, right, _ = st.columns((1, 1, 2))
+        left, center, right = st.columns(3)
         if left.button("Save", use_container_width=True, help=SAVE_HELP):
             # Validate new content
             try:
@@ -464,12 +494,18 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 exception_as_dialog(e)
 
-        if right.button(
+        if center.button(
             "Upload",
             use_container_width=True,
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
+        if right.button(
+            "Translate",
+            use_container_width=True,
+            help=TRANSLATE_HELP, 
+        ):
+            integrate_partner_semantics()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
@@ -515,6 +551,9 @@ useful so you can then play with it in the chat panel on the right side."""
 UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whenever
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
+
+TRANSLATE_HELP = """Have an existing semantic layer in a partner tool that's integrated
+with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec."""
 
 
 def show() -> None:

@@ -25,6 +25,11 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     set_schema,
 )
 
+from admin_apps.partner_semantic import (
+    load_yaml_file,
+    extract_key_values
+)
+
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -823,6 +828,20 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
             yaml_str = temp_file.read()
             return yaml_str
+        
+def upload_partner_semantic() -> None:
+    """
+    Upload the semantic model to a stage.
+    """
+    partners = [None, "dbt"]
+
+    st.session_state["partner_tool"] = st.selectbox("Select the partner tool", partners)
+    if st.session_state["partner_tool"] == "dbt":
+        uploaded_files = st.file_uploader(f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
+                                            type=['yaml', 'yml'],
+                                            accept_multiple_files=True) 
+        if uploaded_files:
+            st.session_state["partner_semantic"] = extract_key_values(load_yaml_file(uploaded_files), 'semantic_models')
 
 
 @dataclass
