@@ -847,66 +847,69 @@ def upload_partner_semantic() -> None:
 class PartnerCompareRow:
     def __init__(self, row_data:pd.Series) -> dict:
         self.row_data = row_data
+        self.key = row_data["field_key"]
+        self.cortex_metadata = self.row_data["field_details_cortex"] if self.row_data["field_details_cortex"] else {}
+        self.partner_metadata = self.row_data["field_details_partner"] if self.row_data["field_details_partner"] else {}
+        
 
     def render_row(self):
-        radio_options = {
-                "field_details_cortex": "cortex",
-                "field_details_partner": "partner",
-                "remove": "remove"}
-        with st.container(border=True, height=150):
+        toggle_options = [
+            "merged",
+            "cortex",
+            "partner",
+            "remove"]
+        metadata = {}
+
+        # Create displays for each metadata combination
+        # Hybrid will merge the 2 based on preference
+        common_fields = ['name', 'description']
+        if self.cortex_metadata and self.partner_metadata:
+            metadata['merged'] = self.cortex_metadata.copy()
+            if st.session_state['partner_metadata_preference'] == "Partner":
+                for n in common_fields:
+                    metadata['merged'][n] = self.partner_metadata.get(n, self.cortex_metadata.get(n, None))
+            else:
+                for n in common_fields:
+                    metadata['merged'][n] = self.cortex_metadata.get(n, self.partner_metadata.get(n, None))
+
+        else:
+            metadata['merged'] = {}
+        metadata['partner'] = {field: self.partner_metadata.get(field) for field in common_fields}  if self.partner_metadata else {}
+        metadata['cortex'] = self.cortex_metadata if self.cortex_metadata else {}
+        metadata['remove'] = {}
+
+        if metadata['merged']:
+            toggle_default = 'merged'
+        elif metadata['partner']:
+            if st.session_state['keep_extra_partner']:
+                toggle_default = 'partner'
+            else:
+                toggle_default = 'remove'
+        elif metadata['cortex']:
+            if st.session_state['keep_extra_cortex']:
+                toggle_default = 'cortex'
+            else:
+                toggle_default = 'remove'
+        else:
+            toggle_default = 'remove'
+        with st.container(border=True, height=175):
             key_col, detail_col = st.columns((.5, 1))
-            if self.row_data["field_details_cortex"]:
-                cortex_metadata = self.row_data["field_details_cortex"]
-            else:
-                cortex_metadata = {}
-            if self.row_data["field_details_partner"]:
-                partner_metadata = self.row_data["field_details_partner"]
-            else:
-                partner_metadata = {}
             with key_col:
-                st.write(self.row_data["field_key"])
-                if cortex_metadata and partner_metadata:
-                     if st.session_state['partner_metadata_preference'] == "Partner":
-                        toggle = "field_details_partner"
-                elif cortex_metadata:
-                    if st.session_state['keep_extra_cortex']:
-                        toggle = "field_details_cortex"
-                    else:
-                        toggle = "remove"
-                else:
-                    if st.session_state['keep_extra_partner']:
-                        toggle = "field_details_partner"
-                    else:
-                        toggle = "remove"
-                toggle_options = ["field_details_cortex","field_details_partner", "remove"]
+                st.write(self.key)
+                # We want to disable non-options but always keep remove option
+                revised_options = [i for i in toggle_options if metadata[i] or i == 'remove']
                 detail_selection = st.radio("Keep", 
-                                     index = toggle_options.index(toggle),
-                                     options=toggle_options, 
-                                     format_func= lambda x: radio_options[x],
-                                     key=f'row_{self.row_data["field_key"]}',
+                                     index = revised_options.index(toggle_default),
+                                     options=revised_options, 
+                                     key=f'row_{self.key}',
                                      label_visibility='collapsed')
             with detail_col:
-                if detail_selection == "field_details_cortex": 
-                    st.json({k:v for k,v in cortex_metadata.items() if k in ['name', 'description']})
-                elif detail_selection == "field_details_partner":
-                    st.json({k:v for k,v in partner_metadata.items() if k in ['name', 'description']})
+                if metadata[detail_selection]:
+                    st.json({k:v for k,v in metadata[detail_selection].items() if k in common_fields and v is not None})
                 else:
-                    pass
+                    st.write("NA")
         # Extract the selected metadata
-        if detail_selection == "field_details_cortex":
-            metadata = cortex_metadata
-        else: # Data type will come after
-            metadata = dict(
-                name = partner_metadata.get('name'),
-                description = partner_metadata.get('description', None),
-                expr = self.row_data["field_key"],
-                            )
-            if metadata.get('description', None): 
-                if cortex_metadata.get('description', None):
-                    metadata['description'] = cortex_metadata.get('description', None)
-                else:
-                    metadata['description'] = '' # TO DO: Use Cortex to generate description if not found
-        return metadata
+        return metadata[detail_selection]
 
 @dataclass
 class AppMetadata:

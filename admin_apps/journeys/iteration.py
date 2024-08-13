@@ -53,7 +53,8 @@ from admin_apps.partner_semantic import (
     extract_key_values,
     extract_expressions_from_sections,
     make_field_df,
-    determine_field_section
+    determine_field_section,
+    create_table_field_df
 )
 
 
@@ -405,7 +406,7 @@ def integrate_partner_semantics() -> None:
     if 'partner_semantic' in st.session_state:
         # Get cortex semantic file as dictionary
         cortex_semantic = proto_to_dict(st.session_state['semantic_model'])
-        cortex_tables = [i.get('name', None) for i in cortex_semantic['tables']]
+        cortex_tables = extract_key_values(cortex_semantic['tables'], 'name')
         partner_tables = extract_key_values(st.session_state["partner_semantic"], 'name')
         st.write("Select which logical views to compare.")
         c1, c2 = st.columns(2)
@@ -413,40 +414,58 @@ def integrate_partner_semantics() -> None:
             semantic_cortex_tbl = st.selectbox("Snowflake", cortex_tables)
         with c2:
             semantic_partner_tbl = st.selectbox("Partner", partner_tables)
-        # TO DO add mass selection options
+        
         st.session_state['partner_metadata_preference'] = st.selectbox(
-            "For fields shared in both, select default",
+            "For fields shared in both, select default source",
             ["Partner", "Cortex"],
             index = 0,
-            help = "Which semantic file should be checked first for necessary metadata. Where metadata is missing, the other semantic file will be checked."
+            help = COMPARE_SEMANTICS_HELP
             )
-        st.session_state['keep_extra_cortex'] = st.toggle("Keep unmatched Cortex fields",
-                                                            value = True
-                                                            )
-        st.session_state['keep_extra_partner'] = st.toggle("Keep unmatched Partner fields",
-                                                            value = True
-                                                            )
-        # if st.toggle("Compare Fields"):
-        with st.expander("Compare Fields", expanded=False):
-            partner_view = [x for x in st.session_state["partner_semantic"] if x.get('name') == semantic_partner_tbl][0]
-            partner_fields = extract_expressions_from_sections(partner_view, ['dimensions', 'measures', 'entities'])
-            partner_fields_df = make_field_df(partner_fields)
+        orphan_label, orphan_col1, orphan_col2 = st.columns(3)
+        with orphan_label:
+            st.write("Keep unmatched fields:")
+        with orphan_col1:
+            st.session_state['keep_extra_cortex'] = st.toggle("Cortex",value = True)
+        with orphan_col2:
+            st.session_state['keep_extra_partner'] = st.toggle("Partner",value = True)
 
-            cortex_view = [x for x in cortex_semantic['tables'] if x.get('name') == semantic_cortex_tbl][0]
-            cortex_fields = extract_expressions_from_sections(cortex_view, ['dimensions', 'time_dimensions', 'measures'])
-            cortex_fields_df = make_field_df(cortex_fields)
+        with st.expander("Customize by field", expanded=False):
+            st.caption("Only common metadata fields displayed")
+            # Create dataframe of each semantic file's fields with mergeable keys
+            partner_fields_df = create_table_field_df(
+                semantic_partner_tbl,
+                ['dimensions', 'measures', 'entities'],
+                st.session_state["partner_semantic"]
+            )
+            cortex_fields_df = create_table_field_df(
+                semantic_cortex_tbl,
+                ['dimensions', 'time_dimensions', 'measures'],
+                cortex_semantic['tables']
+            )
             
-            combined_fields_df = cortex_fields_df.merge(partner_fields_df, on='field_key', how='outer', suffixes=('_cortex', '_partner')).replace(np.nan, None)
+            combined_fields_df = cortex_fields_df.merge(
+                partner_fields_df, 
+                on='field_key', 
+                how='outer', 
+                suffixes=('_cortex', '_partner')).replace(np.nan, None)
             # Convert json strings to dict for easier extraction later
             for col in ['field_details_cortex', 'field_details_partner']:
-                combined_fields_df[col] = combined_fields_df[col].apply(lambda x: json.loads(x) if not pd.isnull(x) and not isinstance(x, dict) else x)
+                combined_fields_df[col] = combined_fields_df[col].apply(lambda x: 
+                                                                        json.loads(x) if not pd.isnull(x) and 
+                                                                        not isinstance(x, dict) else x)
+            # Create containers and store them in a dictionary
+            containers = {
+                'dimensions': st.container(border=True),
+                'measures': st.container(border=True),
+                'time_dimensions': st.container(border=True)
+            }
+            
+                # Assign labels to the containers
+            for key in containers.keys():
+                containers[key].write(key.replace('_',' ').title())
 
-            dimensions, measures, time_dimensions = st.container(border=True), st.container(border=True), st.container(border=True)
-            dimensions.write("Dimensions")
-            measures.write("Measures")
-            time_dimensions.write("Time_dimensions")
-
-            dimensions_section, measures_sections, time_dimensions_section = [], [], []
+            # Initialize sections as empty lists
+            sections = {key: [] for key in containers.keys()}
 
             for k,v in combined_fields_df.iterrows():
                 # Get destination section for cortex analyst semantic file
@@ -455,31 +474,30 @@ def integrate_partner_semantics() -> None:
                     v['section_partner'],
                     v['field_details_cortex'],
                     v['field_details_partner'])
-                if target_section == 'dimensions':
-                    with dimensions:
-                        dimensions_section.append({**PartnerCompareRow(row_data=v).render_row(), 'data_type': target_data_type})
-                if target_section == 'measures':
-                    with measures:
-                        measures_sections.append({**PartnerCompareRow(row_data=v).render_row(), 'data_type': target_data_type})
-                if target_section == 'time_dimensions':
-                    with time_dimensions:
-                        time_dimensions_section.append({**PartnerCompareRow(row_data=v).render_row(), 'data_type': target_data_type})
-        if st.button("Integrate"):
-            # Update fields in cortex semantic model
-            for i, tbl in enumerate(cortex_semantic['tables']):
-                if tbl.get('name', None) == semantic_cortex_tbl:
-                    cortex_semantic['tables'][i]['dimensions'] = dimensions_section
-                    cortex_semantic['tables'][i]['measures'] = measures_sections
-                    cortex_semantic['tables'][i]['time_dimensions'] = time_dimensions_section
-            # Submitted changes to fields will be captured in the yaml editor
-            # User will need to make necessary modifications there before validating/uploading
-            try:
-                st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
-                st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
-                st.success("Integration complete! Please validate your semantic model before uploading.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Integration failed: {e}")
+                with containers[target_section]:
+                    sections[target_section].append({**PartnerCompareRow(row_data=v).render_row(),
+                                                    'data_type': target_data_type})
+  
+        integrate_col, reset_col, _ = st.columns((.2,.2, 1))
+        with integrate_col:
+            if st.button("Integrate", help=INTEGRATE_HELP):
+                # Update fields in cortex semantic model
+                for i, tbl in enumerate(cortex_semantic['tables']):
+                    if tbl.get('name', None) == semantic_cortex_tbl:
+                        for k in sections.keys():
+                            cortex_semantic['tables'][i][k] = sections[k]
+                # Submitted changes to fields will be captured in the yaml editor
+                # User will need to make necessary modifications there before validating/uploading
+                try:
+                    st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
+                    st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
+                    st.success("Integration complete! Please validate your semantic model before uploading.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Integration failed: {e}")
+        with reset_col:
+            if st.button("Back", help="Return to the main iteration screen"):
+                st.rerun() # Lazy alternative to resetting all configurations
 
 
 
@@ -624,6 +642,12 @@ the semantic model must be validated to be uploaded."""
 
 TRANSLATE_HELP = """Have an existing semantic layer in a partner tool that's integrated
 with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec."""
+
+COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata. 
+Where metadata is missing, the other semantic file will be checked."""
+
+INTEGRATE_HELP = """Merge the Cortex Analyst semantic file and Partner semantic file into the
+primary Cortex Analyst yaml editor."""
 
 
 def show() -> None:

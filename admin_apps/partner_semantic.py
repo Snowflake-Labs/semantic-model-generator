@@ -73,6 +73,18 @@ def make_field_df(fields):
                         })
     return pd.DataFrame(rows)
 
+def create_table_field_df(table_name: str,
+                          sections: list[str],
+                          yaml_data: list[dict]) -> pd.DataFrame:
+    """
+    Extracts sections of table_name in yaml_data dictionary as a DataFrame.
+    """
+    view = [x for x in yaml_data if x.get('name') == table_name][0]
+    fields = extract_expressions_from_sections(view, sections)
+    fields_df = make_field_df(fields)
+
+    return fields_df
+
 def determine_field_section(section_cortex: str,
                             section_partner: str,
                             field_details_cortex: str,
