@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -130,7 +131,7 @@ def init_session_states() -> None:
         st.session_state.confirmed_edits = False
 
 
-@st.experimental_dialog("Edit Dimension")  # type: ignore[misc]
+@st.dialog("Edit Dimension")  # type: ignore[misc]
 def edit_dimension(table_name: str, dim: semantic_model_pb2.Dimension) -> None:
     """
     Renders a dialog box to edit an existing dimension.
@@ -180,7 +181,7 @@ def edit_dimension(table_name: str, dim: semantic_model_pb2.Dimension) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Add Dimension")  # type: ignore[misc]
+@st.dialog("Add Dimension")  # type: ignore[misc]
 def add_dimension(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new dimension.
@@ -219,7 +220,7 @@ def add_dimension(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Edit Measure")  # type: ignore[misc]
+@st.dialog("Edit Measure")  # type: ignore[misc]
 def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
     """
     Renders a dialog box to edit an existing measure.
@@ -292,7 +293,7 @@ def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Add Measure")  # type: ignore[misc]
+@st.dialog("Add Measure")  # type: ignore[misc]
 def add_measure(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new measure.
@@ -352,7 +353,7 @@ def add_measure(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Edit Time Dimension")  # type: ignore[misc]
+@st.dialog("Edit Time Dimension")  # type: ignore[misc]
 def edit_time_dimension(
     table_name: str, tdim: semantic_model_pb2.TimeDimension
 ) -> None:
@@ -397,7 +398,7 @@ def edit_time_dimension(
         st.rerun()
 
 
-@st.experimental_dialog("Add Time Dimension")  # type: ignore[misc]
+@st.dialog("Add Time Dimension")  # type: ignore[misc]
 def add_time_dimension(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new time dimension.
@@ -595,7 +596,7 @@ def display_table(table_name: str) -> None:
         add_time_dimension(table)
 
 
-@st.experimental_dialog("Add Table")  # type: ignore[misc]
+@st.dialog("Add Table")  # type: ignore[misc]
 def add_new_table() -> None:
     """
     Renders a dialog box to add a new logical table.
@@ -713,7 +714,7 @@ def import_yaml() -> None:
             st.rerun()
 
 
-@st.experimental_dialog("Model YAML", width="large")  # type: ignore
+@st.dialog("Model YAML", width="large")  # type: ignore
 def show_yaml_in_dialog() -> None:
     yaml = proto_to_yaml(st.session_state.semantic_model)
     st.code(
@@ -843,6 +844,69 @@ def upload_partner_semantic() -> None:
         if uploaded_files:
             st.session_state["partner_semantic"] = extract_key_values(load_yaml_file(uploaded_files), 'semantic_models')
 
+class PartnerCompareRow:
+    def __init__(self, row_data:pd.Series) -> dict:
+        self.row_data = row_data
+
+    def render_row(self):
+        radio_options = {
+                "field_details_cortex": "cortex",
+                "field_details_partner": "partner",
+                "remove": "remove"}
+        with st.container(border=True, height=150):
+            key_col, detail_col = st.columns((.5, 1))
+            if self.row_data["field_details_cortex"]:
+                cortex_metadata = self.row_data["field_details_cortex"]
+            else:
+                cortex_metadata = {}
+            if self.row_data["field_details_partner"]:
+                partner_metadata = self.row_data["field_details_partner"]
+            else:
+                partner_metadata = {}
+            with key_col:
+                st.write(self.row_data["field_key"])
+                if cortex_metadata and partner_metadata:
+                     if st.session_state['partner_metadata_preference'] == "Partner":
+                        toggle = "field_details_partner"
+                elif cortex_metadata:
+                    if st.session_state['keep_extra_cortex']:
+                        toggle = "field_details_cortex"
+                    else:
+                        toggle = "remove"
+                else:
+                    if st.session_state['keep_extra_partner']:
+                        toggle = "field_details_partner"
+                    else:
+                        toggle = "remove"
+                toggle_options = ["field_details_cortex","field_details_partner", "remove"]
+                detail_selection = st.radio("Keep", 
+                                     index = toggle_options.index(toggle),
+                                     options=toggle_options, 
+                                     format_func= lambda x: radio_options[x],
+                                     key=f'row_{self.row_data["field_key"]}',
+                                     label_visibility='collapsed')
+            with detail_col:
+                if detail_selection == "field_details_cortex": 
+                    st.json({k:v for k,v in cortex_metadata.items() if k in ['name', 'description']})
+                elif detail_selection == "field_details_partner":
+                    st.json({k:v for k,v in partner_metadata.items() if k in ['name', 'description']})
+                else:
+                    pass
+        # Extract the selected metadata
+        if detail_selection == "field_details_cortex":
+            metadata = cortex_metadata
+        else: # Data type will come after
+            metadata = dict(
+                name = partner_metadata.get('name'),
+                description = partner_metadata.get('description', None),
+                expr = self.row_data["field_key"],
+                            )
+            if metadata.get('description', None): 
+                if cortex_metadata.get('description', None):
+                    metadata['description'] = cortex_metadata.get('description', None)
+                else:
+                    metadata['description'] = '' # TO DO: Use Cortex to generate description if not found
+        return metadata
 
 @dataclass
 class AppMetadata:

@@ -25,7 +25,7 @@ def get_available_tables() -> list[str]:
     return fetch_table_names(get_snowflake_connection())
 
 
-@st.experimental_dialog("Selecting your tables", width="large")
+@st.dialog("Selecting your tables", width="large")
 def table_selector_dialog() -> None:
     """
     Renders a dialog box for the user to input the tables they want to use in their semantic model.

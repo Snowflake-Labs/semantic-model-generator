@@ -1,8 +1,10 @@
 import json
 import time
 from typing import Any, Dict, List, Optional
+import yaml
 
 import pandas as pd
+import numpy as np
 import requests
 import sqlglot
 import streamlit as st
@@ -21,6 +23,7 @@ from admin_apps.shared_utils import (
     upload_yaml,
     validate_and_upload_tmp_yaml,
     upload_partner_semantic,
+    PartnerCompareRow
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -31,6 +34,7 @@ from semantic_model_generator.data_processing.cte_utils import (
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
     yaml_to_semantic_model,
+    proto_to_dict,
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.env_vars import (
@@ -48,7 +52,8 @@ from admin_apps.partner_semantic import (
     load_yaml_file,
     extract_key_values,
     extract_expressions_from_sections,
-    make_field_df
+    make_field_df,
+    determine_field_section
 )
 
 
@@ -140,7 +145,7 @@ def show_expr_for_ref(message_index: int) -> None:
         st.dataframe(col_df, hide_index=True, use_container_width=True, height=250)
 
 
-@st.experimental_dialog("Edit", width="large")
+@st.dialog("Edit", width="large")
 def edit_verified_query(
     conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
@@ -339,7 +344,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
-@st.experimental_dialog("Upload", width="small")
+@st.dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
@@ -390,27 +395,92 @@ def upload_dialog(content: str) -> None:
                 )
                 upload_handler(new_name)
 
-@st.experimental_dialog(f"Integrate partner tool semantic specs", width="large")
+@st.dialog(f"Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
+
     # User either came right to iteration app or did not upload partner semantic in builder
     if 'partner_semantic' not in st.session_state:
         upload_partner_semantic()
     # User uploaded in builder or just uploaded while in iteration
     if 'partner_semantic' in st.session_state:
-        st.write("Select which semantic layers to compare.")
+        # Get cortex semantic file as dictionary
+        cortex_semantic = proto_to_dict(st.session_state['semantic_model'])
+        cortex_tables = [i.get('name', None) for i in cortex_semantic['tables']]
+        partner_tables = extract_key_values(st.session_state["partner_semantic"], 'name')
+        st.write("Select which logical views to compare.")
         c1, c2 = st.columns(2)
-        with c1: # TODO: Need to parser a semantic file for cortex analyst to run comparison
-            semantic_snowflake_tbl = st.selectbox("Snowflake", 
-                                                list(st.session_state.ctx_table_col_expr_dict.keys()))
+        with c1:
+            semantic_cortex_tbl = st.selectbox("Snowflake", cortex_tables)
         with c2:
-            semantic_partner_tbl = st.selectbox("Partner", 
-                                                extract_key_values(st.session_state["partner_semantic"], 'name'))
-        if st.button("Compare"):
+            semantic_partner_tbl = st.selectbox("Partner", partner_tables)
+        # TO DO add mass selection options
+        st.session_state['partner_metadata_preference'] = st.selectbox(
+            "For fields shared in both, select default",
+            ["Partner", "Cortex"],
+            index = 0,
+            help = "Which semantic file should be checked first for necessary metadata. Where metadata is missing, the other semantic file will be checked."
+            )
+        st.session_state['keep_extra_cortex'] = st.toggle("Keep unmatched Cortex fields",
+                                                            value = True
+                                                            )
+        st.session_state['keep_extra_partner'] = st.toggle("Keep unmatched Partner fields",
+                                                            value = True
+                                                            )
+        # if st.toggle("Compare Fields"):
+        with st.expander("Compare Fields", expanded=False):
             partner_view = [x for x in st.session_state["partner_semantic"] if x.get('name') == semantic_partner_tbl][0]
             partner_fields = extract_expressions_from_sections(partner_view, ['dimensions', 'measures', 'entities'])
             partner_fields_df = make_field_df(partner_fields)
-            st.dataframe(partner_fields_df, hide_index=True, use_container_width=True)
+
+            cortex_view = [x for x in cortex_semantic['tables'] if x.get('name') == semantic_cortex_tbl][0]
+            cortex_fields = extract_expressions_from_sections(cortex_view, ['dimensions', 'time_dimensions', 'measures'])
+            cortex_fields_df = make_field_df(cortex_fields)
             
+            combined_fields_df = cortex_fields_df.merge(partner_fields_df, on='field_key', how='outer', suffixes=('_cortex', '_partner')).replace(np.nan, None)
+            # Convert json strings to dict for easier extraction later
+            for col in ['field_details_cortex', 'field_details_partner']:
+                combined_fields_df[col] = combined_fields_df[col].apply(lambda x: json.loads(x) if not pd.isnull(x) and not isinstance(x, dict) else x)
+
+            dimensions, measures, time_dimensions = st.container(border=True), st.container(border=True), st.container(border=True)
+            dimensions.write("Dimensions")
+            measures.write("Measures")
+            time_dimensions.write("Time_dimensions")
+
+            dimensions_section, measures_sections, time_dimensions_section = [], [], []
+
+            for k,v in combined_fields_df.iterrows():
+                # Get destination section for cortex analyst semantic file
+                target_section, target_data_type = determine_field_section(
+                    v['section_cortex'],
+                    v['section_partner'],
+                    v['field_details_cortex'],
+                    v['field_details_partner'])
+                if target_section == 'dimensions':
+                    with dimensions:
+                        dimensions_section.append({**PartnerCompareRow(row_data=v).render_row(), 'data_type': target_data_type})
+                if target_section == 'measures':
+                    with measures:
+                        measures_sections.append({**PartnerCompareRow(row_data=v).render_row(), 'data_type': target_data_type})
+                if target_section == 'time_dimensions':
+                    with time_dimensions:
+                        time_dimensions_section.append({**PartnerCompareRow(row_data=v).render_row(), 'data_type': target_data_type})
+        if st.button("Integrate"):
+            # Update fields in cortex semantic model
+            for i, tbl in enumerate(cortex_semantic['tables']):
+                if tbl.get('name', None) == semantic_cortex_tbl:
+                    cortex_semantic['tables'][i]['dimensions'] = dimensions_section
+                    cortex_semantic['tables'][i]['measures'] = measures_sections
+                    cortex_semantic['tables'][i]['time_dimensions'] = time_dimensions_section
+            # Submitted changes to fields will be captured in the yaml editor
+            # User will need to make necessary modifications there before validating/uploading
+            try:
+                st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
+                st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
+                st.success("Integration complete! Please validate your semantic model before uploading.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Integration failed: {e}")
+
 
 
 def update_container(
@@ -441,7 +511,7 @@ def update_container(
     container.markdown(content)
 
 
-@st.experimental_dialog("Error", width="small")
+@st.dialog("Error", width="small")
 def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
@@ -486,7 +556,7 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 st.session_state.semantic_model = yaml_to_semantic_model(content)
                 st.session_state.last_saved_yaml = content
-                st.rerun()
+                st.rerun() # TO DO: Troubleshoot why this is causing the RerunData(page_script_hash error
             except Exception as e:
                 st.session_state["validated"] = False
                 update_container(
@@ -516,7 +586,7 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "editing", prefix=status_container_title)
 
 
-@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
+@st.dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
