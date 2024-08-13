@@ -252,6 +252,11 @@ validate_from_local_path(
 
 ## Usage
 
+### Semantic Model Context Length Constraints
+Due to context window as well as quality constraints, we currently limit the size of the generated semantic model to <30,980 tokens (~123,920 characters).
+
+Please note sample values and verified queries is not counted into this token length constraints. You can include as much sample values or verified queries as you'd like with limiting the overall file to <1MB.
+
 ### Auto-Generated Descriptions
 
 If your snowflake tables and comments do not have comments, we currently
