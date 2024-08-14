@@ -8,10 +8,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
 from semantic_model_generator.data_processing.proto_utils import (
     yaml_to_semantic_model,
 )
-from admin_apps.partner_semantic import (
-    load_yaml_file,
-    extract_key_values
-)
 
 
 @st.cache_resource(show_spinner=False)

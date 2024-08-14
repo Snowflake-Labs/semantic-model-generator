@@ -22,8 +22,7 @@ from admin_apps.shared_utils import (
     init_session_states,
     upload_yaml,
     validate_and_upload_tmp_yaml,
-    upload_partner_semantic,
-    PartnerCompareRow
+    integrate_partner_semantics
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -34,7 +33,6 @@ from semantic_model_generator.data_processing.cte_utils import (
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
     yaml_to_semantic_model,
-    proto_to_dict,
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.env_vars import (
@@ -47,15 +45,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     set_schema,
 )
 from semantic_model_generator.validate_model import validate
-
-from admin_apps.partner_semantic import (
-    load_yaml_file,
-    extract_key_values,
-    extract_expressions_from_sections,
-    make_field_df,
-    determine_field_section,
-    create_table_field_df
-)
 
 
 def get_file_name() -> str:
@@ -396,109 +385,6 @@ def upload_dialog(content: str) -> None:
                 )
                 upload_handler(new_name)
 
-@st.dialog(f"Integrate partner tool semantic specs", width="large")
-def integrate_partner_semantics() -> None:
-
-    # User either came right to iteration app or did not upload partner semantic in builder
-    if 'partner_semantic' not in st.session_state:
-        upload_partner_semantic()
-    # User uploaded in builder or just uploaded while in iteration
-    if 'partner_semantic' in st.session_state:
-        # Get cortex semantic file as dictionary
-        cortex_semantic = proto_to_dict(st.session_state['semantic_model'])
-        cortex_tables = extract_key_values(cortex_semantic['tables'], 'name')
-        partner_tables = extract_key_values(st.session_state["partner_semantic"], 'name')
-        st.write("Select which logical views to compare.")
-        c1, c2 = st.columns(2)
-        with c1:
-            semantic_cortex_tbl = st.selectbox("Snowflake", cortex_tables)
-        with c2:
-            semantic_partner_tbl = st.selectbox("Partner", partner_tables)
-        
-        st.session_state['partner_metadata_preference'] = st.selectbox(
-            "For fields shared in both, select default source",
-            ["Partner", "Cortex"],
-            index = 0,
-            help = COMPARE_SEMANTICS_HELP
-            )
-        orphan_label, orphan_col1, orphan_col2 = st.columns(3)
-        with orphan_label:
-            st.write("Keep unmatched fields:")
-        with orphan_col1:
-            st.session_state['keep_extra_cortex'] = st.toggle("Cortex",value = True)
-        with orphan_col2:
-            st.session_state['keep_extra_partner'] = st.toggle("Partner",value = True)
-
-        with st.expander("Customize by field", expanded=False):
-            st.caption("Only common metadata fields displayed")
-            # Create dataframe of each semantic file's fields with mergeable keys
-            partner_fields_df = create_table_field_df(
-                semantic_partner_tbl,
-                ['dimensions', 'measures', 'entities'],
-                st.session_state["partner_semantic"]
-            )
-            cortex_fields_df = create_table_field_df(
-                semantic_cortex_tbl,
-                ['dimensions', 'time_dimensions', 'measures'],
-                cortex_semantic['tables']
-            )
-            
-            combined_fields_df = cortex_fields_df.merge(
-                partner_fields_df, 
-                on='field_key', 
-                how='outer', 
-                suffixes=('_cortex', '_partner')).replace(np.nan, None)
-            # Convert json strings to dict for easier extraction later
-            for col in ['field_details_cortex', 'field_details_partner']:
-                combined_fields_df[col] = combined_fields_df[col].apply(lambda x: 
-                                                                        json.loads(x) if not pd.isnull(x) and 
-                                                                        not isinstance(x, dict) else x)
-            # Create containers and store them in a dictionary
-            containers = {
-                'dimensions': st.container(border=True),
-                'measures': st.container(border=True),
-                'time_dimensions': st.container(border=True)
-            }
-            
-                # Assign labels to the containers
-            for key in containers.keys():
-                containers[key].write(key.replace('_',' ').title())
-
-            # Initialize sections as empty lists
-            sections = {key: [] for key in containers.keys()}
-
-            for k,v in combined_fields_df.iterrows():
-                # Get destination section for cortex analyst semantic file
-                target_section, target_data_type = determine_field_section(
-                    v['section_cortex'],
-                    v['section_partner'],
-                    v['field_details_cortex'],
-                    v['field_details_partner'])
-                with containers[target_section]:
-                    sections[target_section].append({**PartnerCompareRow(row_data=v).render_row(),
-                                                    'data_type': target_data_type})
-  
-        integrate_col, reset_col, _ = st.columns((.2,.2, 1))
-        with integrate_col:
-            if st.button("Integrate", help=INTEGRATE_HELP):
-                # Update fields in cortex semantic model
-                for i, tbl in enumerate(cortex_semantic['tables']):
-                    if tbl.get('name', None) == semantic_cortex_tbl:
-                        for k in sections.keys():
-                            cortex_semantic['tables'][i][k] = sections[k]
-                # Submitted changes to fields will be captured in the yaml editor
-                # User will need to make necessary modifications there before validating/uploading
-                try:
-                    st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
-                    st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
-                    st.success("Integration complete! Please validate your semantic model before uploading.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Integration failed: {e}")
-        with reset_col:
-            if st.button("Back", help="Return to the main iteration screen"):
-                st.rerun() # Lazy alternative to resetting all configurations
-
 
 
 def update_container(
@@ -589,9 +475,10 @@ def yaml_editor(yaml_str: str) -> None:
         ):
             upload_dialog(content)
         if right.button(
-            "Translate",
+            "Partner Semantic",
             use_container_width=True,
-            help=TRANSLATE_HELP, 
+            help=PARTNER_SEMANTIC_HELP, 
+            disabled = not st.session_state["validated"]
         ):
             integrate_partner_semantics()
 
@@ -640,14 +527,9 @@ UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whe
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
 
-TRANSLATE_HELP = """Have an existing semantic layer in a partner tool that's integrated
-with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec."""
-
-COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata. 
-Where metadata is missing, the other semantic file will be checked."""
-
-INTEGRATE_HELP = """Merge the Cortex Analyst semantic file and Partner semantic file into the
-primary Cortex Analyst yaml editor."""
+PARTNER_SEMANTIC_HELP = """Have an existing semantic layer in a partner tool that's integrated
+with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
+Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 
 def show() -> None:
