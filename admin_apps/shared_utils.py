@@ -1017,6 +1017,18 @@ def determine_field_section(section_cortex: str,
                 section_cortex = 'dimensions'
                 data_type = 'TEXT'
         return (section_cortex, data_type)
+    
+def run_cortex_complete(conn: SnowflakeConnection,
+                        model: str,
+                        prompt: str,
+                        prompt_args: Optional[dict] = None) -> str:
+    
+    if prompt_args:
+        prompt = prompt.format(**prompt_args).replace("'", "\\'")
+    complete_sql = f"SELECT snowflake.cortex.complete('{model}', '{prompt}')"
+    response = conn.cursor().execute(complete_sql).fetchone()[0]
+
+    return response
 
 @st.dialog(f"Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
