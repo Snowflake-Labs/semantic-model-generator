@@ -881,14 +881,20 @@ def upload_partner_semantic() -> None:
     Upload the semantic model to a stage.
     """
     partners = [None, "dbt"]
+    # User may have specified a partner tool in builder module or returning to module
+    selected_partner = st.session_state.get("partner_tool", None)
 
-    st.session_state["partner_tool"] = st.selectbox("Select the partner tool", partners)
+    st.session_state["partner_tool"] = st.selectbox("Select the partner tool",
+                                                    partners,
+                                                    index = partners.index(selected_partner))
     if st.session_state["partner_tool"] == "dbt":
         uploaded_files = st.file_uploader(f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
                                             type=['yaml', 'yml'],
                                             accept_multiple_files=True) 
         if uploaded_files:
             st.session_state["partner_semantic"] = extract_key_values(load_yaml_file(uploaded_files), 'semantic_models')
+        else:
+            st.session_state["partner_semantic"] = None
 
 class PartnerCompareRow:
     def __init__(self, row_data:pd.Series) -> dict:
@@ -1046,11 +1052,9 @@ def integrate_partner_semantics() -> None:
     KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model 
     but not in Cortex Analyst semantic model."""
 
-    # User either came right to iteration app or did not upload partner semantic in builder
-    if 'partner_semantic' not in st.session_state:
-        upload_partner_semantic()
-    # User uploaded in builder or just uploaded while in iteration
-    if 'partner_semantic' in st.session_state:
+    upload_partner_semantic() # Give user another chance to add/change partner semantic files besides builder
+    if st.session_state.get('partner_semantic', None) and st.session_state.get('partner_tool', None):
+        # upload_partner_semantic()
         # Get cortex semantic file as dictionary
         cortex_semantic = proto_to_dict(st.session_state['semantic_model'])
         cortex_tables = extract_key_values(cortex_semantic['tables'], 'name')
@@ -1076,7 +1080,8 @@ def integrate_partner_semantics() -> None:
         with orphan_col2:
             st.session_state['keep_extra_partner'] = st.toggle("Partner",value = True, help = KEEP_PARTNER_HELP)
 
-        with st.expander("Advanced configuration", expanded=False):
+        with st.expander("Advanced configuration", 
+                         expanded=False):
             st.caption("Only common metadata fields displayed")
             # Create dataframe of each semantic file's fields with mergeable keys
             partner_fields_df = create_table_field_df(
