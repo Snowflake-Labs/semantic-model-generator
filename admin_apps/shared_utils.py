@@ -875,12 +875,22 @@ def extract_expressions_from_sections(data_dict, section_names):
         d[i] = {extract_key(obj): obj for obj in data_dict.get(i, [])}
     
     return d
-        
-def upload_partner_semantic() -> None:
+
+def upload_label():
+    if st.session_state.get('my_file_uploader', None):
+        st.session_state['upload_label'] = ', '.join([i.name for i in st.session_state['my_file_uploader']])
+    elif st.session_state.get('uploaded_semantic_files', None):
+        st.session_state['upload_label'] = ', '.join([i for i in st.session_state['uploaded_semantic_files']])
+    else:
+        st.session_state['upload_label'] = f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)'
+
+
+def upload_partner_semantic() -> bool:
     """
     Upload the semantic model to a stage.
     """
     partners = [None, "dbt"]
+    uploaded_files = []
     # User may have specified a partner tool in builder module or returning to module
     selected_partner = st.session_state.get("partner_tool", None)
 
@@ -890,11 +900,14 @@ def upload_partner_semantic() -> None:
     if st.session_state["partner_tool"] == "dbt":
         uploaded_files = st.file_uploader(f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
                                             type=['yaml', 'yml'],
-                                            accept_multiple_files=True) 
+                                            accept_multiple_files=True,
+                                            key = 'myfile') 
         if uploaded_files:
             st.session_state["partner_semantic"] = extract_key_values(load_yaml_file(uploaded_files), 'semantic_models')
+            st.session_state["uploaded_semantic_files"] = [i.name for i in uploaded_files]
         else:
             st.session_state["partner_semantic"] = None
+    return bool(uploaded_files)
 
 class PartnerCompareRow:
     def __init__(self, row_data:pd.Series) -> dict:
@@ -903,7 +916,7 @@ class PartnerCompareRow:
         self.cortex_metadata = self.row_data["field_details_cortex"] if self.row_data["field_details_cortex"] else {}
         self.partner_metadata = self.row_data["field_details_partner"] if self.row_data["field_details_partner"] else {}
         
-
+    
     def render_row(self):
         toggle_options = [
             "merged",
@@ -912,8 +925,8 @@ class PartnerCompareRow:
             "remove"]
         metadata = {}
 
-        # Create displays for each metadata combination
-        # Hybrid will merge the 2 based on preference
+        # Create metadata based for each field given merging or singular semantic file useage of the field
+        # Merge will merge the 2 based on user-selected preference
         common_fields = ['name', 'description']
         if self.cortex_metadata and self.partner_metadata:
             metadata['merged'] = self.cortex_metadata.copy()
@@ -944,24 +957,31 @@ class PartnerCompareRow:
                 toggle_default = 'remove'
         else:
             toggle_default = 'remove'
-        with st.container(border=True, height=175):
-            key_col, detail_col = st.columns((.5, 1))
-            with key_col:
-                st.write(self.key)
-                # We want to disable non-options but always keep remove option
-                revised_options = [i for i in toggle_options if metadata[i] or i == 'remove']
-                detail_selection = st.radio("Keep", 
-                                     index = revised_options.index(toggle_default),
-                                     options=revised_options, 
-                                     key=f'row_{self.key}',
-                                     label_visibility='collapsed')
-            with detail_col:
-                if metadata[detail_selection]:
-                    st.json({k:v for k,v in metadata[detail_selection].items() if k in common_fields and v is not None})
-                else:
-                    st.write("NA")
+
+        # with st.container(border=True,
+        #                   height=175):
+        key_col, detail_col = st.columns((.5, 1))
+        with key_col:
+            st.write(self.key)
+            # We want to disable non-options but always keep remove option
+            revised_options = [i for i in toggle_options if metadata[i] or i == 'remove']
+            detail_selection = st.radio("Keep", 
+                                    index = revised_options.index(toggle_default),
+                                    options=revised_options, 
+                                    key=f'row_{self.key}',
+                                    format_func=lambda x: x.capitalize(),
+                                    label_visibility='collapsed')
+        with detail_col:
+            if metadata[detail_selection]:
+                st.json({k:v for k,v in metadata[detail_selection].items() if k in common_fields and v is not None})
+            else:
+                st.write("NA")
+        st.divider()
         # Extract the selected metadata
-        return metadata[detail_selection]
+        selected_metadata = metadata[detail_selection]
+        # Add expr to selected metadata if it's not included which is the case for dbt
+        selected_metadata['expr'] = self.key
+        return selected_metadata
     
 def make_field_df(fields):
     """
@@ -1051,15 +1071,20 @@ def integrate_partner_semantics() -> None:
 
     KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model 
     but not in Cortex Analyst semantic model."""
+    
+    uploaded_files = upload_partner_semantic() # Give user another chance to add/change partner semantic files besides builder
+    st.divider()
+    if (
+        st.session_state.get('partner_semantic', None) and 
+        st.session_state.get('partner_tool', None) and
+        st.session_state.get('uploaded_semantic_files', None)
+        ):
 
-    upload_partner_semantic() # Give user another chance to add/change partner semantic files besides builder
-    if st.session_state.get('partner_semantic', None) and st.session_state.get('partner_tool', None):
-        # upload_partner_semantic()
         # Get cortex semantic file as dictionary
         cortex_semantic = proto_to_dict(st.session_state['semantic_model'])
         cortex_tables = extract_key_values(cortex_semantic['tables'], 'name')
         partner_tables = extract_key_values(st.session_state["partner_semantic"], 'name')
-        st.write("Select which logical views to compare.")
+        st.write("Select which logical views to compare and merge.")
         c1, c2 = st.columns(2)
         with c1:
             semantic_cortex_tbl = st.selectbox("Snowflake", cortex_tables)
@@ -1067,22 +1092,20 @@ def integrate_partner_semantics() -> None:
             semantic_partner_tbl = st.selectbox("Partner", partner_tables)
         
         st.session_state['partner_metadata_preference'] = st.selectbox(
-            "For fields shared in both, select default source",
+            "For fields shared in both sources, which source should be checked first for common metadata?",
             ["Partner", "Cortex"],
             index = 0,
             help = COMPARE_SEMANTICS_HELP
             )
         orphan_label, orphan_col1, orphan_col2 = st.columns(3, vertical_alignment="center", gap="small")
         with orphan_label:
-            st.write("Keep unmatched fields:")
+            st.write("Retain unmatched fields:")
         with orphan_col1:
             st.session_state['keep_extra_cortex'] = st.toggle("Cortex",value = True, help = KEEP_CORTEX_HELP)
         with orphan_col2:
             st.session_state['keep_extra_partner'] = st.toggle("Partner",value = True, help = KEEP_PARTNER_HELP)
-
-        with st.expander("Advanced configuration", 
-                         expanded=False):
-            st.caption("Only common metadata fields displayed")
+        with st.expander("Advanced configuration", expanded=False):
+            st.caption("Only shared metadata information displayed")
             # Create dataframe of each semantic file's fields with mergeable keys
             partner_fields_df = create_table_field_df(
                 semantic_partner_tbl,
@@ -1094,7 +1117,6 @@ def integrate_partner_semantics() -> None:
                 ['dimensions', 'time_dimensions', 'measures'],
                 cortex_semantic['tables']
             )
-            
             combined_fields_df = cortex_fields_df.merge(
                 partner_fields_df, 
                 on='field_key', 
@@ -1112,7 +1134,7 @@ def integrate_partner_semantics() -> None:
                 'time_dimensions': st.container()
             }
             
-                # Assign labels to the containers
+            # Assign labels to the containers
             for key in containers.keys():
                 containers[key].write(key.replace('_',' ').title())
 
@@ -1132,24 +1154,29 @@ def integrate_partner_semantics() -> None:
   
         integrate_col, reset_col, _ = st.columns((1, 1, 5), gap = "small")
         with integrate_col:
-            if st.button("Merge", help=INTEGRATE_HELP, use_container_width=True):
-                # Update fields in cortex semantic model
-                for i, tbl in enumerate(cortex_semantic['tables']):
-                    if tbl.get('name', None) == semantic_cortex_tbl:
-                        for k in sections.keys():
-                            cortex_semantic['tables'][i][k] = sections[k]
-                # Submitted changes to fields will be captured in the yaml editor
-                # User will need to make necessary modifications there before validating/uploading
-                try:
-                    st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
-                    st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
-                    st.success("Integration complete! Please validate your semantic model before uploading.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Integration failed: {e}")
+            merge_button = st.button("Merge", help=INTEGRATE_HELP, use_container_width=True)
         with reset_col:
-            if st.button("Back", help="Return to the main iteration screen", use_container_width=True):
-                st.rerun() # Lazy alternative to resetting all configurations
+            reset_button = st.button("Back", help="Return to the main iteration screen", use_container_width=True)
+
+        if merge_button:
+            # Update fields in cortex semantic model
+            for i, tbl in enumerate(cortex_semantic['tables']):
+                if tbl.get('name', None) == semantic_cortex_tbl:
+                    for k in sections.keys():
+                        cortex_semantic['tables'][i][k] = sections[k]
+            # Submitted changes to fields will be captured in the yaml editor
+            # User will need to make necessary modifications there before validating/uploading
+            try:
+                st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
+                st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
+                st.success("Integration complete! Please validate your semantic model before uploading.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Integration failed: {e}")
+     
+        if reset_button:
+            st.rerun() # Lazy alternative to resetting all configurations
+
 
 @dataclass
 class AppMetadata:

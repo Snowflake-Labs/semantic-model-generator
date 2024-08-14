@@ -47,11 +47,11 @@ def table_selector_dialog() -> None:
         placeholder="Select the tables you'd like to include in your semantic model.",
     )
 
-    has_semantic = st.radio("Do you have an existing semantic for these tables(s) in a partner tool?", ("No", "Yes"))
-    if has_semantic == "Yes":
-        upload_partner_semantic()
-    else:
-        st.session_state["partner_semantic"] = None
+    # has_semantic = st.radio("Do you have an existing semantic for these tables(s) in a partner tool?", ("No", "Yes"))
+    # if has_semantic == "Yes":
+    #     upload_partner_semantic()
+    # else:
+    #     st.session_state["partner_semantic"] = None
     st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
     submit = st.button(
         "Submit", use_container_width=True, type="primary"
