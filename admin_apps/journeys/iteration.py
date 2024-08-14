@@ -446,7 +446,7 @@ def yaml_editor(yaml_str: str) -> None:
 
     with button_container:
         left, center, right = st.columns(3)
-        if left.button("Save", use_container_width=True, help=SAVE_HELP):
+        if left.button("Validate", use_container_width=True, help=SAVE_HELP):
             # Validate new content
             try:
                 validate(

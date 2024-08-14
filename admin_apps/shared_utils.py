@@ -1032,12 +1032,19 @@ def run_cortex_complete(conn: SnowflakeConnection,
 
 @st.dialog(f"Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
+    st.write("Upload semantic files from supported partners to merge with Cortex Analyst semantic model.")
 
     COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata. 
     Where metadata is missing, the other semantic file will be checked."""
 
     INTEGRATE_HELP = """Merge the Cortex Analyst semantic file and Partner semantic file into the
     primary Cortex Analyst yaml editor."""
+
+    KEEP_CORTEX_HELP = """Retain fields that are found in Cortex Analyst semantic model 
+    but not in Partner semantic model."""
+
+    KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model 
+    but not in Cortex Analyst semantic model."""
 
     # User either came right to iteration app or did not upload partner semantic in builder
     if 'partner_semantic' not in st.session_state:
@@ -1065,9 +1072,9 @@ def integrate_partner_semantics() -> None:
         with orphan_label:
             st.write("Keep unmatched fields:")
         with orphan_col1:
-            st.session_state['keep_extra_cortex'] = st.toggle("Cortex",value = True)
+            st.session_state['keep_extra_cortex'] = st.toggle("Cortex",value = True, help = KEEP_CORTEX_HELP)
         with orphan_col2:
-            st.session_state['keep_extra_partner'] = st.toggle("Partner",value = True)
+            st.session_state['keep_extra_partner'] = st.toggle("Partner",value = True, help = KEEP_PARTNER_HELP)
 
         with st.expander("Advanced configuration", expanded=False):
             st.caption("Only common metadata fields displayed")
