@@ -903,8 +903,12 @@ def upload_partner_semantic() -> bool:
                                             accept_multiple_files=True,
                                             key = 'myfile') 
         if uploaded_files:
-            st.session_state["partner_semantic"] = extract_key_values(load_yaml_file(uploaded_files), 'semantic_models')
-            st.session_state["uploaded_semantic_files"] = [i.name for i in uploaded_files]
+            partner_semantic = extract_key_values(load_yaml_file(uploaded_files), 'semantic_models')
+            if not partner_semantic:
+                st.error("Upload file does not contain required semantic_models section.")
+            else:
+                st.session_state["partner_semantic"] = partner_semantic
+                st.session_state["uploaded_semantic_files"] = [i.name for i in uploaded_files]
         else:
             st.session_state["partner_semantic"] = None
     return bool(uploaded_files)
