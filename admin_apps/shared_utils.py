@@ -891,7 +891,7 @@ def upload_partner_semantic() -> bool:
     """
     partners = [None, "dbt"]
     uploaded_files = []
-    # User may have specified a partner tool in builder module or returning to module
+    
     selected_partner = st.session_state.get("partner_tool", None)
 
     st.session_state["partner_tool"] = st.selectbox("Select the partner tool",
@@ -977,11 +977,12 @@ class PartnerCompareRow:
             else:
                 st.write("NA")
         st.divider()
-        # Extract the selected metadata
-        selected_metadata = metadata[detail_selection]
-        # Add expr to selected metadata if it's not included which is the case for dbt
-        selected_metadata['expr'] = self.key
-        return selected_metadata
+        # Extract the selected metadata if not set to remove
+        if detail_selection != 'remove':
+            selected_metadata = metadata[detail_selection]
+            # Add expr to selected metadata if it's not included which is the case for dbt
+            selected_metadata['expr'] = self.key
+            return selected_metadata
     
 def make_field_df(fields):
     """
@@ -1071,9 +1072,10 @@ def integrate_partner_semantics() -> None:
 
     KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model 
     but not in Cortex Analyst semantic model."""
-    
+
     uploaded_files = upload_partner_semantic() # Give user another chance to add/change partner semantic files besides builder
     st.divider()
+
     if (
         st.session_state.get('partner_semantic', None) and 
         st.session_state.get('partner_tool', None) and
@@ -1149,8 +1151,10 @@ def integrate_partner_semantics() -> None:
                     v['field_details_cortex'],
                     v['field_details_partner'])
                 with containers[target_section]:
-                    sections[target_section].append({**PartnerCompareRow(row_data=v).render_row(),
-                                                    'data_type': target_data_type})
+                    selected_metadata = PartnerCompareRow(v).render_row()
+                    if selected_metadata:
+                        selected_metadata['data_type'] = target_data_type
+                        sections[target_section].append(selected_metadata)
   
         integrate_col, reset_col, _ = st.columns((1, 1, 5), gap = "small")
         with integrate_col:
@@ -1170,6 +1174,7 @@ def integrate_partner_semantics() -> None:
                 st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
                 st.session_state["semantic_model"] = yaml_to_semantic_model(st.session_state["yaml"])
                 st.success("Integration complete! Please validate your semantic model before uploading.")
+                time.sleep(1.5)
                 st.rerun()
             except Exception as e:
                 st.error(f"Integration failed: {e}")
