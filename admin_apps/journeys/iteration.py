@@ -8,10 +8,11 @@ import numpy as np
 import requests
 import sqlglot
 import streamlit as st
-from snowflake.connector import SnowflakeConnection
+from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
+from admin_apps.journeys.builder import get_available_databases, get_available_schemas
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
@@ -41,6 +42,8 @@ from semantic_model_generator.snowflake_utils.env_vars import (
     SNOWFLAKE_USER,
 )
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    fetch_stages_in_schema,
+    fetch_yaml_names_in_stage,
     set_database,
     set_schema,
 )
@@ -371,19 +374,25 @@ def upload_dialog(content: str) -> None:
     else:
         # If coming from the builder flow, we need to ask the user for the exact stage path to upload to.
         st.markdown("Please enter the destination of your YAML file.")
-        with st.form("upload_form"):
-            stage_database = st.text_input("Stage database", value="")
-            stage_schema = st.text_input("Stage schema", value="")
-            stage_name = st.text_input("Stage name", value="")
-            new_name = st.text_input("File name (omit .yaml suffix)", value="")
+        stage_selector_container()
+        new_name = st.text_input("File name (omit .yaml suffix)", value="")
 
-            if st.form_submit_button("Submit Upload"):
-                st.session_state["snowflake_stage"] = SnowflakeStage(
-                    stage_database=stage_database,
-                    stage_schema=stage_schema,
-                    stage_name=stage_name,
-                )
-                upload_handler(new_name)
+        if st.button("Submit Upload"):
+            if (
+                not st.session_state["selected_iteration_database"]
+                or not st.session_state["selected_iteration_schema"]
+                or not st.session_state["selected_iteration_stage"]
+                or not new_name
+            ):
+                st.error("Please fill in all fields.")
+                return
+
+            st.session_state["snowflake_stage"] = SnowflakeStage(
+                stage_database=st.session_state["selected_iteration_database"],
+                stage_schema=st.session_state["selected_iteration_schema"],
+                stage_name=st.session_state["selected_iteration_stage"],
+            )
+            upload_handler(new_name)
 
 
 
@@ -445,8 +454,13 @@ def yaml_editor(yaml_str: str) -> None:
     status_container = st.empty()
 
     with button_container:
-        left, center, right = st.columns(3)
-        if left.button("Validate", use_container_width=True, help=SAVE_HELP):
+        (
+            one,
+            two,
+            three,
+            four
+        ) = st.columns(4)
+        if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
             # Validate new content
             try:
                 validate(
@@ -460,7 +474,6 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 st.session_state.semantic_model = yaml_to_semantic_model(content)
                 st.session_state.last_saved_yaml = content
-                st.rerun() # TO DO: Troubleshoot why this is causing the RerunData(page_script_hash error
             except Exception as e:
                 st.session_state["validated"] = False
                 update_container(
@@ -468,13 +481,31 @@ def yaml_editor(yaml_str: str) -> None:
                 )
                 exception_as_dialog(e)
 
-        if center.button(
+            # Rerun the app if validation was successful.
+            # We shouldn't rerun if validation failed as the error popup would immediately dismiss.
+            # This must be done outside of the try/except because the generic Exception handling is catching the
+            # exception that st.rerun() properly raises to halt execution.
+            # This is fixed in later versions of Streamlit, but other refactors to the code are required to upgrade.
+            if st.session_state["validated"]:
+                st.rerun()
+
+        if content:
+            two.download_button(
+                label="Download",
+                data=content,
+                file_name="semantic_model.yaml",
+                mime="text/yaml",
+                use_container_width=True,
+                help=DOWNLOAD_HELP,
+            )
+
+        if three.button(
             "Upload",
             use_container_width=True,
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
-        if right.button(
+        if four.button(
             "Partner Semantic",
             use_container_width=True,
             help=PARTNER_SEMANTIC_HELP, 
@@ -491,37 +522,133 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "editing", prefix=status_container_title)
 
 
+@st.cache_resource(show_spinner=False)
+def get_available_stages(schema: str) -> List[str]:
+    """
+    Fetches the available stages from the Snowflake account.
+
+    Returns:
+        List[str]: A list of available stages.
+    """
+    return fetch_stages_in_schema(get_snowflake_connection(), schema)
+
+
+@st.cache_resource(show_spinner=False)
+def get_yamls_from_stage(stage: str) -> List[str]:
+    """
+    Fetches the YAML files from the specified stage.
+
+    Args:
+        stage (str): The name of the stage to fetch the YAML files from.
+
+    Returns:
+        List[str]: A list of YAML files in the specified stage.
+    """
+    return fetch_yaml_names_in_stage(get_snowflake_connection(), stage)
+
+
+def stage_selector_container() -> None:
+    """
+    Common component that encapsulates db/schema/stage selection for the admin app.
+    When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_stages = []
+
+    # First, retrieve all databases that the user has access to.
+    stage_database = st.selectbox(
+        "Stage database",
+        options=get_available_databases(),
+        index=None,
+        key="selected_iteration_database",
+    )
+    if stage_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            set_database(get_snowflake_connection(), stage_database)
+            available_schemas = get_available_schemas(stage_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    stage_schema = st.selectbox(
+        "Stage schema",
+        options=available_schemas,
+        index=None,
+        key="selected_iteration_schema",
+    )
+    if stage_schema:
+        # When a valid schema is selected, fetch the available stages in that schema.
+        try:
+            set_schema(get_snowflake_connection(), stage_schema)
+            available_stages = get_available_stages(stage_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    st.selectbox(
+        "Stage name",
+        options=available_stages,
+        index=None,
+        key="selected_iteration_stage",
+    )
+
+
 @st.dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
     """
-    # Otherwise, we should collect the prebuilt YAML location from the user so that we can download it.
-    with st.form("download_yaml_requirements"):
-        st.markdown(
-            "Fill in the Snowflake stage details to download your existing YAML file."
-        )
-        # TODO: Make these dropdown selectors by fetching all dbs/schemas similar to table approach?
-        stage_database = st.text_input("Stage database", value="")
-        stage_schema = st.text_input("Stage schema", value="")
-        stage_name = st.text_input("Stage name", value="")
-        file_name = st.text_input("File name", value="<your_file>.yaml")
-        if st.form_submit_button("Submit"):
-            st.session_state["snowflake_stage"] = SnowflakeStage(
-                stage_database=stage_database,
-                stage_schema=stage_schema,
-                stage_name=stage_name,
+    st.markdown(
+        "Fill in the Snowflake stage details to download your existing YAML file."
+    )
+
+    stage_selector_container()
+
+    # Based on the currently selected stage, show a dropdown of YAML files for the user to pick from.
+    available_files = []
+    if (
+        "selected_iteration_stage" in st.session_state
+        and st.session_state["selected_iteration_stage"]
+    ):
+        # When a valid stage is selected, fetch the available YAML files in that stage.
+        try:
+            available_files = get_yamls_from_stage(
+                st.session_state["selected_iteration_stage"]
             )
-            st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
-            st.session_state["host_name"] = SNOWFLAKE_HOST
-            st.session_state["user_name"] = SNOWFLAKE_USER
-            st.session_state["file_name"] = file_name
-            st.session_state["page"] = GeneratorAppScreen.ITERATION
-            st.rerun()
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected stage.")
+            st.stop()
+
+    file_name = st.selectbox("File name", options=available_files, index=None)
+
+    if st.button(
+        "Submit",
+        disabled=not st.session_state["selected_iteration_database"]
+        or not st.session_state["selected_iteration_schema"]
+        or not st.session_state["selected_iteration_stage"]
+        or not file_name,
+    ):
+        st.session_state["snowflake_stage"] = SnowflakeStage(
+            stage_database=st.session_state["selected_iteration_database"],
+            stage_schema=st.session_state["selected_iteration_schema"],
+            stage_name=st.session_state["selected_iteration_stage"],
+        )
+        st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
+        st.session_state["host_name"] = SNOWFLAKE_HOST
+        st.session_state["user_name"] = SNOWFLAKE_USER
+        st.session_state["file_name"] = file_name
+        st.session_state["page"] = GeneratorAppScreen.ITERATION
+        st.rerun()
 
 
-SAVE_HELP = """Save changes to the active semantic model in this app. This is
+VALIDATE_HELP = """Save and validate changes to the active semantic model in this app. This is
 useful so you can then play with it in the chat panel on the right side."""
+
+DOWNLOAD_HELP = (
+    """Download the currently loaded semantic model to your local machine."""
+)
 
 UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whenever
 you think your semantic model is doing great and should be pushed to prod! Note that

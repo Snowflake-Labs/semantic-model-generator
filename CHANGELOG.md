@@ -2,6 +2,12 @@
 
 You must follow the format of `## [VERSION-NUMBER]` for the GitHub workflow to pick up the text.
 
+## [0.1.33] - 2024-08-07
+
+### Updates
+
+- Throw an error during validation if a user adds duplicate verified queries to their semantic model.
+
 ## [0.1.32] - 2024-07-30
 
 ### Updates

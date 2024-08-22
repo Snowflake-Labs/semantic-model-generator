@@ -2,15 +2,10 @@
 
 The `Semantic Model Generator` is used to generate a semantic model for use in your Snowflake account.
 
-Your workflow should be:
+You can generate semantic models through our Streamlit app, the command line, or directly in your Python code.
+Please complete the instructions in [setup](#setup), then proceed to the instructions for your desired approach.
 
-1. [Setup](#setup) to set credentials.
-2. [Usage](#usage) to create a model either through Python or command line.
-3. [Post Generation](#post-generation) to fill out the rest of your semantic model.
-4. [Validating Your Final Semantic Model](#validating-yaml-updates) to ensure any changes you've made are valid.
-5. [Admin App](#admin-app) spin up the admin app for easier generation of your semantic model.
-
-Or, if you want to see what a semantic model looks like, skip to [Examples](#examples).
+If you want to see what a semantic model looks like, skip to [Examples](#examples).
 
 ## Setup
 
@@ -27,12 +22,16 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility
   on API.
-* It typically follows format of: `https://<accountlocator>.<region>.<cloud>.snowflakecomputing.com`
+* It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit the `https://` prefix.
 * `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
   your Snowflake deployment. We would recommend setting it regardless.
 
+We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. See the
+examples in [`.env.example`](.env.example) for reference and proper syntax for `.env` files.
 
-1. To set these on Mac OS/Linux:
+However, if you would like to set these variables directly in your shell/Python environment,
+
+1. MacOS/Linux syntax:
 
 ```bash
 export SNOWFLAKE_ROLE="<your-snowflake-role>"
@@ -42,7 +41,7 @@ export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
 export SNOWFLAKE_HOST="<your-snowflake-host>"
 ```
 
-2. To set these on Windows:
+2. Windows syntax:
 
 ```bash
 set SNOWFLAKE_ROLE=<your-snowflake-role>
@@ -52,7 +51,7 @@ set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
 set SNOWFLAKE_HOST=<your-snowflake-host>
 ```
 
-3. To set these within a Python environment:
+3. Python syntax:
 
 ```python
 import os
@@ -75,7 +74,16 @@ is set, the default is `snowflake`, which uses standard username/password suppor
 
 ```bash
 # no SNOWFLAKE_AUTHENTICATOR needed
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+
+# MacOS/Linux
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+
+# Windows
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+
+# Python
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
 ```
 
 2. Username/Password with MFA passcode
@@ -83,57 +91,133 @@ export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 Using a passcode from your authenticator app:
 
 ```bash
+SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" # if your authenticator app reads "123 456", fill in "123456" (No spaces)
+
+# MacOS/Linux
 export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>"
 
-# if your authenticator app says "123 456", enter "123456" (no spaces)
-export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" 
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+set SNOWFLAKE_MFA_PASSCODE=<your-snowflake-mfa-passcode>
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+os.environ['SNOWFLAKE_MFA_PASSCODE'] = '<your-snowflake-mfa-passcode>'
 ```
 
 Using a passcode embedded in the password:
 
 ```bash
+SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
+SNOWFLAKE_PASSWORD="<your-snowflake-password>"
+SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
+
+# MacOS/Linux
 export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 export SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
+
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
+set SNOWFLAKE_PASSWORD=<your-snowflake-password>
+set SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD=true
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
+os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+os.environ['SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD'] = 'true'
 ```
 
 3. Single Sign-On (SSO) with Okta
 
 ```bash
 # no SNOWFLAKE_PASSWORD needed
+SNOWFLAKE_AUTHENTICATOR="externalbrowser"
+
+# MacOS/Linux
 export SNOWFLAKE_AUTHENTICATOR="externalbrowser"
+
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=externalbrowser
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'externalbrowser'
 ```
 
-## Usage
+## Streamlit App
+
+We offer a convenient Streamlit app that supports creating semantic models from scratch as well as iterating on existing ones uploaded to a Snowflake stage.
+
+To install dependencies for the Streamlit app, run
+
+```bash
+make setup_admin_app
+```
+
+Once installed, you can run the app using the provided Makefile target, or with your current version of Python manually specified:
+
+```bash
+# Make target
+make run_admin_app
+
+# directly
+python3.11 -m streamlit run admin_apps/app.py
+```
+
+## CLI Tool
+
+You may also generate a semantic model directly from the CLI. To do this, first install the CLI tool dependencies, which differ from the Streamlit app's dependencies.
+
+Unlike the Streamlit route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for Python versions.
+This has only been tested on MacOS/Linux.
+
+1. If you need brew, run `make install-homebrew`.
+2. If you need pyenv, `make install-pyenv` and `make install-python-3.8`.
+3. Run `make setup` to install all external dependencies into your Poetry environment. This will also install `poetry` if needed.
+4. Spawn a shell in the virtual environment using `poetry shell`. This will activate your virtual environment.
+
+
+### Generation
+You are now ready to generate semantic models via the CLI! The generation command uses the following syntax:
+
+```bash
+python -m semantic_model_generator.generate_model \
+    --base_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']" \
+    --semantic_model_name "<a-meaningful-semantic-model-name>" \
+    --snowflake_account="<your-snowflake-account>"
+```
 
 You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}`
 format. Each table in this list should be a physical table or a view present in your database.
 
-If your snowflake tables and comments do not have comments, we currently
-leverages [cortex LLM function](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) to
-auto-generate description suggestions. Those generation are suffixed with '__' and additional comment to remind you to
-confirm/modity the descriptions.
-
 All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from
 the root of this project or the current directory you're in.
 
-### Generation - Python
 
-1. Ensure you have installed the Python package. Note, the version below should be the latest version under the `dist/`
-   directory.
+### Validation
+You may also use the CLI tool to validate one of your semantic models. From inside your Poetry shell, run
+
+```bash
+python -m semantic_model_generator.validate_model \
+    --yaml_path="/path/to/your/model_yaml.yaml \
+    --snowflake_account="<your-account-name>"
+```
+
+## Python
+
+You may also create/validate your semantic models from directly within your Python code. First, ensure that you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
 
 ```bash
 pip install dist/*.whl
 ```
 
-2. Activate Python shell
-
-```bash
-python
-```
-
-3. Generate a semantic model.
+### Generation
 
 ```python
 from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
@@ -150,50 +234,7 @@ generate_base_semantic_model_from_snowflake(
 )
 ```
 
-### Generation - CLI
-
-Unlike the Python route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv`
-for Python versions.
-This has only been tested on Mas OS/Linux.
-
-1. If you need brew, `make install-homebrew`.
-2. If you need pyenv, `make install-pyenv` and `make install-python-3.8`.
-3. `make setup` Make setup will install poetry if needed.
-
-This is the script version run on the command line.
-
-1. `poetry shell` . This will activate your virtual environment.
-2. Run on your command line.
-
-```bash
-python -m semantic_model_generator.generate_model \
-    --base_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']" \
-    --semantic_model_name "<a-meaningful-semantic-model-name>" \
-    --snowflake_account="<your-snowflake-account>"
-```
-
-### Post-Generation
-
-#### Additional Fields to Fill Out
-
-**IMPORTANT**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time
-to fill these out with your business context, or else subsequent validation of your model will fail.
-
-By default, the generated semantic model will contain all columns from the provided tables/views. However, it's highly
-encouraged to only keep relevant columns and drop any unwanted columns from the generated semantic model.
-
-In addition, consider adding the following elements to your semantic model:
-
-1. Logical columns for a given table/view that are expressions over physical columns.
-    * Example: `col1 - col2` could be the `expr` for a logical column.
-2. Synonyms. Any additional synonyms for column names.
-3. Filters. Additional filters with their relevant `expr`.
-
-#### Validating Yaml Updates
-
-After you've edited your semantic model, you can validate this file before uploading.
-
-1. Using Python. Ensure you've installed the package.
+### Validation
 
 ```python
 from semantic_model_generator.validate_model import validate_from_local_path
@@ -208,26 +249,36 @@ validate_from_local_path(
 
 ```
 
-2. Using the command line. Ensure `poetry shell` is activated.
 
-```bash
-python -m semantic_model_generator.validate_model \
-    --yaml_path="/path/to/your/model_yaml.yaml \
-    --snowflake_account="<your-account-name>"
-```
+## Usage
 
-## admin-app
+### Semantic Model Context Length Constraints
+Due to context window as well as quality constraints, we currently limit the size of the generated semantic model to <30,980 tokens (~123,920 characters).
 
-To install the admin app dependencies, please run
+Please note sample values and verified queries is not counted into this token length constraints. You can include as much sample values or verified queries as you'd like with limiting the overall file to <1MB.
 
-```bash
-make setup_admin_app
-```
+### Auto-Generated Descriptions
 
-from the root repo directory. This will install dependencies from the base wheel as well as admin-app specific
-dependencies.
+If your snowflake tables and comments do not have comments, we currently
+leverages [cortex LLM function](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) to
+auto-generate description suggestions. Those generation are suffixed with '__' and additional comment to remind you to
+confirm/modity the descriptions.
 
-See `admin_apps/README.md` for an overview of the feature as well as how to run the app.
+### Additional Fields to Fill Out
+
+**IMPORTANT**: After generation, your YAML files will have a series of lines with `# <FILL-OUT>`. Please take the time
+to fill these out with your business context, or else subsequent validation of your model will fail.
+
+By default, the generated semantic model will contain all columns from the provided tables/views. However, it's highly
+encouraged to only keep relevant columns and drop any unwanted columns from the generated semantic model.
+
+In addition, consider adding the following elements to your semantic model:
+
+1. Logical columns for a given table/view that are expressions over physical columns.
+    * Example: `col1 - col2` could be the `expr` for a logical column.
+2. Synonyms. Any additional synonyms for column names.
+3. Filters. Additional filters with their relevant `expr`.
+
 
 ## Examples
 
