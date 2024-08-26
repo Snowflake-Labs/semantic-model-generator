@@ -1225,9 +1225,7 @@ def integrate_partner_semantics() -> None:
         integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
         with integrate_col:
             merge_button = st.button(
-                "Merge",
-                help=INTEGRATE_HELP,
-                use_container_width=True
+                "Merge", help=INTEGRATE_HELP, use_container_width=True
             )
         with commit_col:
             reset_button = st.button(
@@ -1249,9 +1247,7 @@ def integrate_partner_semantics() -> None:
                 st.session_state["semantic_model"] = yaml_to_semantic_model(
                     st.session_state["yaml"]
                 )
-                merge_msg = st.success(
-                    "Merging..."
-                )
+                merge_msg = st.success("Merging...")
                 time.sleep(1)
                 merge_msg.empty()
             except Exception as e:
@@ -1259,8 +1255,8 @@ def integrate_partner_semantics() -> None:
 
         if reset_button:
             st.success(
-                    "Integration complete! Please validate your semantic model before uploading."
-                )
+                "Integration complete! Please validate your semantic model before uploading."
+            )
             time.sleep(1.5)
             st.rerun()  # Lazy alternative to resetting all configurations
 
