@@ -1222,15 +1222,17 @@ def integrate_partner_semantics() -> None:
                         selected_metadata["data_type"] = target_data_type
                         sections[target_section].append(selected_metadata)
 
-        integrate_col, reset_col, _ = st.columns((1, 1, 5), gap="small")
+        integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
         with integrate_col:
             merge_button = st.button(
-                "Merge", help=INTEGRATE_HELP, use_container_width=True
+                "Merge",
+                help=INTEGRATE_HELP,
+                use_container_width=True
             )
-        with reset_col:
+        with commit_col:
             reset_button = st.button(
-                "Back",
-                help="Return to the main iteration screen",
+                "Save",
+                help="Save the merged results and return to the main iteration screen",
                 use_container_width=True,
             )
 
@@ -1247,15 +1249,19 @@ def integrate_partner_semantics() -> None:
                 st.session_state["semantic_model"] = yaml_to_semantic_model(
                     st.session_state["yaml"]
                 )
-                st.success(
-                    "Integration complete! Please validate your semantic model before uploading."
+                merge_msg = st.success(
+                    "Merging..."
                 )
-                time.sleep(1.5)
-                st.rerun()
+                time.sleep(1)
+                merge_msg.empty()
             except Exception as e:
                 st.error(f"Integration failed: {e}")
 
         if reset_button:
+            st.success(
+                    "Integration complete! Please validate your semantic model before uploading."
+                )
+            time.sleep(1.5)
             st.rerun()  # Lazy alternative to resetting all configurations
 
 
