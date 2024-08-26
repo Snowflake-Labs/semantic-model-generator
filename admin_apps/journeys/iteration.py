@@ -19,6 +19,7 @@ from admin_apps.shared_utils import (
     download_yaml,
     get_snowflake_connection,
     init_session_states,
+    integrate_partner_semantics,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
@@ -135,7 +136,7 @@ def show_expr_for_ref(message_index: int) -> None:
         st.dataframe(col_df, hide_index=True, use_container_width=True, height=250)
 
 
-@st.experimental_dialog("Edit", width="large")
+@st.dialog("Edit", width="large")
 def edit_verified_query(
     conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
@@ -334,7 +335,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
-@st.experimental_dialog("Upload", width="small")
+@st.dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
@@ -420,7 +421,7 @@ def update_container(
     container.markdown(content)
 
 
-@st.experimental_dialog("Error", width="small")
+@st.dialog("Error", width="small")
 def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
@@ -450,12 +451,8 @@ def yaml_editor(yaml_str: str) -> None:
     status_container = st.empty()
 
     with button_container:
-        (
-            left,
-            middle,
-            right,
-        ) = st.columns(3)
-        if left.button("Validate", use_container_width=True, help=VALIDATE_HELP):
+        (one, two, three, four) = st.columns(4)
+        if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
             # Validate new content
             try:
                 validate(
@@ -485,7 +482,7 @@ def yaml_editor(yaml_str: str) -> None:
                 st.rerun()
 
         if content:
-            middle.download_button(
+            two.download_button(
                 label="Download",
                 data=content,
                 file_name="semantic_model.yaml",
@@ -494,12 +491,19 @@ def yaml_editor(yaml_str: str) -> None:
                 help=DOWNLOAD_HELP,
             )
 
-        if right.button(
+        if three.button(
             "Upload",
             use_container_width=True,
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
+        if four.button(
+            "Partner Semantic",
+            use_container_width=True,
+            help=PARTNER_SEMANTIC_HELP,
+            disabled=not st.session_state["validated"],
+        ):
+            integrate_partner_semantics()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
@@ -583,7 +587,7 @@ def stage_selector_container() -> None:
     )
 
 
-@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
+@st.dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
@@ -641,6 +645,10 @@ DOWNLOAD_HELP = (
 UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whenever
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
+
+PARTNER_SEMANTIC_HELP = """Have an existing semantic layer in a partner tool that's integrated
+with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
+Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 
 def show() -> None:

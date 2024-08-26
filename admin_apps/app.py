@@ -1,19 +1,22 @@
 import streamlit as st
 from snowflake.connector import DatabaseError
 
-from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
-from semantic_model_generator.snowflake_utils.env_vars import (
+# set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
+st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
+
+from admin_apps.shared_utils import (  # noqa: E402
+    GeneratorAppScreen,
+    get_snowflake_connection,
+)
+from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
     assert_required_env_vars,
 )
 
-# set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
-st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
 
-
-@st.experimental_dialog(title="Setup")
+@st.dialog(title="Setup")
 def env_setup_popup(missing_env_vars: list[str]) -> None:
     """
     Renders a dialog box to prompt the user to set the required environment variables.
@@ -28,7 +31,7 @@ Please follow the [setup instructions](https://github.com/Snowflake-Labs/semanti
     st.stop()
 
 
-@st.experimental_dialog(title="Connection Error")
+@st.dialog(title="Connection Error")
 def failed_connection_popup() -> None:
     """
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.

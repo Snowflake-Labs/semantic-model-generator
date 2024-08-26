@@ -98,7 +98,7 @@ def update_tables() -> None:
     st.session_state["selected_tables"] = valid_selected_tables
 
 
-@st.experimental_dialog("Selecting your tables", width="large")
+@st.dialog("Selecting your tables", width="large")
 def table_selector_dialog() -> None:
     st.write(
         "Please fill out the following fields to start building your semantic model."
