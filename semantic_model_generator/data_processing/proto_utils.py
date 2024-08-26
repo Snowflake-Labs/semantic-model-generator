@@ -1,6 +1,6 @@
 import io
 import json
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import ruamel.yaml
 from google.protobuf import json_format
@@ -39,8 +39,9 @@ def proto_to_yaml(message: ProtoMsg) -> str:
         return yaml_str
     except Exception as e:
         raise ValueError(f"Failed to convert protobuf message to YAML: {e}")
-    
-def proto_to_dict(message: ProtoMsg) -> dict:
+
+
+def proto_to_dict(message: ProtoMsg) -> dict[str, Any]:
     """Serializes the input proto into a dictionary.
 
     Args:
@@ -52,10 +53,10 @@ def proto_to_dict(message: ProtoMsg) -> dict:
     try:
         # Convert the Protobuf message to JSON string.
         json_str = json_format.MessageToJson(message, preserving_proto_field_name=True)
-        
+
         # Convert the JSON string to a Python dictionary.
         json_data = json.loads(json_str)
-        
+
         assert isinstance(json_data, dict)
         return json_data
     except Exception as e:

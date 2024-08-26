@@ -4,14 +4,16 @@ from snowflake.connector import DatabaseError
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
 st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
 
-from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
-from semantic_model_generator.snowflake_utils.env_vars import (
+from admin_apps.shared_utils import (  # noqa: E402
+    GeneratorAppScreen,
+    get_snowflake_connection,
+)
+from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
     assert_required_env_vars,
 )
-
 
 
 @st.dialog(title="Setup")

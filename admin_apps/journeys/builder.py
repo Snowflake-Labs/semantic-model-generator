@@ -2,15 +2,12 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError
 
-from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection, upload_partner_semantic
+from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
 from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_databases,
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
-)
-from semantic_model_generator.data_processing.proto_utils import (
-    yaml_to_semantic_model,
 )
 
 

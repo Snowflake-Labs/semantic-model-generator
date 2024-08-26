@@ -1,10 +1,8 @@
 import json
 import time
 from typing import Any, Dict, List, Optional
-import yaml
 
 import pandas as pd
-import numpy as np
 import requests
 import sqlglot
 import streamlit as st
@@ -21,9 +19,9 @@ from admin_apps.shared_utils import (
     download_yaml,
     get_snowflake_connection,
     init_session_states,
+    integrate_partner_semantics,
     upload_yaml,
     validate_and_upload_tmp_yaml,
-    integrate_partner_semantics
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -395,7 +393,6 @@ def upload_dialog(content: str) -> None:
             upload_handler(new_name)
 
 
-
 def update_container(
     container: DeltaGenerator, content: str, prefix: Optional[str]
 ) -> None:
@@ -454,12 +451,7 @@ def yaml_editor(yaml_str: str) -> None:
     status_container = st.empty()
 
     with button_container:
-        (
-            one,
-            two,
-            three,
-            four
-        ) = st.columns(4)
+        (one, two, three, four) = st.columns(4)
         if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
             # Validate new content
             try:
@@ -508,8 +500,8 @@ def yaml_editor(yaml_str: str) -> None:
         if four.button(
             "Partner Semantic",
             use_container_width=True,
-            help=PARTNER_SEMANTIC_HELP, 
-            disabled = not st.session_state["validated"]
+            help=PARTNER_SEMANTIC_HELP,
+            disabled=not st.session_state["validated"],
         ):
             integrate_partner_semantics()
 
