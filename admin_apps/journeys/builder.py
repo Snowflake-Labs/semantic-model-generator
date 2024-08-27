@@ -83,40 +83,49 @@ def table_selector_dialog() -> None:
     )
     st.markdown("")
 
-    if "selected_databases" not in st.session_state:
-        st.session_state["selected_databases"] = []
+    # Circumvent the table selection process if the user has already set up Looker
+    # TO DO - Default the table selection context in the next logical block
+    if st.session_state.get("partner_setup", False):
+        if ('looker_target_schema' in st.session_state) and ('looker_target_table_name' in st.session_state):
+            st.session_state["selected_tables"] = [f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"]
+        st.write(f"Generating semantic file for: {st.session_state['selected_tables'][0]}")
 
-    if "selected_schemas" not in st.session_state:
-        st.session_state["selected_schemas"] = []
+    else:
+        if "selected_databases" not in st.session_state:
+            st.session_state["selected_databases"] = []
 
-    if "selected_tables" not in st.session_state:
-        st.session_state["selected_tables"] = []
+        if "selected_schemas" not in st.session_state:
+            st.session_state["selected_schemas"] = []
 
-    with st.spinner("Loading databases..."):
-        available_databases = get_available_databases()
+        if "selected_tables" not in st.session_state:
+            st.session_state["selected_tables"] = []
 
-    st.multiselect(
-        label="Databases",
-        options=available_databases,
-        placeholder="Select the databases that contain the tables you'd like to include in your semantic model.",
-        on_change=update_schemas_and_tables,
-        key="selected_databases",
-    )
+        with st.spinner("Loading databases..."):
+            available_databases = get_available_databases()
 
-    st.multiselect(
-        label="Schemas",
-        options=st.session_state.get("available_schemas", []),
-        placeholder="Select the schemas that contain the tables you'd like to include in your semantic model.",
-        on_change=update_tables,
-        key="selected_schemas",
-    )
+        st.multiselect(
+            label="Databases",
+            options=available_databases,
+            placeholder="Select the databases that contain the tables you'd like to include in your semantic model.",
+            on_change=update_schemas_and_tables,
+            key="selected_databases",
+            default=st.session_state.get("selected_databases", []),
+        )
 
-    st.multiselect(
-        label="Tables",
-        options=st.session_state.get("available_tables", []),
-        placeholder="Select the tables you'd like to include in your semantic model.",
-        key="selected_tables",
-    )
+        st.multiselect(
+            label="Schemas",
+            options=st.session_state.get("available_schemas", []),
+            placeholder="Select the schemas that contain the tables you'd like to include in your semantic model.",
+            on_change=update_tables,
+            key="selected_schemas",
+        )
+
+        st.multiselect(
+            label="Tables",
+            options=st.session_state.get("available_tables", []),
+            placeholder="Select the tables you'd like to include in your semantic model.",
+            key="selected_tables",
+        )
 
     st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
     submit = st.button("Submit", use_container_width=True, type="primary")

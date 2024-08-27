@@ -67,6 +67,10 @@ if __name__ == "__main__":
         """
         Renders the initial screen where users can choose to create a new semantic model or edit an existing one.
         """
+
+        # Direct to specific page based instead of default onboarding if user comes from successful partner setup
+        if st.session_state.get('partner_setup', False):
+            builder.show()
         st.markdown(
             """
                 <div style="text-align: center;">
@@ -86,6 +90,7 @@ if __name__ == "__main__":
                 use_container_width=True,
                 type="primary",
             ):
+                st.session_state['partner_setup'] = False # Resets to normal builder flow
                 builder.show()
             st.markdown("")
             if st.button(
