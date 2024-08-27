@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import time
+from loguru import logger
 from dataclasses import dataclass
+from PIL import Image
 from datetime import datetime
 from enum import Enum
 from io import StringIO
@@ -13,7 +15,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import yaml
-from snowflake.connector import SnowflakeConnection
+from snowflake.connector import SnowflakeConnection, ProgrammingError
+import looker_sdk
+from looker_sdk import models40 as models
 
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_dict,
@@ -27,6 +31,9 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     set_database,
     set_schema,
+    fetch_databases,
+    fetch_schemas_in_database,
+    fetch_tables_views_in_schema,
 )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
@@ -37,6 +44,28 @@ LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snow
 LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
+
+# Partner semantic support instructions
+DBT_IMAGE = 'admin_apps/images/dbt-signature_tm_black.png'
+LOOKER_IMAGE = 'admin_apps/images/looker.png'
+DBT_INSTRUCTIONS = """
+We extract metadata from your **DBT** semantic yaml file(s) and merge it with a generated Cortex Analyst semantic file.
+**Note**: The DBT semantic layer must be sourced from tables/views in Snowflake.
+> Steps:
+> 1) Upload your dbt semantic (yaml/yml) file(s) below. 
+> 2) Select **🛠 Create a new semantic model** to generate a new Cortex Analyst semantic file for Snowflake tables or **✏️ Edit an existing semantic model**.
+> 3) Validate the output in the UI.
+> 4) Once you've validated the semantic file, click **Partner Semantic** to merge DBT and Cortex Analyst semantic files.  
+"""
+LOOKER_INSTRUCTIONS = """
+We materialize your Explore dataset in **Looker** as Snowflake table(s) and generate a Cortex Analyst semantic file.
+Metadata from your Explore fields will be merged with the generated Cortex Analyst semantic file.
+**Note**: Views referenced in the Looker Explores must be tables/views in Snowflake.
+> Steps:
+> 1) Provide your Looker project details below.
+> 2) Specify the Snowflake database and schema to materialize the Explore dataset as table(s).
+> 3) A semantic file will be generated for the Snowflake table(s) and metadata from Looker populated.
+"""
 
 
 @st.cache_resource
@@ -60,6 +89,38 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Returns: SnowflakeConnection
     """
     return get_connector().open_connection(db_name="")
+
+@st.cache_resource(show_spinner=False)
+def get_available_tables(schema: str) -> list[str]:
+    """
+    Simple wrapper around fetch_table_names to cache the results.
+
+    Returns: list of fully qualified table names
+    """
+
+    return fetch_tables_views_in_schema(get_snowflake_connection(), schema)
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_schemas(db: str) -> list[str]:
+    """
+    Simple wrapper around fetch_schemas to cache the results.
+
+    Returns: list of schema names
+    """
+
+    return fetch_schemas_in_database(get_snowflake_connection(), db)
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_databases() -> list[str]:
+    """
+    Simple wrapper around fetch_databases to cache the results.
+
+    Returns: list of database names
+    """
+
+    return fetch_databases(get_snowflake_connection())
 
 
 class GeneratorAppScreen(str, Enum):
@@ -875,51 +936,196 @@ def extract_expressions_from_sections(
     Extracts data in section_names from a dictionary into a nested dictionary:
     """
 
-    def extract_key(obj: dict[str, Any]) -> str | Any:
+    def extract_dbt_field_key(obj: dict[str, Any]) -> str | Any:
         return obj.get("expr", obj["name"]).lower()
 
     d = {}
     for i in section_names:
-        d[i] = {extract_key(obj): obj for obj in data_dict.get(i, [])}
+        if st.session_state["partner_tool"] == 'dbt':
+            d[i] = {extract_dbt_field_key(obj): obj for obj in data_dict.get(i, [])}
 
     return d
 
-
-def upload_partner_semantic() -> bool:
+def update_schemas() -> None:
     """
-    Upload the semantic model to a stage.
+    Callback to run when the selected databases change. Ensures that if a database is deselected, the corresponding
+    schema is also deselected.
+    Returns: None
+
     """
-    partners = [None, "dbt"]
-    uploaded_files = None
+    database = st.session_state["looker_target_database"]
 
-    selected_partner = st.session_state.get("partner_tool", None)
+    # Fetch the available schemas for the selected databases
+    try:
+        if database:
+            schemas = get_available_schemas(database)
+        else:
+            schemas = []
+    except ProgrammingError:
+        logger.error(
+            f"Insufficient permissions to read from database {database}."
+        )
 
-    st.session_state["partner_tool"] = st.selectbox(
-        "Select the partner tool", partners, index=partners.index(selected_partner)
-    )
-    if st.session_state["partner_tool"] == "dbt":
-        uploaded_files = st.file_uploader(
+    st.session_state["looker_available_schemas"] = schemas
+
+    if st.session_state["looker_target_schema"] in st.session_state["looker_available_schemas"]:
+        valid_selected_schemas = st.session_state["looker_target_schema"]
+    else:
+        valid_selected_schemas = None
+    st.session_state["looker_target_schema"] = valid_selected_schemas
+
+def upload_dbt_semantic() -> None:
+    """
+    Upload semantic file(s) for dbt from local source.
+    """
+    uploaded_files = st.file_uploader(
             f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
             type=["yaml", "yml"],
             accept_multiple_files=True,
             key="myfile",
         )
-        if uploaded_files:
-            partner_semantic = extract_key_values(
-                load_yaml_file(uploaded_files), "semantic_models"
+    if uploaded_files:
+        partner_semantic = extract_key_values(
+            load_yaml_file(uploaded_files), "semantic_models"
+        )
+        if not partner_semantic:
+            st.error(
+                "Upload file does not contain required semantic_models section."
             )
-            if not partner_semantic:
-                st.error(
-                    "Upload file does not contain required semantic_models section."
-                )
-            else:
-                st.session_state["partner_semantic"] = partner_semantic
-                st.session_state["uploaded_semantic_files"] = [
-                    i.name for i in uploaded_files
-                ]
         else:
-            st.session_state["partner_semantic"] = None
-    return bool(uploaded_files)
+            st.session_state["partner_semantic"] = partner_semantic
+            st.session_state["uploaded_semantic_files"] = [
+                i.name for i in uploaded_files
+            ]
+            # Where logical fields are captured in semantic file
+            st.session_state['field_section_names'] = ["dimensions", "measures", "entities"]
+            # Field-level metadata common to both cortex and partner
+            st.session_state['common_fields'] = ["name", "description"]
+    else:
+        st.session_state["partner_semantic"] = None
+
+def set_looker_semantic() -> None:
+    st.write(
+        """
+        Please fill out the following information about your Looker Explore.
+        The Explore will be materialized as a Snowflake table.
+        """
+    )
+    col1, col2 = st.columns(2)
+
+    with col1:
+        looker_model_name = st.text_input(
+            "Model Name",
+            key="looker_model_name",
+            help="The name of the LookML Model containing the Looker Explore you would like to replicate in Cortex Analyst.",
+        )
+
+        looker_explore_name = st.text_input(
+            "Explore Name",
+            key="looker_explore_name",
+            help="The name of the LookML Explore to replicate in Cortex Analyst.",
+        )
+    with col2:
+        looker_base_url = st.text_input(
+            "Looker SDK Base URL",
+            key="looker_base_url",
+            help="TO DO - add help text with link",
+        )
+
+        looker_client_id = st.text_input(
+            "Looker SDK Client ID",
+            key="looker_client_id",
+            help="TO DO - add help text with link",
+        )
+
+        looker_client_secret = st.text_input(
+            "Looker SDK Client Secret",
+            key="looker_client_secret",
+            help="TO DO - add help text with link",
+            type="password",
+        )
+
+    st.divider()
+    with st.spinner("Loading databases..."):
+        available_databases = get_available_databases()
+    st.write(
+        """
+        Please pick a Snowflake destination for the table.
+        """)
+    st.selectbox(
+        label="Database",
+        index=None,
+        options=available_databases,
+        placeholder="Select the database to materialize the Explore dataset as a Snowflake table.",
+        on_change=update_schemas,
+        key="looker_target_database",
+    )
+
+    st.selectbox(
+        label="Schema",
+        index=None,
+        options=st.session_state.get("looker_available_schemas", []),
+        placeholder="Select the schema to materialize the Explore dataset as a Snowflake table.",
+        key="looker_target_schema",
+    )
+
+    looker_target_table_name = st.text_input(
+        "Snowflake Table",
+        key="looker_target_table_name",
+        help="The name of the LookML Explore to replicate in Cortex Analyst.",
+    )
+    st.markdown("")
+
+def set_partner_instructions() -> None:
+    """
+    Sets instructions and partner logo in session_state based on selected partner.
+    """
+    if st.session_state.get("partner_tool", None):
+        if st.session_state["partner_tool"] == "dbt":
+            instructions = DBT_INSTRUCTIONS
+            image = DBT_IMAGE
+            image_size = (72, 32)
+        elif st.session_state["partner_tool"] == "looker":
+            instructions = LOOKER_INSTRUCTIONS
+            image = LOOKER_IMAGE
+            image_size = (72, 72)
+        st.session_state["partner_instructions"] = instructions
+        st.session_state["partner_image"] = image
+        st.session_state["partner_image_size"] = image_size
+
+
+def render_image(image_file: str, size: tuple[int, int]) -> None:
+    """
+    Renders image in streamlit app with custom width x height by pixel.
+    """
+    image = Image.open(image_file)
+    new_image = image.resize(size)
+    st.image(new_image)
+
+
+def configure_partner_semantic() -> None:
+    """
+    Upload semantic files from local source.
+    """
+    partners = [None, "dbt", "looker"]
+
+    partner_tool = st.selectbox(
+        "Select the partner tool",
+        partners,
+        index = None,
+        key="partner_tool",
+        on_change=set_partner_instructions()
+    )
+    if st.session_state.get("partner_tool", None):
+        with st.expander(f"{st.session_state.get('partner_tool', '').title()} Instructions", expanded=True):
+            render_image(st.session_state['partner_image'], st.session_state['partner_image_size'])
+            st.write(st.session_state['partner_instructions'])
+    if st.session_state["partner_tool"] == "dbt":
+        upload_dbt_semantic()
+    if st.session_state["partner_tool"] == "looker":
+        set_looker_semantic()
+    if st.button("Continue"):
+        st.rerun()
 
 
 class PartnerCompareRow:
@@ -943,16 +1149,15 @@ class PartnerCompareRow:
 
         # Create metadata based for each field given merging or singular semantic file useage of the field
         # Merge will merge the 2 based on user-selected preference
-        common_fields = ["name", "description"]
         if self.cortex_metadata and self.partner_metadata:
             metadata["merged"] = self.cortex_metadata.copy()
             if st.session_state["partner_metadata_preference"] == "Partner":
-                for n in common_fields:
+                for n in st.session_state['common_fields']:
                     metadata["merged"][n] = self.partner_metadata.get(
                         n, self.cortex_metadata.get(n, None)
                     )
             else:
-                for n in common_fields:
+                for n in st.session_state['common_fields']:
                     metadata["merged"][n] = self.cortex_metadata.get(
                         n, self.partner_metadata.get(n, None)
                     )
@@ -960,7 +1165,7 @@ class PartnerCompareRow:
         else:
             metadata["merged"] = {}
         metadata["partner"] = (
-            {field: self.partner_metadata.get(field) for field in common_fields}
+            {field: self.partner_metadata.get(field) for field in st.session_state['common_fields']}
             if self.partner_metadata
             else {}
         )
@@ -1003,7 +1208,7 @@ class PartnerCompareRow:
                     {
                         k: v
                         for k, v in metadata[detail_selection].items()
-                        if k in common_fields and v is not None
+                        if k in st.session_state['common_fields'] and v is not None
                     }
                 )
             else:
@@ -1046,19 +1251,17 @@ def create_table_field_df(
 
     return fields_df
 
-
-def determine_field_section(
+def determine_field_section_dbt(
     section_cortex: str,
     section_partner: str,
     field_details_cortex: dict[str, str],
     field_details_partner: dict[str, str],
 ) -> tuple[str, str | None]:
     """
-    Derives intended section of field in cortex analyst model.
+    Derives intended section and data type of field in cortex analyst model.
 
-    Currently expects dbt as source.
+    Function assumes dbt as partner.
     """
-
     if section_cortex and field_details_cortex:
         try:
             data_type = field_details_cortex.get("data_type", None)
@@ -1086,6 +1289,152 @@ def determine_field_section(
         return (section_cortex, data_type)
 
 
+def determine_field_section(
+    section_cortex: str,
+    section_partner: str,
+    field_details_cortex: dict[str, str],
+    field_details_partner: dict[str, str],
+) -> tuple[str, str | None]:
+    """
+    Derives intended section and data type of field in cortex analyst model.
+    """
+
+    if st.session_state["partner_tool"] == "dbt":
+        (section_cortex, data_type) = determine_field_section_dbt(
+            section_cortex,
+            section_partner,
+            field_details_cortex,
+            field_details_partner
+            )
+        return (section_cortex, data_type)
+    
+##### Looker Config #####
+def set_looker_config() -> None:
+    """
+    Sets Looker SDK connection
+    """
+    os.environ["LOOKERSDK_BASE_URL"] = st.session_state['looker_base_url'] #If your looker URL has .cloud in it (hosted on GCP), do not include :19999 (ie: https://your.cloud.looker.com).
+    os.environ["LOOKERSDK_API_VERSION"] = "4.0" #As of Looker v23.18+, the 3.0 and 3.1 versions of the API are removed. Use "4.0" here.
+    os.environ["LOOKERSDK_VERIFY_SSL"] = "true" #Defaults to true if not set. SSL verification should generally be on unless you have a real good reason not to use it. Valid options: true, y, t, yes, 1.
+    os.environ["LOOKERSDK_TIMEOUT"] = "120" #Seconds till request timeout. Standard default is 120.
+
+    #Get the following values from your Users page in the Admin panel of your Looker instance > Users > Your user > Edit API keys. If you know your user id, you can visit https://your.looker.com/admin/users/<your_user_id>/edit.
+    os.environ["LOOKERSDK_CLIENT_ID"] =  st.session_state['looker_client_id'] #No defaults.
+    os.environ["LOOKERSDK_CLIENT_SECRET"] = st.session_state['looker_client_secret'] #No defaults. This should be protected at all costs. Please do not leave it sitting here, even if you don't share this document.
+
+    sdk = looker_sdk.init40()
+
+def get_explore_fields(model_name: str,
+                       explore_name: str,
+                       fields: list = None) -> dict:
+    """Retrieves dimensions and measure fields from Looker Explore"""
+
+    field_keys = [
+        'dimensions',
+        'measures'
+    ]
+    extracted_fields = {}
+
+    if fields:
+        response = sdk.lookml_model_explore(
+            lookml_model_name=model_name,
+            explore_name=explore_name,
+            fields=fields
+        )
+    else:
+        response = sdk.lookml_model_explore(
+            lookml_model_name=model_name,
+            explore_name=explore_name
+        )
+
+    # Extract dimensions and measures from the response fields
+    # Only need field name, tags, and descriptions
+    for k in field_keys:
+        for field in response.fields[k]:
+            extracted_fields[field['name']] = {
+                'description': field['description'],
+                'tags': field['tags']
+                }
+
+    return extracted_fields
+
+def create_query_id(model_name: str,
+                    explore_name: str,
+                    fields: list) -> str:
+    """Creates a query ID corresponding to SQL to preview Looker Explore data"""
+
+    query = sdk.create_query(
+        body=models.WriteQuery(
+            model=model_name,
+            view=explore_name,
+            fields=fields
+        )
+    )
+
+    return query.id
+
+def create_explore_ctas(query_string: str,
+                        database_name: str,
+                        schema_name: str,
+                        table_name: str) -> str:
+    """Augments Looker Explore SQL with CTAS clause to create a materialized view"""
+
+    # Remove unnecessary lines of sql
+    lines = query_string.split('\n')
+    filtered_lines = [line for line in lines if not line.strip().startswith(('LIMIT', 'FETCH'))]
+    filtered_query_string = '\n'.join(filtered_lines)
+    
+    # Add CTAS clause
+    ctas_clause = f'CREATE OR REPLACE TABLE {database_name}.{schema_name}.{table_name} AS\n'
+    return ctas_clause + filtered_query_string
+
+def get_explore_sql(query_id: str) -> str:
+    """Retrieves Looker SQL query of query ID"""
+    response = sdk.run_query(query_id=query_id, 
+                             result_format='sql')
+    return response
+
+def clean_table_columns(session: Session,
+                        database: str,
+                        schema: str,
+                        tablename: str) -> None:
+    """Renames table columns to remove alias prefixes and double quotes"""
+    columns = session.table(f'{database}.{schema}.{tablename}').columns
+
+    for col in columns:
+        new_col = ast.literal_eval(col).split('.')[-1]
+        query = f'ALTER TABLE {database}.{schema}.{tablename} RENAME COLUMN {col} TO {new_col};'
+        session.sql(query).collect()
+
+def render_looker_explore_as_table(session: Session,
+                                   model_name: str,
+                                   explore_name: str,
+                                   database: str,
+                                   schema: str,
+                                   tablename: str,
+                                   fields: Optional[list] = None):
+    """Creates materialized table corresponding to Looker Explore"""
+    
+    # Get fields from explore
+    field_metadata = get_explore_fields(model_name, explore_name)
+    fields = list(field_metadata.keys())
+
+    # Get query to define materialized view
+    query_id = create_query_id(model_name, explore_name, fields)
+    explore_sql = get_explore_sql(query_id)
+    ctas = create_explore_ctas(explore_sql, database, schema, tablename)
+
+    # Create materialized equivalent of Explore
+    session.sql(ctas).collect()
+    # Look creates lower case double-quoted column names with alias prefixes
+    clean_table_columns(session, database, schema, tablename)
+
+
+    return field_metadata
+
+##### Looker Config #####
+
+
 def run_cortex_complete(
     conn: SnowflakeConnection,
     model: str,
@@ -1108,14 +1457,15 @@ def run_cortex_complete(
 @st.dialog("Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
     st.write(
-        "Upload semantic files from supported partners to merge with Cortex Analyst semantic model."
+        "Specify how to merge semantic metadata from partner tools with Cortex Analyst's semantic model."
     )
 
     COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata.
     Where metadata is missing, the other semantic file will be checked."""
 
-    INTEGRATE_HELP = """Merge the Cortex Analyst semantic file and Partner semantic file into the
-    primary Cortex Analyst yaml editor."""
+    INTEGRATE_HELP = """Merge the selected Snowflake and Partner tables' semantics together."""
+
+    SAVE_HELP = """Save the merges to the Cortex Analyst semantic model for validation and iteration."""
 
     KEEP_CORTEX_HELP = """Retain fields that are found in Cortex Analyst semantic model
     but not in Partner semantic model."""
@@ -1123,8 +1473,6 @@ def integrate_partner_semantics() -> None:
     KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model
     but not in Cortex Analyst semantic model."""
 
-    upload_partner_semantic()
-    st.divider()
 
     if (
         st.session_state.get("partner_semantic", None)
@@ -1138,7 +1486,7 @@ def integrate_partner_semantics() -> None:
         partner_tables = extract_key_values(
             st.session_state["partner_semantic"], "name"
         )
-        st.write("Select which logical views to compare and merge.")
+        st.write("Select which logical tables/views to compare and merge.")
         c1, c2 = st.columns(2)
         with c1:
             semantic_cortex_tbl: str = st.selectbox("Snowflake", cortex_tables)  # type: ignore
@@ -1169,7 +1517,7 @@ def integrate_partner_semantics() -> None:
             # Create dataframe of each semantic file's fields with mergeable keys
             partner_fields_df = create_table_field_df(
                 semantic_partner_tbl,  # type: ignore
-                ["dimensions", "measures", "entities"],
+                st.session_state['field_section_names'],
                 st.session_state["partner_semantic"],
             )
             cortex_fields_df = create_table_field_df(
@@ -1225,12 +1573,14 @@ def integrate_partner_semantics() -> None:
         integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
         with integrate_col:
             merge_button = st.button(
-                "Merge", help=INTEGRATE_HELP, use_container_width=True
+                "Merge",
+                help=INTEGRATE_HELP,
+                use_container_width=True
             )
         with commit_col:
             reset_button = st.button(
                 "Save",
-                help="Save the merged results and return to the main iteration screen",
+                help=SAVE_HELP,
                 use_container_width=True,
             )
 

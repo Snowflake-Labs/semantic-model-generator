@@ -497,13 +497,14 @@ def yaml_editor(yaml_str: str) -> None:
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
-        if four.button(
-            "Partner Semantic",
-            use_container_width=True,
-            help=PARTNER_SEMANTIC_HELP,
-            disabled=not st.session_state["validated"],
-        ):
-            integrate_partner_semantics()
+        if st.session_state.get("partner_tool", None) in ['dbt']:
+            if four.button(
+                "Partner Semantic",
+                use_container_width=True,
+                help=PARTNER_SEMANTIC_HELP,
+                disabled=not st.session_state["validated"],
+                ):
+                integrate_partner_semantics()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
@@ -646,8 +647,8 @@ UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whe
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
 
-PARTNER_SEMANTIC_HELP = """Have an existing semantic layer in a partner tool that's integrated
-with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
+PARTNER_SEMANTIC_HELP = """Uploaded semantic files from a partner tool? 
+Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 

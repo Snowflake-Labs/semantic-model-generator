@@ -61,7 +61,7 @@ def verify_environment_setup() -> None:
 
 
 if __name__ == "__main__":
-    from admin_apps.journeys import builder, iteration
+    from admin_apps.journeys import builder, iteration, partner
 
     def onboarding_dialog() -> None:
         """
@@ -94,6 +94,13 @@ if __name__ == "__main__":
                 type="primary",
             ):
                 iteration.show()
+            st.markdown("")
+            if st.button(
+                "**:package: Start with partner semantic model**",
+                use_container_width=True,
+                type="primary",
+            ):
+                partner.show()
 
     verify_environment_setup()
 

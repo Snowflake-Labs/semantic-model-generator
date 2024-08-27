@@ -2,46 +2,14 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError
 
-from admin_apps.shared_utils import GeneratorAppScreen, get_snowflake_connection
-from semantic_model_generator.generate_model import generate_model_str_from_snowflake
-from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    fetch_databases,
-    fetch_schemas_in_database,
-    fetch_tables_views_in_schema,
+from admin_apps.shared_utils import (
+    GeneratorAppScreen,
+    get_snowflake_connection,
+    get_available_tables,
+    get_available_schemas,
+    get_available_databases,
 )
-
-
-@st.cache_resource(show_spinner=False)
-def get_available_tables(schema: str) -> list[str]:
-    """
-    Simple wrapper around fetch_table_names to cache the results.
-
-    Returns: list of fully qualified table names
-    """
-
-    return fetch_tables_views_in_schema(get_snowflake_connection(), schema)
-
-
-@st.cache_resource(show_spinner=False)
-def get_available_schemas(db: str) -> list[str]:
-    """
-    Simple wrapper around fetch_schemas to cache the results.
-
-    Returns: list of schema names
-    """
-
-    return fetch_schemas_in_database(get_snowflake_connection(), db)
-
-
-@st.cache_resource(show_spinner=False)
-def get_available_databases() -> list[str]:
-    """
-    Simple wrapper around fetch_databases to cache the results.
-
-    Returns: list of database names
-    """
-
-    return fetch_databases(get_snowflake_connection())
+from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 
 
 def update_schemas_and_tables() -> None:
