@@ -1081,7 +1081,6 @@ def set_looker_semantic() -> None:
         key="looker_target_table_name",
         help="The name of the LookML Explore to replicate in Cortex Analyst.",
     )
-    st.write(st.session_state['looker_target_schema'])
     
 
 def set_partner_instructions() -> None:

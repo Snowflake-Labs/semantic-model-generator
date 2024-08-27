@@ -84,11 +84,19 @@ def table_selector_dialog() -> None:
     st.markdown("")
 
     # Circumvent the table selection process if the user has already set up Looker
-    # TO DO - Default the table selection context in the next logical block
+    # TO DO - Default the entire table selection context in the next logical block
     if st.session_state.get("partner_setup", False):
         if ('looker_target_schema' in st.session_state) and ('looker_target_table_name' in st.session_state):
             st.session_state["selected_tables"] = [f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"]
-        st.write(f"Generating semantic file for: {st.session_state['selected_tables'][0]}")
+
+        st.multiselect(
+            label="Tables",
+            options=st.session_state["selected_tables"],
+            placeholder="Select the tables you'd like to include in your semantic model.",
+            key="selected_tables",
+            default = st.session_state["selected_tables"],
+            disabled=True,
+        )
 
     else:
         if "selected_databases" not in st.session_state:
@@ -109,7 +117,7 @@ def table_selector_dialog() -> None:
             placeholder="Select the databases that contain the tables you'd like to include in your semantic model.",
             on_change=update_schemas_and_tables,
             key="selected_databases",
-            default=st.session_state.get("selected_databases", []),
+            # default=st.session_state.get("selected_databases", []),
         )
 
         st.multiselect(
