@@ -31,7 +31,7 @@ run_admin_app:
 
 # Installs dependencies for the admin app.
 setup_admin_app:
-	pip install $(shell ls dist/*.whl) && \
+	pip install . && \
 	pip install -r admin_apps/requirements.txt
 
 # Linting and formatting below.
@@ -83,3 +83,8 @@ build: ## Clean the dist dir and build the whl file
 
 help: ## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's
+
+create_uv_venv:
+	uv venv --python 3.10
+	source .venv/bin/activate
+	uv pip install -e . && uv pip install -r admin_apps/requirements.txt

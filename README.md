@@ -211,10 +211,10 @@ python -m semantic_model_generator.validate_model \
 
 ## Python
 
-You may also create/validate your semantic models from directly within your Python code. First, ensure that you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
+You may also create/validate your semantic models from directly within your Python code. First, ensure that you have installed the Python package.
 
 ```bash
-pip install dist/*.whl
+pip install .
 ```
 
 ### Generation

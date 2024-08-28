@@ -18,25 +18,16 @@ The app currently supports two types of flows:
 
 ## Get started
 
-1. Install all dependencies by running the following Makefile command from the root repo:
+1. Install all dependencies by running the following command from the root of the repo:
 
 ```bash
-make setup_admin_app
+pip install -e . && pip install -r admin_apps/requirements.txt
 ```
 
 2. Run the following command from the root repo:
 
 ```bash
 python -m streamlit run admin_apps/app.py 
-
-# Depending on how your python is installed, you may need to specify the python version e.g:
-python3.11 -m streamlit run admin_apps/app.py
-```
-
-Alternatively, you can use the Make target from the root directory:
-
-```bash
-make run_admin_app
 ```
 
 3. Enjoy! 
