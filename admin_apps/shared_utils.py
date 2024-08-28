@@ -1074,6 +1074,7 @@ def set_looker_semantic() -> None:
         options=st.session_state.get("looker_available_schemas", []),
         placeholder="Select the schema to materialize the Explore dataset as a Snowflake table.",
         key="looker_target_schema",
+        format_func=lambda x: format_snowflake_context(x, -1),
     )
 
     st.text_input(
@@ -1108,6 +1109,12 @@ def render_image(image_file: str, size: tuple[int, int]) -> None:
     image = Image.open(image_file)
     new_image = image.resize(size)
     st.image(new_image)
+
+def format_snowflake_context(context: str, index: int) -> str:
+    """
+    Extracts the desired part of the Snowflake context.
+    """
+    return context.split(".")[index]
 
 
 def configure_partner_semantic() -> None:

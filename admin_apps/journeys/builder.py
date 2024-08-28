@@ -8,6 +8,7 @@ from admin_apps.shared_utils import (
     get_available_tables,
     get_available_schemas,
     get_available_databases,
+    format_snowflake_context,
 )
 from semantic_model_generator.generate_model import generate_model_str_from_snowflake
 
@@ -89,7 +90,7 @@ def table_selector_dialog() -> None:
         if ('looker_target_schema' in st.session_state) and ('looker_target_table_name' in st.session_state):
             st.session_state["selected_tables"] = [f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"]
 
-        st.multiselect(
+        st.selectbox(
             label="Tables",
             options=st.session_state["selected_tables"],
             placeholder="Select the tables you'd like to include in your semantic model.",
@@ -126,6 +127,7 @@ def table_selector_dialog() -> None:
             placeholder="Select the schemas that contain the tables you'd like to include in your semantic model.",
             on_change=update_tables,
             key="selected_schemas",
+            format_func=lambda x: format_snowflake_context(x, -1),
         )
 
         st.multiselect(
@@ -133,6 +135,7 @@ def table_selector_dialog() -> None:
             options=st.session_state.get("available_tables", []),
             placeholder="Select the tables you'd like to include in your semantic model.",
             key="selected_tables",
+            format_func=lambda x: format_snowflake_context(x, -1),
         )
 
     st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
