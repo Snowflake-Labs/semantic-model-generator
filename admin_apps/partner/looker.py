@@ -1,13 +1,139 @@
 import os
 from typing import Optional
+from loguru import logger
 
 import streamlit as st
 import looker_sdk
 from looker_sdk import models40 as models
-from snowflake.connector import SnowflakeConnection
+from snowflake.connector import SnowflakeConnection, ProgrammingError
 
 
-from admin_apps.partner.partner_utils import clean_table_columns
+# from admin_apps.partner.partner_utils import clean_table_columns
+from admin_apps.shared_utils import (
+    get_available_databases,
+    get_available_schemas,
+    format_snowflake_context,
+)
+
+# Partner semantic support instructions
+LOOKER_IMAGE = 'admin_apps/images/looker.png'
+LOOKER_INSTRUCTIONS = """
+We materialize your Explore dataset in **Looker** as Snowflake table(s) and generate a Cortex Analyst semantic file.
+Metadata from your Explore fields will be merged with the generated Cortex Analyst semantic file.
+
+**Note**: Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. 
+Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information.
+> Steps:
+> 1) Provide your Looker project details below.
+> 2) Specify the Snowflake database and schema to materialize the Explore dataset as table(s).
+> 3) A semantic file will be generated for the Snowflake table(s) and metadata from Looker populated.
+"""
+
+def update_schemas() -> None:
+    """
+    Callback to run when the selected databases change. Ensures that if a database is deselected, the corresponding
+    schema is also deselected.
+    Returns: None
+
+    """
+    database = st.session_state["looker_target_database"]
+
+    # Fetch the available schemas for the selected databases
+    try:
+        if database:
+            schemas = get_available_schemas(database)
+        else:
+            schemas = []
+    except ProgrammingError:
+        logger.error(
+            f"Insufficient permissions to read from database {database}."
+        )
+
+    st.session_state["looker_available_schemas"] = schemas
+
+    if st.session_state["looker_target_schema"] in st.session_state["looker_available_schemas"]:
+        valid_selected_schemas = st.session_state["looker_target_schema"]
+    else:
+        valid_selected_schemas = None
+    st.session_state["looker_target_schema"] = valid_selected_schemas
+
+
+def set_looker_semantic() -> None:
+    st.write(
+        """
+        Please fill out the following information about your Looker Explore.
+        The Explore will be materialized as a Snowflake table.
+        """
+    )
+    col1, col2 = st.columns(2)
+
+    with col1:
+        looker_model_name = st.text_input(
+            "Model Name",
+            key="looker_model_name",
+            help="The name of the LookML Model containing the Looker Explore you would like to replicate in Cortex Analyst.",
+            value="jaffle",
+        )
+
+        looker_explore_name = st.text_input(
+            "Explore Name",
+            key="looker_explore_name",
+            help="The name of the LookML Explore to replicate in Cortex Analyst.",
+            value="jaffle_customers"
+        )
+    with col2:
+        looker_base_url = st.text_input(
+            "Looker SDK Base URL",
+            key="looker_base_url",
+            help="TO DO - add help text with link",
+            value="https://snowflakedemo.looker.com"
+        )
+
+        looker_client_id = st.text_input(
+            "Looker SDK Client ID",
+            key="looker_client_id",
+            help="TO DO - add help text with link",
+            value="3r4Q38HMgTyQfX5KMyrF"
+        )
+
+        looker_client_secret = st.text_input(
+            "Looker SDK Client Secret",
+            key="looker_client_secret",
+            help="TO DO - add help text with link",
+            type="password",
+        )
+
+    st.divider()
+    with st.spinner("Loading databases..."):
+        available_databases = get_available_databases()
+    st.write(
+        """
+        Please pick a Snowflake destination for the table.
+        """)
+    st.selectbox(
+        label="Database",
+        index=None,
+        options=available_databases,
+        placeholder="Select the database to materialize the Explore dataset as a Snowflake table.",
+        on_change=update_schemas,
+        key="looker_target_database",
+    )
+
+    st.selectbox(
+        label="Schema",
+        index=None,
+        options=st.session_state.get("looker_available_schemas", []),
+        placeholder="Select the schema to materialize the Explore dataset as a Snowflake table.",
+        key="looker_target_schema",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+
+    st.text_input(
+        "Snowflake Table",
+        key="looker_target_table_name",
+        help="The name of the LookML Explore to replicate in Cortex Analyst.",
+    )
+
 
 def set_looker_config() -> None:
     """
@@ -95,12 +221,51 @@ def create_explore_ctas(query_string: str,
     ctas_clause = f'CREATE OR REPLACE TABLE {snowflake_context}.{table_name} AS\n'
     return ctas_clause + filtered_query_string
 
+
 def get_explore_sql(sdk: looker_sdk.sdk.api40.methods.Looker40SDK,
                     query_id: str) -> str:
     """Retrieves Looker SQL query of query ID"""
+    
     response = sdk.run_query(query_id=query_id, 
                              result_format='sql')
     return response
+
+
+def fetch_columns_in_table(conn: SnowflakeConnection, table_name: str) -> list[str]:
+    
+    """
+    Fetches all columns in a Snowflake table table
+    Args:
+        conn: SnowflakeConnection to run the query
+        table_name: The fully-qualified name of the table.
+
+    Returns: a list of qualified schema names (db.schema)
+    """
+
+    query = f"show columns in table {table_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    results = cursor.fetchall()
+    return [result[2] for result in results]
+
+
+def clean_table_columns(conn: SnowflakeConnection,
+                        snowflake_context: str,
+                        tablename: str) -> None:
+    
+    """Renames table columns to remove alias prefixes and double quotes"""
+    
+    columns = fetch_columns_in_table(conn, f'{snowflake_context}.{tablename}')
+
+    for col in columns:
+        if '.' in col:
+            # new_col = ast.literal_eval(col).split('.')[-1]
+            new_col = col.split('.')[-1].upper()
+        else:
+            new_col = col
+        query = f'ALTER TABLE {snowflake_context}.{tablename} RENAME COLUMN "{col}" TO {new_col};'
+        conn.cursor().execute(query)
+
 
 def render_looker_explore_as_table(conn: SnowflakeConnection,
                                    model_name: str,

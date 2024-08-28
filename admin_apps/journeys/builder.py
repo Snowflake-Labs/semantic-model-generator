@@ -86,7 +86,9 @@ def table_selector_dialog() -> None:
 
     # Circumvent the table selection process if the user has already set up Looker
     # TO DO - Default the entire table selection context in the next logical block
-    if st.session_state.get("partner_setup", False):
+    if (st.session_state.get("partner_setup", False) 
+        and st.session_state.get("partner_tool", None) == 'looker'):
+        # Dialog box resets prior dialog box widget key values so we need to set session state at first render only
         if ('looker_target_schema' in st.session_state) and ('looker_target_table_name' in st.session_state):
             st.session_state["selected_tables"] = [f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"]
 

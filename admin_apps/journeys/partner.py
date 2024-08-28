@@ -1,7 +1,7 @@
 import streamlit as st
 from PIL import Image
 
-from admin_apps.shared_utils import (
+from admin_apps.partner.partner_utils import (
     configure_partner_semantic,
 )
 

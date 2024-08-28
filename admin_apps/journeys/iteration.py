@@ -11,6 +11,9 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
 from admin_apps.journeys.builder import get_available_databases, get_available_schemas
+
+from admin_apps.partner.partner_utils import integrate_partner_semantics
+
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
@@ -19,7 +22,7 @@ from admin_apps.shared_utils import (
     download_yaml,
     get_snowflake_connection,
     init_session_states,
-    integrate_partner_semantics,
+    # integrate_partner_semantics,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
