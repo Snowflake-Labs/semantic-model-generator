@@ -40,13 +40,16 @@ def upload_dbt_semantic() -> None:
             )
         else:
             st.session_state["partner_semantic"] = partner_semantic
-            st.session_state["uploaded_semantic_files"] = [
-                i.name for i in uploaded_files
-            ]
+            # st.session_state["uploaded_semantic_files"] = [
+            #     i.name for i in uploaded_files
+            # ]
             # Where logical fields are captured in semantic file
             st.session_state['field_section_names'] = ["dimensions", "measures", "entities"]
             # Field-level metadata common to both cortex and partner
             st.session_state['common_fields'] = ["name", "description"]
+        if st.button("Continue", type="primary"):
+            st.session_state['partner_setup'] = True
+            st.rerun()
     else:
         st.session_state["partner_semantic"] = None
 

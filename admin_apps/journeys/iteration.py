@@ -500,9 +500,9 @@ def yaml_editor(yaml_str: str) -> None:
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
-        if st.session_state.get("partner_tool", None) in ['dbt']:
+        if st.session_state.get("partner_semantic", None):
             if four.button(
-                "Partner Semantic",
+                "Integrate Partner",
                 use_container_width=True,
                 help=PARTNER_SEMANTIC_HELP,
                 disabled=not st.session_state["validated"],

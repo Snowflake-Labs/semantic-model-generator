@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 from loguru import logger
+import yaml
 
 import streamlit as st
 import looker_sdk
@@ -10,9 +11,19 @@ from snowflake.connector import SnowflakeConnection, ProgrammingError
 
 # from admin_apps.partner.partner_utils import clean_table_columns
 from admin_apps.shared_utils import (
+    GeneratorAppScreen,
     get_available_databases,
     get_available_schemas,
     format_snowflake_context,
+    get_snowflake_connection,
+    input_sample_value_num,
+    input_semantic_file_name,
+    run_generate_model_str_from_snowflake,
+)
+
+from semantic_model_generator.data_processing.proto_utils import (
+    proto_to_dict,
+    yaml_to_semantic_model,
 )
 
 # Partner semantic support instructions
@@ -58,10 +69,34 @@ def update_schemas() -> None:
     st.session_state["looker_target_schema"] = valid_selected_schemas
 
 
+def map_looker_to_cortex(
+        looker_semantic, 
+        cortex_partner_mapping = [('description', 'description')]
+        ) -> None:
+    
+    """
+    Maps Looker semantic metadata to field metadata in Cortex semantic layer string
+    """
+
+    merged_semantic = yaml.safe_load(st.session_state["yaml"])
+    
+    for i, tables in enumerate(merged_semantic['tables']):
+        for table_attribute, attribute_value in tables.items():
+            if table_attribute in ['dimensions', 'time_dimensions', 'measures']:
+                for field_idx, field in enumerate(attribute_value):
+                    if field['name'] in looker_semantic[tables['name']]:
+                        for mappings in cortex_partner_mapping:
+                            new_value = looker_semantic[tables['name']].get(field['name'])[mappings[1]]
+                            if new_value is not None and new_value != '':
+                                merged_semantic['tables'][i][table_attribute][field_idx][mappings[0]] = new_value
+    
+    st.session_state["yaml"] = yaml.dump(merged_semantic, sort_keys=False)
+
+
 def set_looker_semantic() -> None:
     st.write(
         """
-        Please fill out the following information about your Looker Explore.
+        Please fill out the following information about your **Looker Explore**.
         The Explore will be materialized as a Snowflake table.
         """
     )
@@ -110,29 +145,58 @@ def set_looker_semantic() -> None:
         """
         Please pick a Snowflake destination for the table.
         """)
-    st.selectbox(
-        label="Database",
-        index=None,
-        options=available_databases,
-        placeholder="Select the database to materialize the Explore dataset as a Snowflake table.",
-        on_change=update_schemas,
-        key="looker_target_database",
-    )
+    col1, col2 = st.columns(2)
+    with col1:
+        st.selectbox(
+            label="Database",
+            index=None,
+            options=available_databases,
+            placeholder="Select the database to materialize the Explore dataset as a Snowflake table.",
+            on_change=update_schemas,
+            key="looker_target_database",
+        )
 
-    st.selectbox(
-        label="Schema",
-        index=None,
-        options=st.session_state.get("looker_available_schemas", []),
-        placeholder="Select the schema to materialize the Explore dataset as a Snowflake table.",
-        key="looker_target_schema",
-        format_func=lambda x: format_snowflake_context(x, -1),
-    )
+        st.selectbox(
+            label="Schema",
+            index=None,
+            options=st.session_state.get("looker_available_schemas", []),
+            placeholder="Select the schema to materialize the Explore dataset as a Snowflake table.",
+            key="looker_target_schema",
+            format_func=lambda x: format_snowflake_context(x, -1),
+        )
 
-    st.text_input(
-        "Snowflake Table",
-        key="looker_target_table_name",
-        help="The name of the LookML Explore to replicate in Cortex Analyst.",
-    )
+        st.text_input(
+            "Snowflake Table",
+            key="looker_target_table_name",
+            help="The name of the LookML Explore to replicate in Cortex Analyst.",
+        )
+    with col2:
+        model_name = input_semantic_file_name()
+        sample_values = input_sample_value_num()
+
+    if st.button("Continue", type="primary"):
+        with st.spinner("Saving Explore as a Snowflake table..."):
+            full_tablename = f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"
+            looker_field_metadata = render_looker_explore_as_table(
+                            get_snowflake_connection(),
+                            st.session_state['looker_model_name'],
+                            st.session_state['looker_explore_name'],
+                            st.session_state['looker_target_schema'],
+                            st.session_state['looker_target_table_name'],
+                            [] # TO DO - Add support for field selection
+                            )
+        run_generate_model_str_from_snowflake(
+            model_name,
+            sample_values,
+            [full_tablename],
+        )
+
+        # Replace Cortex Analyst semantic metadata with Looker metadata
+        map_looker_to_cortex(looker_field_metadata)
+
+        st.session_state['partner_setup'] = True
+        st.session_state["page"] = GeneratorAppScreen.ITERATION
+        st.rerun()
 
 
 def set_looker_config() -> None:
@@ -251,11 +315,12 @@ def fetch_columns_in_table(conn: SnowflakeConnection, table_name: str) -> list[s
 
 def clean_table_columns(conn: SnowflakeConnection,
                         snowflake_context: str,
-                        tablename: str) -> None:
+                        tablename: str) -> list[str]:
     
     """Renames table columns to remove alias prefixes and double quotes"""
     
     columns = fetch_columns_in_table(conn, f'{snowflake_context}.{tablename}')
+    new_cols = []
 
     for col in columns:
         if '.' in col:
@@ -263,8 +328,10 @@ def clean_table_columns(conn: SnowflakeConnection,
             new_col = col.split('.')[-1].upper()
         else:
             new_col = col
+        new_cols.append(new_col)
         query = f'ALTER TABLE {snowflake_context}.{tablename} RENAME COLUMN "{col}" TO {new_col};'
         conn.cursor().execute(query)
+    return new_cols
 
 
 def render_looker_explore_as_table(conn: SnowflakeConnection,
@@ -272,7 +339,8 @@ def render_looker_explore_as_table(conn: SnowflakeConnection,
                                    explore_name: str,
                                    snowflake_context: str,
                                    tablename: str,
-                                   fields: Optional[list] = None):
+                                   fields: Optional[list] = None) -> None:
+    
     """Creates materialized table corresponding to Looker Explore"""
 
     sdk = set_looker_config()
@@ -294,10 +362,14 @@ def render_looker_explore_as_table(conn: SnowflakeConnection,
 
     # Create materialized equivalent of Explore
     conn.cursor().execute(ctas)
-    # Look creates lower case double-quoted column names with alias prefixes
-    clean_table_columns(
+    # Looker creates lower case double-quoted column names with alias prefixes
+    new_columns = clean_table_columns(
         conn, snowflake_context, tablename
         )
-
-    return field_metadata
+    
+    # Associate new column names with looker field metadata
+    column_metadata = dict(zip(new_columns, list(field_metadata.values())))
+    # Add tablename for comparison table drop-down view in partner semantic setup
+    semantic_model = {tablename.upper(): column_metadata}
+    return semantic_model
 
