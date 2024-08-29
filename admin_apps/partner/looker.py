@@ -8,8 +8,6 @@ import looker_sdk
 from looker_sdk import models40 as models
 from snowflake.connector import SnowflakeConnection, ProgrammingError
 
-
-# from admin_apps.partner.partner_utils import clean_table_columns
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     get_available_databases,
@@ -21,10 +19,6 @@ from admin_apps.shared_utils import (
     run_generate_model_str_from_snowflake,
 )
 
-from semantic_model_generator.data_processing.proto_utils import (
-    proto_to_dict,
-    yaml_to_semantic_model,
-)
 
 # Partner semantic support instructions
 LOOKER_IMAGE = 'admin_apps/images/looker.png'

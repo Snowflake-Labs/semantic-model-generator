@@ -1,10 +1,8 @@
+import yaml
+from typing import Any
+
 import streamlit as st
-
-from admin_apps.shared_utils import (
-    extract_key_values,
-    load_yaml_file,
-)
-
+import pandas as pd
 
 # Partner semantic support instructions
 DBT_IMAGE = 'admin_apps/images/dbt-signature_tm_black.png'
@@ -31,22 +29,16 @@ def upload_dbt_semantic() -> None:
             key="myfile",
         )
     if uploaded_files:
-        partner_semantic = extract_key_values(
-            load_yaml_file(uploaded_files), "semantic_models"
-        )
+        partner_semantic = []
+        for file in uploaded_files:
+            partner_semantic.extend(read_dbt_yaml(file))
+
         if not partner_semantic:
             st.error(
-                "Upload file does not contain required semantic_models section."
+                "Upload file(s) do not contain required semantic_models section."
             )
         else:
             st.session_state["partner_semantic"] = partner_semantic
-            # st.session_state["uploaded_semantic_files"] = [
-            #     i.name for i in uploaded_files
-            # ]
-            # Where logical fields are captured in semantic file
-            st.session_state['field_section_names'] = ["dimensions", "measures", "entities"]
-            # Field-level metadata common to both cortex and partner
-            st.session_state['common_fields'] = ["name", "description"]
         if st.button("Continue", type="primary"):
             st.session_state['partner_setup'] = True
             st.rerun()
@@ -54,39 +46,133 @@ def upload_dbt_semantic() -> None:
         st.session_state["partner_semantic"] = None
 
 
-def determine_field_section_dbt(
-    section_cortex: str,
-    section_partner: str,
-    field_details_cortex: dict[str, str],
-    field_details_partner: dict[str, str],
-) -> tuple[str, str | None]:
-    """
-    Derives intended section and data type of field in cortex analyst model.
+class DBTEntity:
+    def __init__(self,
+                 entity: dict[str, Any]):
+        
+        self.entity = entity
+        self.name = entity['name']
+        self.type = entity.get('type', None)
+        self.expr = entity.get('expr', self.name)
+        self.description = entity.get('description', None)
+        self.cortex_map = {
+                'name': self.name,
+                'description': self.description,
+                'expr': self.expr,
+                'data_type': self.get_cortex_type(),
+            }
 
-    Function assumes dbt as partner.
-    """
-    if section_cortex and field_details_cortex:
-        try:
-            data_type = field_details_cortex.get("data_type", None)
-        except TypeError:
-            data_type = "TEXT"
-        return (section_cortex, data_type)
-    else:  # No matching cortex field found; field is partner is a novel logical field
-        if section_partner == "entities":
-            section_cortex = "dimensions"
-            data_type = "TEXT"
-        elif section_partner == "measures":
-            section_cortex = "measures"
-            data_type = "NUMBER"
-        else:  # field_details_partner == 'dimensions'
-            try:
-                if field_details_partner.get("type") == "time":
-                    section_cortex = "time_dimensions"
-                    data_type = "DATE"
-            except TypeError:
-                section_cortex = "dimensions"
-                data_type = "TEXT"
-            else:
-                section_cortex = "dimensions"
-                data_type = "TEXT"
-        return (section_cortex, data_type)
+    def get_data(self):
+        return self.entity
+    
+    def get_cortex_type(self):
+        return 'TEXT'
+    
+    def get_cortex_section(self):
+        return 'dimensions'
+    
+    def get_key(self):
+        return self.expr.upper()
+    
+    def get_cortex_details(self):
+        return_details = {}
+        for k,v in self.cortex_map.items():
+            if v is not None:
+                return_details[k] = v
+        return return_details
+    
+    def get_cortex_comparison_dict(self):
+        return {
+            'field_key': self.get_key(),
+            'section': self.get_cortex_section(),
+            'field_details': self.get_cortex_details()
+        }
+
+
+class DBTMeasure(DBTEntity):
+    def __init__(self, entity):
+        super().__init__(entity)
+        self.agg = entity.get('agg', None)
+        self.cortex_map = {
+                'name': self.name,
+                'description': self.description,
+                'expr': self.expr,
+                'data_type': self.get_cortex_type(),
+                'default_aggregation': self.agg
+            }
+
+    def get_cortex_type(self):
+        return 'NUMBER'
+    
+    def get_cortex_section(self):
+        return 'measures'
+        
+
+class DBTDimension(DBTEntity):
+    
+    def get_cortex_type(self):
+        if self.type == 'time':
+            return 'DATETIME'
+        else:
+            return 'TEXT'
+    
+    def get_cortex_section(self):
+        if self.type == 'time':
+            return 'time_dimensions'
+        else:
+            return 'dimensions'
+        
+
+class DBTSemanticModel:
+    def __init__(self,
+                 data: dict[str, Any]):
+        self.data = data
+        self.name = data['name']
+        self.description = data['description']
+        self.entities = data['entities']
+        self.dimensions = data['dimensions']
+        self.measures = data['measures']
+    
+    def get_data(self):
+        return self.data
+    
+    def get_name(self):
+        return self.name
+    
+    def get_description(self):
+        return self.description
+    
+    def get_cortex_fields(self):
+        cortex_fields = []
+        for entity in self.entities:
+            cortex_fields.append(DBTEntity(entity).get_cortex_comparison_dict())
+        for measure in self.measures:
+            cortex_fields.append(DBTMeasure(measure).get_cortex_comparison_dict())
+        for dimension in self.dimensions:
+            cortex_fields.append(DBTDimension(dimension).get_cortex_comparison_dict())
+        
+        return cortex_fields
+        
+    def create_comparison_df(self):
+        cortex_fields = self.get_cortex_fields()
+        return pd.DataFrame(cortex_fields)
+    
+    @staticmethod
+    def retrieve_df_by_name(name: str) -> 'DBTSemanticModel':
+        for model in st.session_state['partner_semantic']:
+            if model.get_name() == name:
+                return model.create_comparison_df()
+    
+
+def read_dbt_yaml(file_path):
+    # with open(file_path, 'r') as file:
+    data = yaml.safe_load(file_path)
+    if 'semantic_models' in data:
+        dbt_semantic_models = []
+        for semantic_model in data['semantic_models']:
+            dbt_semantic_models.append(DBTSemanticModel(semantic_model))
+    else:
+        st.warning(f"{file_path} does not contain semantic_models section. Skipping.")
+
+    return dbt_semantic_models
+

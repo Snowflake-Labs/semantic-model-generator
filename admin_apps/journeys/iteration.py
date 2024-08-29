@@ -22,7 +22,6 @@ from admin_apps.shared_utils import (
     download_yaml,
     get_snowflake_connection,
     init_session_states,
-    # integrate_partner_semantics,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
