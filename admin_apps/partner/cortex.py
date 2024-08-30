@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import streamlit as st
 import pandas as pd
@@ -7,6 +7,10 @@ from semantic_model_generator.data_processing.proto_utils import proto_to_dict
 
 
 class CortexDimension:
+    """
+    Class for Cortex dimension-type field.
+    """
+
     def __init__(self,
                  data: dict[str, Any]):
         
@@ -19,31 +23,34 @@ class CortexDimension:
         self.sample_values = data.get('sample_values', None)
         self.unique = data.get('unique', False)
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.name
 
-    def get_data(self):
+    def get_data(self) -> dict[str, Any]:
         return self.data
     
-    def get_cortex_type(self):
+    def get_cortex_type(self) -> str:
         return self.data_type
     
-    def get_description(self):
+    def get_description(self) -> Optional[str]:
         return self.description
     
-    def set_description(self, value):
+    def set_description(self, value) -> None:
         self.description = value
     
-    def get_cortex_section(self):
+    def get_cortex_section(self) -> str:
         return 'dimensions'
     
-    def get_key(self):
+    def get_key(self) -> str:
         return self.expr.upper()
     
-    def get_cortex_details(self):
+    def get_cortex_details(self) -> dict[str, Any]:
+        """
+        Used in static methods in partner classes to retrieve and modify Cortex-equivalent details
+        """
         return self.data
     
-    def get_cortex_comparison_dict(self):
+    def get_cortex_comparison_dict(self) -> dict[str, Any]:
         return {
             'field_key': self.get_key(),
             'section': self.get_cortex_section(),
@@ -52,21 +59,33 @@ class CortexDimension:
     
 
 class CortexTimeDimension(CortexDimension):
-    def get_cortex_section(self):
+    """
+    Class for Cortex time dimension-type field.
+    """
+        
+    def get_cortex_section(self) -> str:
         return 'time_dimensions'
     
 
 class CortexMeasure(CortexDimension):
+    """
+    Class for Cortex measure-type field.
+    """
+        
     def __init__(self, entity):
         super().__init__(entity)
         self.default_aggregation = entity.get('default_aggregation', None)
 
-    def get_cortex_section(self):
+    def get_cortex_section(self) -> str:
         return 'measures'
 
 
 
 class CortexSemanticTable:
+    """
+    Class for single Cortex logical table in semantic file.
+    """
+
     def __init__(self,
                  data: dict[str, Any]):
         self.data = data
@@ -79,16 +98,20 @@ class CortexSemanticTable:
         self.time_dimensions = data['time_dimensions']
         self.measures = data['measures']
     
-    def get_data(self):
+    def get_data(self) -> dict[str, Any]:
         return self.data
     
-    def get_name(self):
+    def get_name(self) -> str:
         return self.name
     
-    def get_description(self):
+    def get_description(self) -> Optional[str]:
         return self.description
     
-    def get_cortex_fields(self):
+    def get_cortex_fields(self) -> list[CortexDimension | CortexTimeDimension | CortexMeasure]:
+        """
+        Processes and returns raw field data as vendor-specific field objects.
+        """
+        
         cortex_fields = []
         for dimension in self.dimensions:
             cortex_fields.append(CortexDimension(dimension).get_cortex_comparison_dict())
@@ -99,7 +122,7 @@ class CortexSemanticTable:
         
         return cortex_fields
         
-    def create_comparison_df(self):
+    def create_comparison_df(self) -> pd.DataFrame:
         cortex_fields = self.get_cortex_fields()
         return pd.DataFrame(cortex_fields)
     

@@ -3,62 +3,32 @@ import json
 import time
 import yaml
 
-# from snowflake.connector import SnowflakeConnection
 import streamlit as st
 import numpy as np
 import pandas as pd
 
 from admin_apps.shared_utils import (
     render_image,
+    get_snowflake_connection,
+    set_sit_query_tag,
 )
-
-from admin_apps.partner.looker import (
-    set_looker_semantic,
-)
+from admin_apps.partner.looker import set_looker_semantic
 
 from admin_apps.partner.dbt import (
     upload_dbt_semantic,
     DBTSemanticModel,
-
 )
 
-from admin_apps.partner.cortex import (
-    CortexSemanticTable,
-)
+from admin_apps.partner.cortex import CortexSemanticTable
+from admin_apps.partner.looker import LookerSemanticTable
 
-from admin_apps.partner.looker import (
-    LookerSemanticTable,
-)
-
-from semantic_model_generator.data_processing.proto_utils import (
-    yaml_to_semantic_model,
-)
-
-
-def extract_expressions_from_sections(
-    data_dict: dict[str, Any], section_names: list[str]
-) -> dict[str, dict[str, Any]]:
-    
-    """
-    Extracts data in section_names from a dictionary into a nested dictionary:
-    """
-
-    def extract_dbt_field_key(obj: dict[str, Any]) -> str | Any:
-        # return obj.get("expr", obj["name"]).lower()
-        return obj.get("expr", obj["name"]).upper()
-
-    d = {}
-    for i in section_names:
-        if st.session_state["selected_partner"] == 'dbt':
-            d[i] = {extract_dbt_field_key(obj): obj for obj in data_dict.get(i, [])}
-
-    return d
+from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 
 
 def set_partner_instructions() -> None:
-    
     """
     Sets instructions and partner logo in session_state based on selected partner.
+    Returns: None
     """
     
     if st.session_state.get("partner_tool", None):
@@ -83,6 +53,7 @@ def configure_partner_semantic() -> None:
     
     """
     Upload semantic files from local source.
+    Returns: None
     """
     
     from admin_apps.journeys import builder
@@ -104,8 +75,6 @@ def configure_partner_semantic() -> None:
     # Previous dialog box widget values will reset when overlayed
     if st.session_state.get('partner_tool', None):
         st.session_state['selected_partner'] = st.session_state['partner_tool']
-    # if st.session_state.get('partner_setup', False):
-    #     st.session_state['partner_setup'] = st.session_state['partner_setup']
 
     if st.session_state["partner_tool"] == "dbt":
         upload_dbt_semantic()
@@ -114,6 +83,9 @@ def configure_partner_semantic() -> None:
 
 
 class PartnerCompareRow:
+    """
+    Renders matched and unmatched cortex and partner fields for comparison.
+    """
     def __init__(self, row_data: pd.Series) -> None:  # type: ignore
         self.row_data = row_data
         self.key = row_data["field_key"]
@@ -179,6 +151,7 @@ class PartnerCompareRow:
             )
         with detail_col:
             if metadata[detail_selection]:
+                # Only printing string valued keys for now
                 st.json(
                     {
                         k: v
@@ -200,7 +173,15 @@ class PartnerCompareRow:
 def compare_sections(section_cortex: str, section_partner: str) -> str:
     
     """
-    Returns cortex section if not None, else partner section
+    Compares section_cortex and section_parnter returning the former if available.
+    Otherwise, returns the latter.
+
+    Args:
+        section_cortex (str): The Cortex section of the Cortex field if found.
+        section_cortex (str): The Cortex section of the Partner field if found.
+
+    Returns:
+        str: Cortex section name.
     """
 
     if section_cortex:
@@ -212,7 +193,14 @@ def compare_sections(section_cortex: str, section_partner: str) -> str:
 def compare_data_types(details_cortex: dict[str, Any], details_partner: dict[str, Any]) -> str:
     
     """
-    Returns cortex datatype if not None, else partner section
+    Returns intended cortex datatype comparing cortex and partner datatype values.
+
+    Args:
+        details_cortex (dict[str, Any]): Dictionary of Cortex field metadata.
+        details_partner (dict[str, Any]): Dictionary of Parnter's Cortex field metadata.
+
+    Returns:
+        str: Cortex data_type.
     """
 
     cortex_data_type = None
@@ -233,6 +221,12 @@ def compare_data_types(details_cortex: dict[str, Any], details_partner: dict[str
 
 @st.dialog("Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
+    """
+    Runs UI module for comparing Cortex and Partner fields for integration.
+
+    Returns:
+        None
+    """
     
     st.write(
         "Specify how to merge semantic metadata from partner tools with Cortex Analyst's semantic model."
@@ -252,8 +246,9 @@ def integrate_partner_semantics() -> None:
     but not in Cortex Analyst semantic model."""
 
 
-    # if st.session_state.get("partner_semantic", None):
     if st.session_state.get('partner_setup', False):
+        # Execute pre-processing behind the scenes based on vendor tool
+        CortexSemanticTable.create_cortex_table_list()
         if st.session_state.get("selected_partner", None) == 'looker':
             LookerSemanticTable.create_cortex_table_list()
         elif st.session_state.get("selected_partner", None) == 'dbt':
@@ -261,15 +256,9 @@ def integrate_partner_semantics() -> None:
         else:
             st.error("Selected partner tool not available.")
 
+        # Create table selections for comparison
         partner_tables = [model.get_name() for model in st.session_state["partner_semantic"]]
-        # elif st.session_state.get("selected_partner", None) == 'looker':
-            # partner_tables = [model.get_name() for model in st.session_state["partner_semantic"]]
-            # Write cortex semantic tables as classes in a list to session state
-        CortexSemanticTable.create_cortex_table_list()
         cortex_tables = [table.get_name() for table in st.session_state["cortex_comparison_tables"]]
-
-        # partner_tables = [model.get_name() for model in st.session_state["partner_semantic"]]
-        # partner_tables = extract_key_values(st.session_state["partner_semantic"], "name")
 
         st.write("Select which logical tables/views to compare and merge.")
         c1, c2 = st.columns(2)
@@ -298,22 +287,21 @@ def integrate_partner_semantics() -> None:
                 "Partner", value=True, help=KEEP_PARTNER_HELP
             )
         with st.expander("Advanced configuration", expanded=False):
-            st.caption("Only shared metadata information displayed")
             # Create dataframe of each semantic file's fields with mergeable keys
+            st.caption("Only shared metadata information displayed")
+            cortex_fields_df = CortexSemanticTable.retrieve_df_by_name(semantic_cortex_tbl)
+            
             if st.session_state.get("selected_partner", None) == 'looker':
-                # THIS IS WHERE THE ERROR IS OCCURING
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(semantic_partner_tbl)
             if st.session_state.get("selected_partner", None) == 'dbt':
                 partner_fields_df = DBTSemanticModel.retrieve_df_by_name(semantic_partner_tbl)
-
-            # partner_fields_df = DBTSemanticModel.retrieve_df_by_name(semantic_partner_tbl)
-            cortex_fields_df = CortexSemanticTable.retrieve_df_by_name(semantic_cortex_tbl)
+            
             combined_fields_df = cortex_fields_df.merge(
                 partner_fields_df,
                 on="field_key",
                 how="outer",
                 suffixes=("_cortex", "_partner"),
-            ).replace(np.nan, None)
+            ).replace(np.nan, None) # Will be comparing values to None in UI logic
 
             # Convert json strings to dict for easier extraction later
             for col in ["field_details_cortex", "field_details_partner"]:
@@ -351,44 +339,54 @@ def integrate_partner_semantics() -> None:
                         selected_metadata["data_type"] = target_data_type
                         sections[target_section].append(selected_metadata)
 
-            integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
-            with integrate_col:
-                merge_button = st.button(
-                    "Merge",
-                    help=INTEGRATE_HELP,
-                    use_container_width=True
-                )
-            with commit_col:
-                reset_button = st.button(
-                    "Save",
-                    help=SAVE_HELP,
-                    use_container_width=True,
-                )
+        integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
+        with integrate_col:
+            merge_button = st.button(
+                "Merge",
+                help=INTEGRATE_HELP,
+                use_container_width=True
+            )
+        with commit_col:
+            reset_button = st.button(
+                "Save",
+                help=SAVE_HELP,
+                use_container_width=True,
+            )
 
-            if merge_button:
-                # Update fields in cortex semantic model
-                for i, tbl in enumerate(st.session_state['cortex_comparison_tables']):
-                    if tbl.get_name() == semantic_cortex_tbl:
-                        for k in sections.keys():
-                            st.session_state['current_yaml_as_dict']['tables'][i][k] = sections[k]
-
-                try:
-                    st.session_state["yaml"] = yaml.dump(st.session_state['current_yaml_as_dict'],
-                                                         sort_keys=False)
-                    st.session_state["semantic_model"] = yaml_to_semantic_model(
-                        st.session_state["yaml"]
-                    )
-                    merge_msg = st.success("Merging...")
-                    time.sleep(1)
-                    merge_msg.empty()
-                except Exception as e:
-                    st.error(f"Integration failed: {e}")
-
-            if reset_button:
-                st.success(
-                    "Integration complete! Please validate your semantic model before uploading."
+        if merge_button:
+            set_sit_query_tag(
+                    get_snowflake_connection(),
+                    vendor=st.session_state['selected_partner'],
+                    action="merge",
                 )
-                time.sleep(1.5)
-                st.rerun()  # Lazy alternative to resetting all configurations
+            # Update fields in cortex semantic model
+            for i, tbl in enumerate(st.session_state['cortex_comparison_tables']):
+                if tbl.get_name() == semantic_cortex_tbl:
+                    for k in sections.keys():
+                        st.session_state['current_yaml_as_dict']['tables'][i][k] = sections[k]
+
+            try:
+                st.session_state["yaml"] = yaml.dump(st.session_state['current_yaml_as_dict'],
+                                                        sort_keys=False)
+                st.session_state["semantic_model"] = yaml_to_semantic_model(
+                    st.session_state["yaml"]
+                )
+                merge_msg = st.success("Merging...")
+                time.sleep(1)
+                merge_msg.empty()
+            except Exception as e:
+                st.error(f"Integration failed: {e}")
+
+        if reset_button:
+            set_sit_query_tag(
+                    get_snowflake_connection(),
+                    vendor=st.session_state['selected_partner'],
+                    action="integration_complete",
+                )
+            st.success(
+                "Integration complete! Please validate your semantic model before uploading."
+            )
+            time.sleep(1.5)
+            st.rerun()  # Lazy alternative to resetting all configurations
     else:
         st.error("Partner semantic not setup.")

@@ -24,6 +24,7 @@ from admin_apps.shared_utils import (
     init_session_states,
     upload_yaml,
     validate_and_upload_tmp_yaml,
+    format_snowflake_context,
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -572,6 +573,7 @@ def stage_selector_container() -> None:
         options=available_schemas,
         index=None,
         key="selected_iteration_schema",
+        format_func=lambda x: format_snowflake_context(x, -1)
     )
     if stage_schema:
         # When a valid schema is selected, fetch the available stages in that schema.
@@ -587,6 +589,7 @@ def stage_selector_container() -> None:
         options=available_stages,
         index=None,
         key="selected_iteration_stage",
+        format_func=lambda x: format_snowflake_context(x, -1),
     )
 
 

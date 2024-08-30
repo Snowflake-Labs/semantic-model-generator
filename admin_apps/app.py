@@ -7,6 +7,7 @@ st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model G
 from admin_apps.shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
+    set_sit_query_tag,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
@@ -106,6 +107,11 @@ if __name__ == "__main__":
                 use_container_width=True,
                 type="primary",
             ):
+                set_sit_query_tag(
+                    get_snowflake_connection(),
+                    vendor="",
+                    action="start",
+                )
                 partner.show()
 
     verify_environment_setup()

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-# import json
+import json
 import os
 import time
-# from loguru import logger
 from dataclasses import dataclass
 from PIL import Image
 from datetime import datetime
@@ -11,14 +10,13 @@ from enum import Enum
 from io import StringIO
 from typing import Any, Optional
 
-# import numpy as np
+
 import pandas as pd
 import streamlit as st
 import yaml
-from snowflake.connector import SnowflakeConnection #, ProgrammingError
+from snowflake.connector import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
-    # proto_to_dict,
     proto_to_yaml,
     yaml_to_semantic_model,
 )
@@ -37,14 +35,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_tables_views_in_schema,
 )
 
-# from admin_apps.partner.looker import (
-#     render_looker_explore_as_table,
-#     set_looker_semantic,
-# )
-
-# from admin_apps.partner.partner_utils import (
-#     extract_expressions_from_sections,
-# )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -54,31 +44,6 @@ LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snow
 LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
-
-# # Partner semantic support instructions
-# DBT_IMAGE = 'admin_apps/images/dbt-signature_tm_black.png'
-# LOOKER_IMAGE = 'admin_apps/images/looker.png'
-# DBT_INSTRUCTIONS = """
-# We extract metadata from your **DBT** semantic yaml file(s) and merge it with a generated Cortex Analyst semantic file.
-
-# **Note**: The DBT semantic layer must be sourced from tables/views in Snowflake.
-# > Steps:
-# > 1) Upload your dbt semantic (yaml/yml) file(s) below. 
-# > 2) Select **🛠 Create a new semantic model** to generate a new Cortex Analyst semantic file for Snowflake tables or **✏️ Edit an existing semantic model**.
-# > 3) Validate the output in the UI.
-# > 4) Once you've validated the semantic file, click **Partner Semantic** to merge DBT and Cortex Analyst semantic files.  
-# """
-# LOOKER_INSTRUCTIONS = """
-# We materialize your Explore dataset in **Looker** as Snowflake table(s) and generate a Cortex Analyst semantic file.
-# Metadata from your Explore fields will be merged with the generated Cortex Analyst semantic file.
-
-# **Note**: Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. 
-# Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information.
-# > Steps:
-# > 1) Provide your Looker project details below.
-# > 2) Specify the Snowflake database and schema to materialize the Explore dataset as table(s).
-# > 3) A semantic file will be generated for the Snowflake table(s) and metadata from Looker populated.
-# """
 
 
 @st.cache_resource
@@ -903,43 +868,31 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             return yaml_str
 
 
-def unpack_yaml(
-    data: Any | dict[str, Any] | list[Any]
-) -> Any | dict[str, Any] | list[str]:
+def set_sit_query_tag(conn: SnowflakeConnection,
+                      vendor: str,
+                      action) -> None:
+    
     """
-    Recursively unpacks a YAML structure into a Python dictionary.
+    Sets query tag on a single zero-compute ping for tracking.
+    Returns: None
     """
-    if isinstance(data, dict):
-        return {key: unpack_yaml(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [unpack_yaml(item) for item in data]
-    else:
-        return data
+    
+    query_tag = {
+        "origin":"sf_sit",
+        "name":"skimantics",
+        "version":{
+            "major":1,
+            "minor":0
+            },
+        "attributes":{
+            "vendor":vendor,
+            "action":action
+            }
+        }
 
-
-def load_yaml_file(file_paths: list[Any]) -> list[Any]:  # type: ignore
-    """
-    Loads one or more YAML files and combines them into a single list.
-    """
-    combined_yaml = []
-    for file_path in file_paths:
-        yaml_content = yaml.safe_load(file_path)
-        combined_yaml.append(unpack_yaml(yaml_content))
-    return combined_yaml
-
-
-def extract_key_values(data: list[dict[str, Any]], key: str) -> list[Any]:
-    """
-    Extracts key's value from a list of dictionaries.
-    """
-    result = []
-    for item in data:
-        values = item.get(key, [])
-        if isinstance(values, list):
-            result.extend(values)
-        else:
-            result.append(values)
-    return result
+    conn.cursor().execute(f"alter session set query_tag='{json.dumps(query_tag)}'")
+    conn.cursor().execute("SELECT 'SKIMANTICS';")
+    conn.cursor().execute(f"alter session set query_tag=''")
 
 
 def render_image(image_file: str, size: tuple[int, int]) -> None:
@@ -950,11 +903,31 @@ def render_image(image_file: str, size: tuple[int, int]) -> None:
     new_image = image.resize(size)
     st.image(new_image)
 
+
 def format_snowflake_context(context: str, index: Optional[int] = None) -> str:
     """
     Extracts the desired part of the Snowflake context.
     """
     return context.split(".")[index]
+
+
+def check_valid_session_state_values(vars: list[str]) -> bool:
+    """
+    Returns False if any vars are not found or None in st.session_state.
+    Args:
+        vars (list[str]): List of variables to check in st.session_state
+
+    Returns: bool
+    """
+    empty_vars = []
+    for var in vars:
+        if not st.session_state.get(var, None):
+            empty_vars.append(var)
+    if empty_vars:
+        st.error(f"Please enter values for {vars}.")
+        return False
+    else:
+        return True
 
 
 def run_cortex_complete(
@@ -975,7 +948,7 @@ def run_cortex_complete(
     else:
         return None
     
-def input_semantic_file_name() -> None:
+def input_semantic_file_name() -> str:
     """
     Prompts the user to input the name of the semantic model they are creating.
     Returns:
@@ -989,7 +962,7 @@ def input_semantic_file_name() -> None:
     return model_name
 
 
-def input_sample_value_num() -> None:
+def input_sample_value_num() -> int:
     """
     Function to prompt the user to input the maximum number of sample values per column.
     Returns:
@@ -1007,7 +980,17 @@ def input_sample_value_num() -> None:
 
 def run_generate_model_str_from_snowflake(model_name: str,
                                           sample_values: int,
-                                          base_tables: list[str],):
+                                          base_tables: list[str],) -> None:
+    
+    """
+    Runs generate_model_str_from_snowflake to generate cortex semantic shell.
+    Args:
+        model_name (str): Semantic file name (without .yaml suffix).
+        sample_values (int): Number of sample values to provide for each table in generation.
+        base_tables (list[str]): List of fully-qualified Snowflake tables to include in the semantic model.
+
+    Returns: None
+    """
     
     if not model_name:
             st.error("Please provide a name for your semantic model.")
@@ -1024,8 +1007,6 @@ def run_generate_model_str_from_snowflake(model_name: str,
             )
 
             st.session_state["yaml"] = yaml_str
-            # st.session_state["page"] = GeneratorAppScreen.ITERATION
-            # st.rerun()
 
 
 @dataclass

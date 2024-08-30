@@ -7,6 +7,10 @@ from admin_apps.partner.partner_utils import (
 
 @st.dialog("Partner Semantic Support", width="large")
 def partner_semantic_setup() -> None:
+    """
+    Renders the partner semantic setup dialog with instructions.
+    """
+    
     st.write(
         """
         Have an existing semantic layer in a partner tool that's integrated with Snowflake? 
@@ -17,5 +21,8 @@ def partner_semantic_setup() -> None:
 
 
 def show() -> None:
+    """
+    Runs partner setup dialog.
+    """
     partner_semantic_setup()
     
