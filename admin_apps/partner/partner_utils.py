@@ -137,9 +137,9 @@ class PartnerCompareRow:
         if self.cortex_metadata and self.partner_metadata:
             metadata["merged"] = self.cortex_metadata.copy()
             if st.session_state["partner_metadata_preference"] == "Partner":
-                metadata['merged'] = self.cortex_metadata | self.partner_metadata
+                metadata['merged'] = {k:v for k,v in self.cortex_metadata.items() if v} | {k:v for k,v in self.partner_metadata.items() if v}
             else:
-                metadata['merged'] = self.partner_metadata | self.cortex_metadata
+                metadata['merged'] = {k:v for k,v in self.partner_metadata.items() if v} | {k:v for k,v in self.cortex_metadata.items() if v}
 
         else:
             metadata["merged"] = {}
