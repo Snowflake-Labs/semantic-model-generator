@@ -499,7 +499,7 @@ def yaml_editor(yaml_str: str) -> None:
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
-        if st.session_state.get("partner_semantic", None):
+        if st.session_state.get("partner_setup", False):
             if four.button(
                 "Integrate Partner",
                 use_container_width=True,

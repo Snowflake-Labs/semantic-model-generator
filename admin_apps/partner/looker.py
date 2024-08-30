@@ -5,8 +5,11 @@ import yaml
 
 import streamlit as st
 import looker_sdk
+import pandas as pd
 from looker_sdk import models40 as models
 from snowflake.connector import SnowflakeConnection, ProgrammingError
+
+from semantic_model_generator.data_processing.proto_utils import proto_to_dict
 
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
@@ -17,6 +20,13 @@ from admin_apps.shared_utils import (
     input_sample_value_num,
     input_semantic_file_name,
     run_generate_model_str_from_snowflake,
+)
+
+from admin_apps.partner.cortex import (
+    CortexSemanticTable,
+    CortexDimension,
+    CortexMeasure,
+    CortexTimeDimension,
 )
 
 
@@ -63,28 +73,28 @@ def update_schemas() -> None:
     st.session_state["looker_target_schema"] = valid_selected_schemas
 
 
-def map_looker_to_cortex(
-        looker_semantic, 
-        cortex_partner_mapping = [('description', 'description')]
-        ) -> None:
+# def map_looker_to_cortex(
+#         looker_semantic, 
+#         cortex_partner_mapping = [('description', 'description')]
+#         ) -> None:
     
-    """
-    Maps Looker semantic metadata to field metadata in Cortex semantic layer string
-    """
+#     """
+#     Maps Looker semantic metadata to field metadata in Cortex semantic layer string
+#     """
 
-    merged_semantic = yaml.safe_load(st.session_state["yaml"])
+#     merged_semantic = yaml.safe_load(st.session_state["yaml"])
     
-    for i, tables in enumerate(merged_semantic['tables']):
-        for table_attribute, attribute_value in tables.items():
-            if table_attribute in ['dimensions', 'time_dimensions', 'measures']:
-                for field_idx, field in enumerate(attribute_value):
-                    if field['name'] in looker_semantic[tables['name']]:
-                        for mappings in cortex_partner_mapping:
-                            new_value = looker_semantic[tables['name']].get(field['name'])[mappings[1]]
-                            if new_value is not None and new_value != '':
-                                merged_semantic['tables'][i][table_attribute][field_idx][mappings[0]] = new_value
+#     for i, tables in enumerate(merged_semantic['tables']):
+#         for table_attribute, attribute_value in tables.items():
+#             if table_attribute in ['dimensions', 'time_dimensions', 'measures']:
+#                 for field_idx, field in enumerate(attribute_value):
+#                     if field['name'] in looker_semantic[tables['name']]:
+#                         for mappings in cortex_partner_mapping:
+#                             new_value = looker_semantic[tables['name']].get(field['name'])[mappings[1]]
+#                             if new_value is not None and new_value != '':
+#                                 merged_semantic['tables'][i][table_attribute][field_idx][mappings[0]] = new_value
     
-    st.session_state["yaml"] = yaml.dump(merged_semantic, sort_keys=False)
+#     st.session_state["yaml"] = yaml.dump(merged_semantic, sort_keys=False)
 
 
 def set_looker_semantic() -> None:
@@ -179,6 +189,7 @@ def set_looker_semantic() -> None:
                             st.session_state['looker_target_table_name'],
                             [] # TO DO - Add support for field selection
                             )
+            st.session_state['looker_field_metadata'] = looker_field_metadata
         run_generate_model_str_from_snowflake(
             model_name,
             sample_values,
@@ -186,7 +197,7 @@ def set_looker_semantic() -> None:
         )
 
         # Replace Cortex Analyst semantic metadata with Looker metadata
-        map_looker_to_cortex(looker_field_metadata)
+        # map_looker_to_cortex(looker_field_metadata)
 
         st.session_state['partner_setup'] = True
         st.session_state["page"] = GeneratorAppScreen.ITERATION
@@ -364,6 +375,104 @@ def render_looker_explore_as_table(conn: SnowflakeConnection,
     # Associate new column names with looker field metadata
     column_metadata = dict(zip(new_columns, list(field_metadata.values())))
     # Add tablename for comparison table drop-down view in partner semantic setup
-    semantic_model = {tablename.upper(): column_metadata}
-    return semantic_model
+    # semantic_model = {tablename.upper(): column_metadata}
+    # return semantic_model
+    return column_metadata
+
+
+class LookerDimension(CortexDimension):
+    def __init__(self, data):
+        super().__init__(data)
+        self.description = "HELLO WORLD"
+        if self.get_name() in st.session_state['looker_field_metadata']:
+            description = st.session_state['looker_field_metadata'][self.get_name()].get('description', None)
+        self.description = description
+
+    def get_cortex_comparison_dict(self):
+        cortex_details = self.get_cortex_details()
+        cortex_details['description'] = self.description
+        
+        return {
+            'field_key': self.get_key(),
+            'section': self.get_cortex_section(),
+            'field_details': cortex_details
+        }
+
+
+class LookerMeasure(CortexMeasure):
+    def __init__(self, data):
+        super().__init__(data)
+        self.description = "HELLO MEASURES"
+        if self.get_name() in st.session_state['looker_field_metadata']:
+            description = st.session_state['looker_field_metadata'][self.get_name()].get('description', None)
+        self.description = description
+
+    def get_cortex_comparison_dict(self):
+        cortex_details = self.get_cortex_details()
+        cortex_details['description'] = self.description
+        
+        return {
+            'field_key': self.get_key(),
+            'section': self.get_cortex_section(),
+            'field_details': cortex_details
+        }
+
+
+class LookerTimeDimension(CortexTimeDimension):
+    def __init__(self, data):
+        super().__init__(data)
+        self.description = "HELLO WORLD"
+        if self.get_name() in st.session_state['looker_field_metadata']:
+            description = st.session_state['looker_field_metadata'][self.get_name()].get('description', None)
+        self.description = description
+
+    def get_cortex_comparison_dict(self):
+        cortex_details = self.get_cortex_details()
+        cortex_details['description'] = self.description
+        
+        return {
+            'field_key': self.get_key(),
+            'section': self.get_cortex_section(),
+            'field_details': cortex_details
+        }
+
+
+class LookerSemanticTable(CortexSemanticTable):
+
+    def get_cortex_fields(self):
+        cortex_fields = []
+        for dimension in self.dimensions:
+            cortex_fields.append(LookerDimension(dimension).get_cortex_comparison_dict())
+        for time_dimension in self.time_dimensions:
+            cortex_fields.append(LookerTimeDimension(time_dimension).get_cortex_comparison_dict())
+        for measure in self.measures:
+            cortex_fields.append(LookerMeasure(measure).get_cortex_comparison_dict())
+        
+        # # Applies Looker metadata descriptions to Cortex semantic layer
+        # if self.name in st.session_state['looker_field_metadata']:
+        #     extra_table_metadata = st.session_state['looker_field_metadata'][self.name]
+        #     for i, field in enumerate(cortex_fields):
+        #         field_name = field.get_name()
+        #         if field_name in extra_table_metadata:
+        #             for k,v in self.cortex_map:
+        #                 if extra_table_metadata[field_name].get(v):
+        #                     attribute = extra_table_metadata[field_name][v]
+        #                     cortex_fields[i][k] = field.set_description(attribute)
+        return cortex_fields
+    
+    
+    @staticmethod
+    def create_cortex_table_list() -> None:
+        cortex_semantic = proto_to_dict(st.session_state["semantic_model"])
+        tables = []
+        for table in cortex_semantic['tables']:
+            tables.append(LookerSemanticTable(table))
+        st.session_state['partner_semantic'] = tables
+
+
+    @staticmethod
+    def retrieve_df_by_name(name: str) -> pd.DataFrame:
+        for table in st.session_state["partner_semantic"]:
+            if table.get_name() == name:
+                return table.create_comparison_df()
 

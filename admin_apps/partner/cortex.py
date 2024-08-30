@@ -19,11 +19,20 @@ class CortexDimension:
         self.sample_values = data.get('sample_values', None)
         self.unique = data.get('unique', False)
 
+    def get_name(self):
+        return self.name
+
     def get_data(self):
         return self.data
     
     def get_cortex_type(self):
         return self.data_type
+    
+    def get_description(self):
+        return self.description
+    
+    def set_description(self, value):
+        self.description = value
     
     def get_cortex_section(self):
         return 'dimensions'
@@ -105,7 +114,7 @@ class CortexSemanticTable:
         st.session_state['cortex_comparison_tables'] = tables
 
     @staticmethod
-    def retrieve_df_by_name(name: str) -> 'CortexSemanticTable':
+    def retrieve_df_by_name(name: str) -> pd.DataFrame:
         for table in st.session_state["cortex_comparison_tables"]:
             if table.get_name() == name:
                 return table.create_comparison_df()
