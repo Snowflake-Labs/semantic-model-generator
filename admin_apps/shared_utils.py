@@ -4,16 +4,14 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from PIL import Image
 from datetime import datetime
 from enum import Enum
 from io import StringIO
 from typing import Any, Optional
 
-
 import pandas as pd
 import streamlit as st
-import yaml
+from PIL import Image
 from snowflake.connector import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
@@ -21,20 +19,19 @@ from semantic_model_generator.data_processing.proto_utils import (
     yaml_to_semantic_model,
 )
 from semantic_model_generator.generate_model import (
-    raw_schema_to_semantic_context,
     generate_model_str_from_snowflake,
+    raw_schema_to_semantic_context,
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
-    set_database,
-    set_schema,
     fetch_databases,
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
+    set_database,
+    set_schema,
 )
-
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -67,6 +64,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Returns: SnowflakeConnection
     """
     return get_connector().open_connection(db_name="")
+
 
 @st.cache_resource(show_spinner=False)
 def get_available_tables(schema: str) -> list[str]:
@@ -868,31 +866,22 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             return yaml_str
 
 
-def set_sit_query_tag(conn: SnowflakeConnection,
-                      vendor: str,
-                      action) -> None:
-    
+def set_sit_query_tag(conn: SnowflakeConnection, vendor: str, action: str) -> None:
     """
     Sets query tag on a single zero-compute ping for tracking.
     Returns: None
     """
-    
+
     query_tag = {
-        "origin":"sf_sit",
-        "name":"skimantics",
-        "version":{
-            "major":1,
-            "minor":0
-            },
-        "attributes":{
-            "vendor":vendor,
-            "action":action
-            }
-        }
+        "origin": "sf_sit",
+        "name": "skimantics",
+        "version": {"major": 1, "minor": 0},
+        "attributes": {"vendor": vendor, "action": action},
+    }
 
     conn.cursor().execute(f"alter session set query_tag='{json.dumps(query_tag)}'")
     conn.cursor().execute("SELECT 'SKIMANTICS';")
-    conn.cursor().execute(f"alter session set query_tag=''")
+    conn.cursor().execute("alter session set query_tag=''")
 
 
 def render_image(image_file: str, size: tuple[int, int]) -> None:
@@ -908,7 +897,14 @@ def format_snowflake_context(context: str, index: Optional[int] = None) -> str:
     """
     Extracts the desired part of the Snowflake context.
     """
-    return context.split(".")[index]
+    if index and "." in context:
+        split_context = context.split(".")
+        try:
+            return split_context[index]
+        except IndexError:  # Return final segment if mis-typed index
+            return split_context[-1]
+    else:
+        return context
 
 
 def check_valid_session_state_values(vars: list[str]) -> bool:
@@ -947,7 +943,8 @@ def run_cortex_complete(
         return output
     else:
         return None
-    
+
+
 def input_semantic_file_name() -> str:
     """
     Prompts the user to input the name of the semantic model they are creating.
@@ -956,9 +953,9 @@ def input_semantic_file_name() -> str:
     """
 
     model_name = st.text_input(
-            "Semantic Model Name (no .yaml suffix)",
-            help="The name of the semantic model you are creating. This is separate from the filename, which we will set later.",
-        )
+        "Semantic Model Name (no .yaml suffix)",
+        help="The name of the semantic model you are creating. This is separate from the filename, which we will set later.",
+    )
     return model_name
 
 
@@ -969,7 +966,7 @@ def input_sample_value_num() -> int:
         int: The maximum number of sample values per column.
     """
 
-    sample_values = st.selectbox(
+    sample_values: int = st.selectbox(  # type: ignore
         "Maximum number of sample values per column",
         list(range(1, 40)),
         index=0,
@@ -978,10 +975,11 @@ def input_sample_value_num() -> int:
     return sample_values
 
 
-def run_generate_model_str_from_snowflake(model_name: str,
-                                          sample_values: int,
-                                          base_tables: list[str],) -> None:
-    
+def run_generate_model_str_from_snowflake(
+    model_name: str,
+    sample_values: int,
+    base_tables: list[str],
+) -> None:
     """
     Runs generate_model_str_from_snowflake to generate cortex semantic shell.
     Args:
@@ -991,9 +989,9 @@ def run_generate_model_str_from_snowflake(model_name: str,
 
     Returns: None
     """
-    
+
     if not model_name:
-            st.error("Please provide a name for your semantic model.")
+        st.error("Please provide a name for your semantic model.")
     elif not base_tables:
         st.error("Please select at least one table to proceed.")
     else:

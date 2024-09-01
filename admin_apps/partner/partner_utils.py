@@ -1,27 +1,20 @@
-from typing import Any
 import json
 import time
-import yaml
+from typing import Any
 
-import streamlit as st
 import numpy as np
 import pandas as pd
-
-from admin_apps.shared_utils import (
-    render_image,
-    get_snowflake_connection,
-    set_sit_query_tag,
-)
-from admin_apps.partner.looker import set_looker_semantic
-
-from admin_apps.partner.dbt import (
-    upload_dbt_semantic,
-    DBTSemanticModel,
-)
+import streamlit as st
+import yaml
 
 from admin_apps.partner.cortex import CortexSemanticTable
-from admin_apps.partner.looker import LookerSemanticTable
-
+from admin_apps.partner.dbt import DBTSemanticModel, upload_dbt_semantic
+from admin_apps.partner.looker import LookerSemanticTable, set_looker_semantic
+from admin_apps.shared_utils import (
+    get_snowflake_connection,
+    render_image,
+    set_sit_query_tag,
+)
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 
 
@@ -30,7 +23,7 @@ def set_partner_instructions() -> None:
     Sets instructions and partner logo in session_state based on selected partner.
     Returns: None
     """
-    
+
     if st.session_state.get("partner_tool", None):
         if st.session_state["partner_tool"] == "dbt":
             from admin_apps.partner.dbt import DBT_IMAGE, DBT_INSTRUCTIONS
@@ -50,31 +43,34 @@ def set_partner_instructions() -> None:
 
 
 def configure_partner_semantic() -> None:
-    
     """
     Upload semantic files from local source.
     Returns: None
     """
-    
-    from admin_apps.journeys import builder
 
     partners = [None, "dbt", "looker"]
 
-    partner_tool = st.selectbox(
+    st.selectbox(
         "Select the partner tool",
         partners,
-        index = None,
+        index=None,
         key="partner_tool",
-        on_change=set_partner_instructions()
+        on_change=set_partner_instructions(),  # type: ignore
     )
     if st.session_state.get("partner_tool", None):
-        with st.expander(f"{st.session_state.get('partner_tool', '').title()} Instructions", expanded=True):
-            render_image(st.session_state['partner_image'], st.session_state['partner_image_size'])
-            st.write(st.session_state['partner_instructions'])
-    
+        with st.expander(
+            f"{st.session_state.get('partner_tool', '').title()} Instructions",
+            expanded=True,
+        ):
+            render_image(
+                st.session_state["partner_image"],
+                st.session_state["partner_image_size"],
+            )
+            st.write(st.session_state["partner_instructions"])
+
     # Previous dialog box widget values will reset when overlayed
-    if st.session_state.get('partner_tool', None):
-        st.session_state['selected_partner'] = st.session_state['partner_tool']
+    if st.session_state.get("partner_tool", None):
+        st.session_state["selected_partner"] = st.session_state["partner_tool"]
 
     if st.session_state["partner_tool"] == "dbt":
         upload_dbt_semantic()
@@ -86,6 +82,7 @@ class PartnerCompareRow:
     """
     Renders matched and unmatched cortex and partner fields for comparison.
     """
+
     def __init__(self, row_data: pd.Series) -> None:  # type: ignore
         self.row_data = row_data
         self.key = row_data["field_key"]
@@ -109,9 +106,13 @@ class PartnerCompareRow:
         if self.cortex_metadata and self.partner_metadata:
             metadata["merged"] = self.cortex_metadata.copy()
             if st.session_state["partner_metadata_preference"] == "Partner":
-                metadata['merged'] = {k:v for k,v in self.cortex_metadata.items() if v} | {k:v for k,v in self.partner_metadata.items() if v}
+                metadata["merged"] = {
+                    k: v for k, v in self.cortex_metadata.items() if v
+                } | {k: v for k, v in self.partner_metadata.items() if v}
             else:
-                metadata['merged'] = {k:v for k,v in self.partner_metadata.items() if v} | {k:v for k,v in self.cortex_metadata.items() if v}
+                metadata["merged"] = {
+                    k: v for k, v in self.partner_metadata.items() if v
+                } | {k: v for k, v in self.cortex_metadata.items() if v}
 
         else:
             metadata["merged"] = {}
@@ -168,10 +169,9 @@ class PartnerCompareRow:
             # Add expr to selected metadata if it's not included which is the case for dbt
             selected_metadata["expr"] = self.key
             return selected_metadata
-    
+
 
 def compare_sections(section_cortex: str, section_partner: str) -> str:
-    
     """
     Compares section_cortex and section_parnter returning the former if available.
     Otherwise, returns the latter.
@@ -188,10 +188,11 @@ def compare_sections(section_cortex: str, section_partner: str) -> str:
         return section_cortex
     else:
         return section_partner
-    
 
-def compare_data_types(details_cortex: dict[str, Any], details_partner: dict[str, Any]) -> str:
-    
+
+def compare_data_types(
+    details_cortex: dict[str, Any], details_partner: dict[str, Any]
+) -> Any:
     """
     Returns intended cortex datatype comparing cortex and partner datatype values.
 
@@ -216,7 +217,7 @@ def compare_data_types(details_cortex: dict[str, Any], details_partner: dict[str
     elif partner_data_type:
         return partner_data_type
     else:
-        return 'TEXT'
+        return "TEXT"
 
 
 @st.dialog("Integrate partner tool semantic specs", width="large")
@@ -227,7 +228,7 @@ def integrate_partner_semantics() -> None:
     Returns:
         None
     """
-    
+
     st.write(
         "Specify how to merge semantic metadata from partner tools with Cortex Analyst's semantic model."
     )
@@ -235,7 +236,9 @@ def integrate_partner_semantics() -> None:
     COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata.
     Where metadata is missing, the other semantic file will be checked."""
 
-    INTEGRATE_HELP = """Merge the selected Snowflake and Partner tables' semantics together."""
+    INTEGRATE_HELP = (
+        """Merge the selected Snowflake and Partner tables' semantics together."""
+    )
 
     SAVE_HELP = """Save the merges to the Cortex Analyst semantic model for validation and iteration."""
 
@@ -245,20 +248,23 @@ def integrate_partner_semantics() -> None:
     KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model
     but not in Cortex Analyst semantic model."""
 
-
-    if st.session_state.get('partner_setup', False):
+    if st.session_state.get("partner_setup", False):
         # Execute pre-processing behind the scenes based on vendor tool
         CortexSemanticTable.create_cortex_table_list()
-        if st.session_state.get("selected_partner", None) == 'looker':
+        if st.session_state.get("selected_partner", None) == "looker":
             LookerSemanticTable.create_cortex_table_list()
-        elif st.session_state.get("selected_partner", None) == 'dbt':
+        elif st.session_state.get("selected_partner", None) == "dbt":
             pass
         else:
             st.error("Selected partner tool not available.")
 
         # Create table selections for comparison
-        partner_tables = [model.get_name() for model in st.session_state["partner_semantic"]]
-        cortex_tables = [table.get_name() for table in st.session_state["cortex_comparison_tables"]]
+        partner_tables = [
+            model.get_name() for model in st.session_state["partner_semantic"]
+        ]
+        cortex_tables = [
+            table.get_name() for table in st.session_state["cortex_comparison_tables"]
+        ]
 
         st.write("Select which logical tables/views to compare and merge.")
         c1, c2 = st.columns(2)
@@ -289,19 +295,27 @@ def integrate_partner_semantics() -> None:
         with st.expander("Advanced configuration", expanded=False):
             # Create dataframe of each semantic file's fields with mergeable keys
             st.caption("Only shared metadata information displayed")
-            cortex_fields_df = CortexSemanticTable.retrieve_df_by_name(semantic_cortex_tbl)
-            
-            if st.session_state.get("selected_partner", None) == 'looker':
-                partner_fields_df = LookerSemanticTable.retrieve_df_by_name(semantic_partner_tbl)
-            if st.session_state.get("selected_partner", None) == 'dbt':
-                partner_fields_df = DBTSemanticModel.retrieve_df_by_name(semantic_partner_tbl)
-            
+            cortex_fields_df = CortexSemanticTable.retrieve_df_by_name(
+                semantic_cortex_tbl
+            )
+
+            if st.session_state.get("selected_partner", None) == "looker":
+                partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
+                    semantic_partner_tbl
+                )
+            if st.session_state.get("selected_partner", None) == "dbt":
+                partner_fields_df = DBTSemanticModel.retrieve_df_by_name(
+                    semantic_partner_tbl
+                )
+
             combined_fields_df = cortex_fields_df.merge(
                 partner_fields_df,
                 on="field_key",
                 how="outer",
                 suffixes=("_cortex", "_partner"),
-            ).replace(np.nan, None) # Will be comparing values to None in UI logic
+            ).replace(
+                np.nan, None
+            )  # Will be comparing values to None in UI logic
 
             # Convert json strings to dict for easier extraction later
             for col in ["field_details_cortex", "field_details_partner"]:
@@ -331,8 +345,12 @@ def integrate_partner_semantics() -> None:
             for k, v in combined_fields_df.iterrows():
                 # Get destination section and intended data type for cortex analyst semantic file
                 # If the key is found from the generator, use it. Otherwise, use the partner-specific logic.
-                target_section = compare_sections(v["section_cortex"], v["section_partner"])
-                target_data_type = compare_data_types(v["field_details_cortex"], v["field_details_partner"])
+                target_section = compare_sections(
+                    v["section_cortex"], v["section_partner"]
+                )
+                target_data_type = compare_data_types(
+                    v["field_details_cortex"], v["field_details_partner"]
+                )
                 with containers[target_section]:
                     selected_metadata = PartnerCompareRow(v).render_row()
                     if selected_metadata:
@@ -342,9 +360,7 @@ def integrate_partner_semantics() -> None:
         integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
         with integrate_col:
             merge_button = st.button(
-                "Merge",
-                help=INTEGRATE_HELP,
-                use_container_width=True
+                "Merge", help=INTEGRATE_HELP, use_container_width=True
             )
         with commit_col:
             reset_button = st.button(
@@ -355,19 +371,22 @@ def integrate_partner_semantics() -> None:
 
         if merge_button:
             set_sit_query_tag(
-                    get_snowflake_connection(),
-                    vendor=st.session_state['selected_partner'],
-                    action="merge",
-                )
+                get_snowflake_connection(),
+                vendor=st.session_state["selected_partner"],
+                action="merge",
+            )
             # Update fields in cortex semantic model
-            for i, tbl in enumerate(st.session_state['cortex_comparison_tables']):
+            for i, tbl in enumerate(st.session_state["cortex_comparison_tables"]):
                 if tbl.get_name() == semantic_cortex_tbl:
                     for k in sections.keys():
-                        st.session_state['current_yaml_as_dict']['tables'][i][k] = sections[k]
+                        st.session_state["current_yaml_as_dict"]["tables"][i][k] = (
+                            sections[k]
+                        )
 
             try:
-                st.session_state["yaml"] = yaml.dump(st.session_state['current_yaml_as_dict'],
-                                                        sort_keys=False)
+                st.session_state["yaml"] = yaml.dump(
+                    st.session_state["current_yaml_as_dict"], sort_keys=False
+                )
                 st.session_state["semantic_model"] = yaml_to_semantic_model(
                     st.session_state["yaml"]
                 )
@@ -379,10 +398,10 @@ def integrate_partner_semantics() -> None:
 
         if reset_button:
             set_sit_query_tag(
-                    get_snowflake_connection(),
-                    vendor=st.session_state['selected_partner'],
-                    action="integration_complete",
-                )
+                get_snowflake_connection(),
+                vendor=st.session_state["selected_partner"],
+                action="integration_complete",
+            )
             st.success(
                 "Integration complete! Please validate your semantic model before uploading."
             )

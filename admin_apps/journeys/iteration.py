@@ -10,21 +10,20 @@ from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
-from admin_apps.journeys.builder import get_available_databases, get_available_schemas
-
 from admin_apps.partner.partner_utils import integrate_partner_semantics
-
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
     add_logo,
     changed_from_last_validated_model,
     download_yaml,
+    format_snowflake_context,
+    get_available_databases,
+    get_available_schemas,
     get_snowflake_connection,
     init_session_states,
     upload_yaml,
     validate_and_upload_tmp_yaml,
-    format_snowflake_context,
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -506,7 +505,7 @@ def yaml_editor(yaml_str: str) -> None:
                 use_container_width=True,
                 help=PARTNER_SEMANTIC_HELP,
                 disabled=not st.session_state["validated"],
-                ):
+            ):
                 integrate_partner_semantics()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
@@ -573,7 +572,7 @@ def stage_selector_container() -> None:
         options=available_schemas,
         index=None,
         key="selected_iteration_schema",
-        format_func=lambda x: format_snowflake_context(x, -1)
+        format_func=lambda x: format_snowflake_context(x, -1),
     )
     if stage_schema:
         # When a valid schema is selected, fetch the available stages in that schema.
@@ -652,7 +651,7 @@ UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whe
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
 
-PARTNER_SEMANTIC_HELP = """Uploaded semantic files from a partner tool? 
+PARTNER_SEMANTIC_HELP = """Uploaded semantic files from a partner tool?
 Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 

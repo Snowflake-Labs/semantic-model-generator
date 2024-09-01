@@ -4,10 +4,10 @@ from snowflake.connector import ProgrammingError
 
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
-    get_available_tables,
-    get_available_schemas,
-    get_available_databases,
     format_snowflake_context,
+    get_available_databases,
+    get_available_schemas,
+    get_available_tables,
     input_sample_value_num,
     input_semantic_file_name,
     run_generate_model_str_from_snowflake,
