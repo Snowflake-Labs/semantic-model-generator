@@ -27,9 +27,9 @@ from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     fetch_databases,
-    fetch_warehouses,
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
+    fetch_warehouses,
     set_database,
     set_schema,
 )
@@ -98,6 +98,7 @@ def get_available_databases() -> list[str]:
     """
 
     return fetch_databases(get_snowflake_connection())
+
 
 @st.cache_resource(show_spinner=False)
 def get_available_warehouses() -> list[str]:
@@ -875,9 +876,11 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
             yaml_str = temp_file.read()
             return yaml_str
-        
 
-def get_sit_query_tag(vendor: str = None, action: str = None) -> str:
+
+def get_sit_query_tag(
+    vendor: Optional[str] = None, action: Optional[str] = None
+) -> str:
     """
     Returns SIT query tag.
     Returns: str
@@ -892,8 +895,11 @@ def get_sit_query_tag(vendor: str = None, action: str = None) -> str:
     return json.dumps(query_tag)
 
 
-
-def set_sit_query_tag(conn: SnowflakeConnection, vendor: str = None, action: str = None) -> None:
+def set_sit_query_tag(
+    conn: SnowflakeConnection,
+    vendor: Optional[str] = None,
+    action: Optional[str] = None,
+) -> None:
     """
     Sets query tag on a single zero-compute ping for tracking.
     Returns: None

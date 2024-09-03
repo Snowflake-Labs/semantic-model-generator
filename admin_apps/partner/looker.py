@@ -19,14 +19,14 @@ from admin_apps.shared_utils import (
     check_valid_session_state_values,
     format_snowflake_context,
     get_available_databases,
-    get_available_warehouses,
     get_available_schemas,
+    get_available_warehouses,
+    get_sit_query_tag,
     get_snowflake_connection,
     input_sample_value_num,
     input_semantic_file_name,
     run_generate_model_str_from_snowflake,
     set_sit_query_tag,
-    get_sit_query_tag
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_dict
 
@@ -154,7 +154,7 @@ def set_looker_semantic() -> None:
     with col2:
         dynamic_table = st.checkbox(
             "Dynamic Table",
-            key='dynamic',
+            key="dynamic",
             value=False,
         )
     col1, col2 = st.columns(2)
@@ -187,15 +187,15 @@ def set_looker_semantic() -> None:
             "Dynamic Table Target Lag",
             list(range(1, 41)),
             index=0,
-            key='target_lag',
+            key="target_lag",
             disabled=not dynamic_table,
             help="Specifies the maximum amount of time that the dynamic table’s content should lag behind updates to the base tables.",
         )
         target_lag_unit: str = st.selectbox(  # type: ignore
             "Target Lag Unit",
-            ['seconds','minutes','hours','days'],
+            ["seconds", "minutes", "hours", "days"],
             index=1,
-            key='target_lag_unit',
+            key="target_lag_unit",
             disabled=not dynamic_table,
             help="Specifies the maximum amount of time that the dynamic table’s content should lag behind updates to the base tables.",
         )
@@ -203,7 +203,7 @@ def set_looker_semantic() -> None:
             "Warehouse",
             available_warehouses,
             index=None,
-            key='dynamic_warehouse',
+            key="dynamic_warehouse",
             disabled=not dynamic_table,
             help="Specifies the name of the warehouse that provides the compute resources for refreshing the dynamic table.",
         )
@@ -234,17 +234,17 @@ def set_looker_semantic() -> None:
                 full_tablename = f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"
 
                 looker_columns = render_looker_explore_as_table(
-                    conn = get_snowflake_connection(),
-                    model_name = st.session_state["looker_model_name"].lower(),
-                    explore_name = st.session_state["looker_explore_name"].lower(),
-                    snowflake_context = st.session_state["looker_target_schema"],
-                    table_name = st.session_state["looker_target_table_name"].upper(),
-                    optional_db = st.session_state["looker_connection_db"],
-                    fields = None,  # TO DO - Add support for field selection
-                    dynamic = dynamic_table,
-                    target_lag = target_lag,
-                    target_lag_unit = target_lag_unit,
-                    warehouse = dynamic_warehouse,
+                    conn=get_snowflake_connection(),
+                    model_name=st.session_state["looker_model_name"].lower(),
+                    explore_name=st.session_state["looker_explore_name"].lower(),
+                    snowflake_context=st.session_state["looker_target_schema"],
+                    table_name=st.session_state["looker_target_table_name"].upper(),
+                    optional_db=st.session_state["looker_connection_db"],
+                    fields=None,  # TO DO - Add support for field selection
+                    dynamic=dynamic_table,
+                    target_lag=target_lag,
+                    target_lag_unit=target_lag_unit,
+                    warehouse=dynamic_warehouse,
                 )
                 st.session_state["looker_field_metadata"] = looker_columns
             if st.session_state[
@@ -398,25 +398,31 @@ def create_explore_ctas(
     ]
     filtered_query_string = "\n".join(filtered_lines)
     columns = ", ".join(column_list)
-    comment = f"COMMENT = '{get_sit_query_tag(vendor = 'looker', action = 'materialize')}'"
+    comment = (
+        f"COMMENT = '{get_sit_query_tag(vendor = 'looker', action = 'materialize')}'"
+    )
 
     if dynamic:
-        if not [x for x in (target_lag,
-                            target_lag_unit,
-                            warehouse) if x is None]:
+        if not [x for x in (target_lag, target_lag_unit, warehouse) if x is None]:
             ctas_clause = f"""
             CREATE OR REPLACE DYNAMIC TABLE {snowflake_context}.{table_name}({columns})
             TARGET_LAG = '{target_lag} {target_lag_unit}'
             WAREHOUSE = {warehouse}
             """
         else:
-            st.warning("""
+            st.warning(
+                """
                        Dynamic materialization requires target_lag, target_lag_unit, and warehouse.
                        Standard materialization will be used.
-                       """)
-            ctas_clause = f"CREATE OR REPLACE TABLE {snowflake_context}.{table_name}({columns}) "
+                       """
+            )
+            ctas_clause = (
+                f"CREATE OR REPLACE TABLE {snowflake_context}.{table_name}({columns}) "
+            )
     else:
-        ctas_clause = f"CREATE OR REPLACE TABLE {snowflake_context}.{table_name}({columns}) "
+        ctas_clause = (
+            f"CREATE OR REPLACE TABLE {snowflake_context}.{table_name}({columns}) "
+        )
 
     ctas_clause += comment + " AS\n" + filtered_query_string
     return ctas_clause
@@ -516,7 +522,7 @@ def render_looker_explore_as_table(
         target_lag,
         target_lag_unit,
         warehouse,
-        )
+    )
 
     # Create materialized equivalent of Explore
     # Looker sources don't require explicit database qualification but instead use connection database implicitly.
