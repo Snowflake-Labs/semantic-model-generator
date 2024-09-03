@@ -260,6 +260,22 @@ def fetch_databases(conn: SnowflakeConnection) -> List[str]:
     return [result[1] for result in results]
 
 
+def fetch_warehouses(conn: SnowflakeConnection) -> List[str]:
+    """
+    Fetches all warehouses that the current user has access to
+    Args:
+        conn: SnowflakeConnection to run the query
+
+    Returns: a list of warehouses names
+
+    """
+    query = "show warehouses;"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    results = cursor.fetchall()
+    return [result[0] for result in results]
+
+
 def fetch_schemas_in_database(conn: SnowflakeConnection, db_name: str) -> List[str]:
     """
     Fetches all schemas that the current user has access to in the current database

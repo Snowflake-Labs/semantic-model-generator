@@ -27,6 +27,7 @@ from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     fetch_databases,
+    fetch_warehouses,
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
     set_database,
@@ -97,6 +98,16 @@ def get_available_databases() -> list[str]:
     """
 
     return fetch_databases(get_snowflake_connection())
+
+@st.cache_resource(show_spinner=False)
+def get_available_warehouses() -> list[str]:
+    """
+    Simple wrapper around fetch_warehouses to cache the results.
+
+    Returns: list of warehouse names
+    """
+
+    return fetch_warehouses(get_snowflake_connection())
 
 
 class GeneratorAppScreen(str, Enum):
@@ -864,12 +875,12 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
             yaml_str = temp_file.read()
             return yaml_str
+        
 
-
-def set_sit_query_tag(conn: SnowflakeConnection, vendor: str, action: str) -> None:
+def get_sit_query_tag(vendor: str = None, action: str = None) -> str:
     """
-    Sets query tag on a single zero-compute ping for tracking.
-    Returns: None
+    Returns SIT query tag.
+    Returns: str
     """
 
     query_tag = {
@@ -878,8 +889,19 @@ def set_sit_query_tag(conn: SnowflakeConnection, vendor: str, action: str) -> No
         "version": {"major": 1, "minor": 0},
         "attributes": {"vendor": vendor, "action": action},
     }
+    return json.dumps(query_tag)
 
-    conn.cursor().execute(f"alter session set query_tag='{json.dumps(query_tag)}'")
+
+
+def set_sit_query_tag(conn: SnowflakeConnection, vendor: str = None, action: str = None) -> None:
+    """
+    Sets query tag on a single zero-compute ping for tracking.
+    Returns: None
+    """
+
+    query_tag = get_sit_query_tag(vendor, action)
+
+    conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
     conn.cursor().execute("SELECT 'SKIMANTICS';")
     conn.cursor().execute("alter session set query_tag=''")
 
