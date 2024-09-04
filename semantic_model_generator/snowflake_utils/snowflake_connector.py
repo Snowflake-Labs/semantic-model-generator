@@ -90,6 +90,7 @@ def _get_table_comment(
                 conn.cursor()  # type: ignore[union-attr]
                 .execute(f"select get_ddl('table', '{table_name}');")
                 .fetchall()[0][0]
+                .replace("'", "\\'")
             )
             comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
             complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
@@ -258,6 +259,22 @@ def fetch_databases(conn: SnowflakeConnection) -> List[str]:
     cursor.execute(query)
     results = cursor.fetchall()
     return [result[1] for result in results]
+
+
+def fetch_warehouses(conn: SnowflakeConnection) -> List[str]:
+    """
+    Fetches all warehouses that the current user has access to
+    Args:
+        conn: SnowflakeConnection to run the query
+
+    Returns: a list of warehouses names
+
+    """
+    query = "show warehouses;"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    results = cursor.fetchall()
+    return [result[0] for result in results]
 
 
 def fetch_schemas_in_database(conn: SnowflakeConnection, db_name: str) -> List[str]:

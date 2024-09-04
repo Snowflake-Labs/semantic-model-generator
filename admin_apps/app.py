@@ -7,6 +7,7 @@ st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model G
 from admin_apps.shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
+    set_sit_query_tag,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
@@ -61,12 +62,19 @@ def verify_environment_setup() -> None:
 
 
 if __name__ == "__main__":
-    from admin_apps.journeys import builder, iteration
+    from admin_apps.journeys import builder, iteration, partner
 
     def onboarding_dialog() -> None:
         """
         Renders the initial screen where users can choose to create a new semantic model or edit an existing one.
         """
+
+        # Direct to specific page based instead of default onboarding if user comes from successful partner setup
+        if (
+            st.session_state.get("partner_setup", False)
+            and st.session_state.get("partner_tool", None) == "looker"
+        ):
+            builder.show()
         st.markdown(
             """
                 <div style="text-align: center;">
@@ -94,6 +102,18 @@ if __name__ == "__main__":
                 type="primary",
             ):
                 iteration.show()
+            st.markdown("")
+            if st.button(
+                "**:package: Start with partner semantic model**",
+                use_container_width=True,
+                type="primary",
+            ):
+                set_sit_query_tag(
+                    get_snowflake_connection(),
+                    vendor="",
+                    action="start",
+                )
+                partner.show()
 
     verify_environment_setup()
 

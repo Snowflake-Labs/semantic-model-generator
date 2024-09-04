@@ -10,16 +10,18 @@ from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
-from admin_apps.journeys.builder import get_available_databases, get_available_schemas
+from admin_apps.partner.partner_utils import integrate_partner_semantics
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
     add_logo,
     changed_from_last_validated_model,
     download_yaml,
+    format_snowflake_context,
+    get_available_databases,
+    get_available_schemas,
     get_snowflake_connection,
     init_session_states,
-    integrate_partner_semantics,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
@@ -497,13 +499,14 @@ def yaml_editor(yaml_str: str) -> None:
             help=UPLOAD_HELP,
         ):
             upload_dialog(content)
-        if four.button(
-            "Partner Semantic",
-            use_container_width=True,
-            help=PARTNER_SEMANTIC_HELP,
-            disabled=not st.session_state["validated"],
-        ):
-            integrate_partner_semantics()
+        if st.session_state.get("partner_setup", False):
+            if four.button(
+                "Integrate Partner",
+                use_container_width=True,
+                help=PARTNER_SEMANTIC_HELP,
+                disabled=not st.session_state["validated"],
+            ):
+                integrate_partner_semantics()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
@@ -569,6 +572,7 @@ def stage_selector_container() -> None:
         options=available_schemas,
         index=None,
         key="selected_iteration_schema",
+        format_func=lambda x: format_snowflake_context(x, -1),
     )
     if stage_schema:
         # When a valid schema is selected, fetch the available stages in that schema.
@@ -584,6 +588,7 @@ def stage_selector_container() -> None:
         options=available_stages,
         index=None,
         key="selected_iteration_stage",
+        format_func=lambda x: format_snowflake_context(x, -1),
     )
 
 
@@ -646,8 +651,8 @@ UPLOAD_HELP = """Upload the YAML to the Snowflake stage. You want to do that whe
 you think your semantic model is doing great and should be pushed to prod! Note that
 the semantic model must be validated to be uploaded."""
 
-PARTNER_SEMANTIC_HELP = """Have an existing semantic layer in a partner tool that's integrated
-with Snowflake? Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
+PARTNER_SEMANTIC_HELP = """Uploaded semantic files from a partner tool?
+Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 

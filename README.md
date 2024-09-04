@@ -7,6 +7,25 @@ Please complete the instructions in [setup](#setup), then proceed to the instruc
 
 If you want to see what a semantic model looks like, skip to [Examples](#examples).
 
+## Table of Contents
+
+  * [Table of Contents](#table-of-contents)
+  * [Setup](#setup)
+  * [Streamlit App](#streamlit-app)
+  * [CLI Tool](#cli-tool)
+    + [Generation](#generation)
+    + [Validation](#validation)
+  * [Python](#python)
+    + [Generation](#generation-1)
+    + [Validation](#validation-1)
+  * [Usage](#usage)
+    + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
+    + [Auto-Generated Descriptions](#auto-generated-descriptions)
+    + [Additional Fields to Fill Out](#additional-fields-to-fill-out)
+  * [Examples](#examples)
+  * [Release](#release)
+
+
 ## Setup
 
 We currently leverage credentials saved as environment variables.
@@ -278,6 +297,19 @@ In addition, consider adding the following elements to your semantic model:
     * Example: `col1 - col2` could be the `expr` for a logical column.
 2. Synonyms. Any additional synonyms for column names.
 3. Filters. Additional filters with their relevant `expr`.
+
+### Partner Semantic Support
+
+We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst semantic files using logic and metadata from partner tools.
+Please see below for details about current partner support. 
+
+**IMPORTANT**: Use the [Streamlit App](#streamlit-app) to leverage existing partner semantic/metric layers. 
+
+| Tool     | Method  | Requirements  |
+| -------- | ------- | ------- |
+| DBT      | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table.    |  DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake.   |
+| Looker   |We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file. |  Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly.  |
+
 
 
 ## Examples

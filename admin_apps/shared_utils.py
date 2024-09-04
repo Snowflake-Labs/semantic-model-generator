@@ -9,22 +9,27 @@ from enum import Enum
 from io import StringIO
 from typing import Any, Optional
 
-import numpy as np
 import pandas as pd
 import streamlit as st
-import yaml
+from PIL import Image
 from snowflake.connector import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
-    proto_to_dict,
     proto_to_yaml,
     yaml_to_semantic_model,
 )
-from semantic_model_generator.generate_model import raw_schema_to_semantic_context
+from semantic_model_generator.generate_model import (
+    generate_model_str_from_snowflake,
+    raw_schema_to_semantic_context,
+)
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
+    fetch_databases,
+    fetch_schemas_in_database,
+    fetch_tables_views_in_schema,
+    fetch_warehouses,
     set_database,
     set_schema,
 )
@@ -60,6 +65,50 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Returns: SnowflakeConnection
     """
     return get_connector().open_connection(db_name="")
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_tables(schema: str) -> list[str]:
+    """
+    Simple wrapper around fetch_table_names to cache the results.
+
+    Returns: list of fully qualified table names
+    """
+
+    return fetch_tables_views_in_schema(get_snowflake_connection(), schema)
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_schemas(db: str) -> list[str]:
+    """
+    Simple wrapper around fetch_schemas to cache the results.
+
+    Returns: list of schema names
+    """
+
+    return fetch_schemas_in_database(get_snowflake_connection(), db)
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_databases() -> list[str]:
+    """
+    Simple wrapper around fetch_databases to cache the results.
+
+    Returns: list of database names
+    """
+
+    return fetch_databases(get_snowflake_connection())
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_warehouses() -> list[str]:
+    """
+    Simple wrapper around fetch_warehouses to cache the results.
+
+    Returns: list of warehouse names
+    """
+
+    return fetch_warehouses(get_snowflake_connection())
 
 
 class GeneratorAppScreen(str, Enum):
@@ -829,261 +878,96 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             return yaml_str
 
 
-def unpack_yaml(
-    data: Any | dict[str, Any] | list[Any]
-) -> Any | dict[str, Any] | list[str]:
+def get_sit_query_tag(
+    vendor: Optional[str] = None, action: Optional[str] = None
+) -> str:
     """
-    Recursively unpacks a YAML structure into a Python dictionary.
-    """
-    if isinstance(data, dict):
-        return {key: unpack_yaml(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [unpack_yaml(item) for item in data]
-    else:
-        return data
-
-
-def load_yaml_file(file_paths: list[Any]) -> list[Any]:  # type: ignore
-    """
-    Loads one or more YAML files and combines them into a single list.
-    """
-    combined_yaml = []
-    for file_path in file_paths:
-        yaml_content = yaml.safe_load(file_path)
-        combined_yaml.append(unpack_yaml(yaml_content))
-    return combined_yaml
-
-
-def extract_key_values(data: list[dict[str, Any]], key: str) -> list[Any]:
-    """
-    Extracts key's value from a list of dictionaries.
-    """
-    result = []
-    for item in data:
-        values = item.get(key, [])
-        if isinstance(values, list):
-            result.extend(values)
-        else:
-            result.append(values)
-    return result
-
-
-def extract_expressions_from_sections(
-    data_dict: dict[str, Any], section_names: list[str]
-) -> dict[str, dict[str, Any]]:
-    """
-    Extracts data in section_names from a dictionary into a nested dictionary:
+    Returns SIT query tag.
+    Returns: str
     """
 
-    def extract_key(obj: dict[str, Any]) -> str | Any:
-        return obj.get("expr", obj["name"]).lower()
+    query_tag = {
+        "origin": "sf_sit",
+        "name": "skimantics",
+        "version": {"major": 1, "minor": 0},
+        "attributes": {"vendor": vendor, "action": action},
+    }
+    return json.dumps(query_tag)
 
-    d = {}
-    for i in section_names:
-        d[i] = {extract_key(obj): obj for obj in data_dict.get(i, [])}
 
-    return d
-
-
-def upload_partner_semantic() -> bool:
+def set_sit_query_tag(
+    conn: SnowflakeConnection,
+    vendor: Optional[str] = None,
+    action: Optional[str] = None,
+) -> None:
     """
-    Upload the semantic model to a stage.
-    """
-    partners = [None, "dbt"]
-    uploaded_files = None
-
-    selected_partner = st.session_state.get("partner_tool", None)
-
-    st.session_state["partner_tool"] = st.selectbox(
-        "Select the partner tool", partners, index=partners.index(selected_partner)
-    )
-    if st.session_state["partner_tool"] == "dbt":
-        uploaded_files = st.file_uploader(
-            f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
-            type=["yaml", "yml"],
-            accept_multiple_files=True,
-            key="myfile",
-        )
-        if uploaded_files:
-            partner_semantic = extract_key_values(
-                load_yaml_file(uploaded_files), "semantic_models"
-            )
-            if not partner_semantic:
-                st.error(
-                    "Upload file does not contain required semantic_models section."
-                )
-            else:
-                st.session_state["partner_semantic"] = partner_semantic
-                st.session_state["uploaded_semantic_files"] = [
-                    i.name for i in uploaded_files
-                ]
-        else:
-            st.session_state["partner_semantic"] = None
-    return bool(uploaded_files)
-
-
-class PartnerCompareRow:
-    def __init__(self, row_data: pd.Series) -> None:  # type: ignore
-        self.row_data = row_data
-        self.key = row_data["field_key"]
-        self.cortex_metadata = (
-            self.row_data["field_details_cortex"]
-            if self.row_data["field_details_cortex"]
-            else {}
-        )
-        self.partner_metadata = (
-            self.row_data["field_details_partner"]
-            if self.row_data["field_details_partner"]
-            else {}
-        )
-
-    def render_row(self) -> None | dict[str, Any]:  # type: ignore
-        toggle_options = ["merged", "cortex", "partner", "remove"]
-        metadata = {}
-
-        # Create metadata based for each field given merging or singular semantic file useage of the field
-        # Merge will merge the 2 based on user-selected preference
-        common_fields = ["name", "description"]
-        if self.cortex_metadata and self.partner_metadata:
-            metadata["merged"] = self.cortex_metadata.copy()
-            if st.session_state["partner_metadata_preference"] == "Partner":
-                for n in common_fields:
-                    metadata["merged"][n] = self.partner_metadata.get(
-                        n, self.cortex_metadata.get(n, None)
-                    )
-            else:
-                for n in common_fields:
-                    metadata["merged"][n] = self.cortex_metadata.get(
-                        n, self.partner_metadata.get(n, None)
-                    )
-
-        else:
-            metadata["merged"] = {}
-        metadata["partner"] = (
-            {field: self.partner_metadata.get(field) for field in common_fields}
-            if self.partner_metadata
-            else {}
-        )
-        metadata["cortex"] = self.cortex_metadata if self.cortex_metadata else {}
-        metadata["remove"] = {}
-
-        if metadata["merged"]:
-            toggle_default = "merged"
-        elif metadata["partner"]:
-            if st.session_state["keep_extra_partner"]:
-                toggle_default = "partner"
-            else:
-                toggle_default = "remove"
-        elif metadata["cortex"]:
-            if st.session_state["keep_extra_cortex"]:
-                toggle_default = "cortex"
-            else:
-                toggle_default = "remove"
-        else:
-            toggle_default = "remove"
-
-        key_col, detail_col = st.columns((0.5, 1))
-        with key_col:
-            st.write(self.key)
-            # We want to disable non-options but always keep remove option
-            revised_options = [
-                i for i in toggle_options if metadata[i] or i == "remove"
-            ]
-            detail_selection: str = st.radio(
-                "Keep",  # type: ignore
-                index=revised_options.index(toggle_default),
-                options=revised_options,
-                key=f"row_{self.key}",
-                format_func=lambda x: x.capitalize(),
-                label_visibility="collapsed",
-            )
-        with detail_col:
-            if metadata[detail_selection]:
-                st.json(
-                    {
-                        k: v
-                        for k, v in metadata[detail_selection].items()
-                        if k in common_fields and v is not None
-                    }
-                )
-            else:
-                st.write("NA")
-        st.divider()
-        # Extract the selected metadata if not set to remove
-        if detail_selection != "remove":
-            selected_metadata: dict[str, Any] = metadata[detail_selection]
-            # Add expr to selected metadata if it's not included which is the case for dbt
-            selected_metadata["expr"] = self.key
-            return selected_metadata
-
-
-def make_field_df(fields: dict[str, Any]) -> pd.DataFrame:
-    """
-    Converts a nested dictionary of fields into a DataFrame.
-    """
-    rows = []
-    for section, entity_list in fields.items():
-        for field_key, field_details in entity_list.items():
-            rows.append(
-                {
-                    "section": section,
-                    "field_key": field_key,
-                    "field_details": field_details,
-                }
-            )
-    return pd.DataFrame(rows)
-
-
-def create_table_field_df(
-    table_name: str, sections: list[str], yaml_data: list[dict[str, Any]]
-) -> pd.DataFrame:
-    """
-    Extracts sections of table_name in yaml_data dictionary as a DataFrame.
-    """
-    view = [x for x in yaml_data if x.get("name") == table_name][0]
-    fields = extract_expressions_from_sections(view, sections)
-    fields_df = make_field_df(fields)
-
-    return fields_df
-
-
-def determine_field_section(
-    section_cortex: str,
-    section_partner: str,
-    field_details_cortex: dict[str, str],
-    field_details_partner: dict[str, str],
-) -> tuple[str, str | None]:
-    """
-    Derives intended section of field in cortex analyst model.
-
-    Currently expects dbt as source.
+    Sets query tag on a single zero-compute ping for tracking.
+    Returns: None
     """
 
-    if section_cortex and field_details_cortex:
+    query_tag = get_sit_query_tag(vendor, action)
+
+    conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
+    conn.cursor().execute("SELECT 'SKIMANTICS';")
+    conn.cursor().execute("alter session set query_tag=''")
+
+
+def set_table_comment(
+    conn: SnowflakeConnection,
+    tablename: str,
+    comment: str,
+    table_type: Optional[str] = None,
+) -> None:
+    """
+    Sets comment on provided table.
+    Returns: None
+    """
+    if table_type is None:
+        table_type = ""
+    query = f"ALTER {table_type} TABLE {tablename} SET COMMENT = '{comment}'"
+    conn.cursor().execute(query)
+
+
+def render_image(image_file: str, size: tuple[int, int]) -> None:
+    """
+    Renders image in streamlit app with custom width x height by pixel.
+    """
+    image = Image.open(image_file)
+    new_image = image.resize(size)
+    st.image(new_image)
+
+
+def format_snowflake_context(context: str, index: Optional[int] = None) -> str:
+    """
+    Extracts the desired part of the Snowflake context.
+    """
+    if index and "." in context:
+        split_context = context.split(".")
         try:
-            data_type = field_details_cortex.get("data_type", None)
-        except TypeError:
-            data_type = "TEXT"
-        return (section_cortex, data_type)
-    else:  # No matching cortex field found; field is partner is a novel logical field
-        if section_partner == "entities":
-            section_cortex = "dimensions"
-            data_type = "TEXT"
-        elif section_partner == "measures":
-            section_cortex = "measures"
-            data_type = "NUMBER"
-        else:  # field_details_partner == 'dimensions'
-            try:
-                if field_details_partner.get("type") == "time":
-                    section_cortex = "time_dimensions"
-                    data_type = "DATE"
-            except TypeError:
-                section_cortex = "dimensions"
-                data_type = "TEXT"
-            else:
-                section_cortex = "dimensions"
-                data_type = "TEXT"
-        return (section_cortex, data_type)
+            return split_context[index]
+        except IndexError:  # Return final segment if mis-typed index
+            return split_context[-1]
+    else:
+        return context
+
+
+def check_valid_session_state_values(vars: list[str]) -> bool:
+    """
+    Returns False if any vars are not found or None in st.session_state.
+    Args:
+        vars (list[str]): List of variables to check in st.session_state
+
+    Returns: bool
+    """
+    empty_vars = []
+    for var in vars:
+        if not st.session_state.get(var, None):
+            empty_vars.append(var)
+    if empty_vars:
+        st.error(f"Please enter values for {vars}.")
+        return False
+    else:
+        return True
 
 
 def run_cortex_complete(
@@ -1105,160 +989,66 @@ def run_cortex_complete(
         return None
 
 
-@st.dialog("Integrate partner tool semantic specs", width="large")
-def integrate_partner_semantics() -> None:
-    st.write(
-        "Upload semantic files from supported partners to merge with Cortex Analyst semantic model."
+def input_semantic_file_name() -> str:
+    """
+    Prompts the user to input the name of the semantic model they are creating.
+    Returns:
+        str: The name of the semantic model.
+    """
+
+    model_name = st.text_input(
+        "Semantic Model Name (no .yaml suffix)",
+        help="The name of the semantic model you are creating. This is separate from the filename, which we will set later.",
     )
+    return model_name
 
-    COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata.
-    Where metadata is missing, the other semantic file will be checked."""
 
-    INTEGRATE_HELP = """Merge the Cortex Analyst semantic file and Partner semantic file into the
-    primary Cortex Analyst yaml editor."""
+def input_sample_value_num() -> int:
+    """
+    Function to prompt the user to input the maximum number of sample values per column.
+    Returns:
+        int: The maximum number of sample values per column.
+    """
 
-    KEEP_CORTEX_HELP = """Retain fields that are found in Cortex Analyst semantic model
-    but not in Partner semantic model."""
+    sample_values: int = st.selectbox(  # type: ignore
+        "Maximum number of sample values per column",
+        list(range(1, 40)),
+        index=0,
+        help="NOTE: For dimensions, time measures, and measures, we enforce a minimum of 25, 3, and 3 sample values respectively.",
+    )
+    return sample_values
 
-    KEEP_PARTNER_HELP = """Retain fields that are found in Partner semantic model
-    but not in Cortex Analyst semantic model."""
 
-    upload_partner_semantic()
-    st.divider()
+def run_generate_model_str_from_snowflake(
+    model_name: str,
+    sample_values: int,
+    base_tables: list[str],
+) -> None:
+    """
+    Runs generate_model_str_from_snowflake to generate cortex semantic shell.
+    Args:
+        model_name (str): Semantic file name (without .yaml suffix).
+        sample_values (int): Number of sample values to provide for each table in generation.
+        base_tables (list[str]): List of fully-qualified Snowflake tables to include in the semantic model.
 
-    if (
-        st.session_state.get("partner_semantic", None)
-        and st.session_state.get("partner_tool", None)
-        and st.session_state.get("uploaded_semantic_files", None)
-    ):
+    Returns: None
+    """
 
-        # Get cortex semantic file as dictionary
-        cortex_semantic = proto_to_dict(st.session_state["semantic_model"])
-        cortex_tables = extract_key_values(cortex_semantic["tables"], "name")
-        partner_tables = extract_key_values(
-            st.session_state["partner_semantic"], "name"
-        )
-        st.write("Select which logical views to compare and merge.")
-        c1, c2 = st.columns(2)
-        with c1:
-            semantic_cortex_tbl: str = st.selectbox("Snowflake", cortex_tables)  # type: ignore
-        with c2:
-            semantic_partner_tbl: str = st.selectbox("Partner", partner_tables)  # type: ignore
-
-        st.session_state["partner_metadata_preference"] = st.selectbox(
-            "For fields shared in both sources, which source should be checked first for common metadata?",
-            ["Partner", "Cortex"],
-            index=0,
-            help=COMPARE_SEMANTICS_HELP,
-        )
-        orphan_label, orphan_col1, orphan_col2 = st.columns(
-            3, vertical_alignment="center", gap="small"
-        )
-        with orphan_label:
-            st.write("Retain unmatched fields:")
-        with orphan_col1:
-            st.session_state["keep_extra_cortex"] = st.toggle(
-                "Cortex", value=True, help=KEEP_CORTEX_HELP
-            )
-        with orphan_col2:
-            st.session_state["keep_extra_partner"] = st.toggle(
-                "Partner", value=True, help=KEEP_PARTNER_HELP
-            )
-        with st.expander("Advanced configuration", expanded=False):
-            st.caption("Only shared metadata information displayed")
-            # Create dataframe of each semantic file's fields with mergeable keys
-            partner_fields_df = create_table_field_df(
-                semantic_partner_tbl,  # type: ignore
-                ["dimensions", "measures", "entities"],
-                st.session_state["partner_semantic"],
-            )
-            cortex_fields_df = create_table_field_df(
-                semantic_cortex_tbl,  # type: ignore
-                ["dimensions", "time_dimensions", "measures"],
-                cortex_semantic["tables"],
-            )
-            combined_fields_df = cortex_fields_df.merge(
-                partner_fields_df,
-                on="field_key",
-                how="outer",
-                suffixes=("_cortex", "_partner"),
-            ).replace(np.nan, None)
-            # Convert json strings to dict for easier extraction later
-            for col in ["field_details_cortex", "field_details_partner"]:
-                combined_fields_df[col] = combined_fields_df[col].apply(
-                    lambda x: (
-                        json.loads(x)
-                        if not pd.isnull(x) and not isinstance(x, dict)
-                        else x
-                    )
-                )
-            # Create containers and store them in a dictionary
-            containers = {
-                "dimensions": st.container(),
-                "measures": st.container(),
-                "time_dimensions": st.container(),
-            }
-
-            # Assign labels to the containers
-            for key in containers.keys():
-                containers[key].write(key.replace("_", " ").title())
-
-            # Initialize sections as empty lists
-            sections: dict[str, list[dict[str, Any]]] = {
-                key: [] for key in containers.keys()
-            }
-
-            for k, v in combined_fields_df.iterrows():
-                # Get destination section for cortex analyst semantic file
-                target_section, target_data_type = determine_field_section(
-                    v["section_cortex"],
-                    v["section_partner"],
-                    v["field_details_cortex"],
-                    v["field_details_partner"],
-                )
-                with containers[target_section]:
-                    selected_metadata = PartnerCompareRow(v).render_row()
-                    if selected_metadata:
-                        selected_metadata["data_type"] = target_data_type
-                        sections[target_section].append(selected_metadata)
-
-        integrate_col, commit_col, _ = st.columns((1, 1, 5), gap="small")
-        with integrate_col:
-            merge_button = st.button(
-                "Merge", help=INTEGRATE_HELP, use_container_width=True
-            )
-        with commit_col:
-            reset_button = st.button(
-                "Save",
-                help="Save the merged results and return to the main iteration screen",
-                use_container_width=True,
+    if not model_name:
+        st.error("Please provide a name for your semantic model.")
+    elif not base_tables:
+        st.error("Please select at least one table to proceed.")
+    else:
+        with st.spinner("Generating model. This may take a minute or two..."):
+            yaml_str = generate_model_str_from_snowflake(
+                base_tables=base_tables,
+                snowflake_account=st.session_state["account_name"],
+                semantic_model_name=model_name,
+                n_sample_values=sample_values,  # type: ignore
+                conn=get_snowflake_connection(),
             )
 
-        if merge_button:
-            # Update fields in cortex semantic model
-            for i, tbl in enumerate(cortex_semantic["tables"]):
-                if tbl.get("name", None) == semantic_cortex_tbl:
-                    for k in sections.keys():
-                        cortex_semantic["tables"][i][k] = sections[k]
-            # Submitted changes to fields will be captured in the yaml editor
-            # User will need to make necessary modifications there before validating/uploading
-            try:
-                st.session_state["yaml"] = yaml.dump(cortex_semantic, sort_keys=False)
-                st.session_state["semantic_model"] = yaml_to_semantic_model(
-                    st.session_state["yaml"]
-                )
-                merge_msg = st.success("Merging...")
-                time.sleep(1)
-                merge_msg.empty()
-            except Exception as e:
-                st.error(f"Integration failed: {e}")
-
-        if reset_button:
-            st.success(
-                "Integration complete! Please validate your semantic model before uploading."
-            )
-            time.sleep(1.5)
-            st.rerun()  # Lazy alternative to resetting all configurations
+            st.session_state["yaml"] = yaml_str
 
 
 @dataclass
