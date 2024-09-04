@@ -27,6 +27,7 @@ from admin_apps.shared_utils import (
     input_semantic_file_name,
     run_generate_model_str_from_snowflake,
     set_sit_query_tag,
+    set_table_comment,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_dict
 
@@ -208,6 +209,9 @@ def set_looker_semantic() -> None:
             help="Specifies the name of the warehouse that provides the compute resources for refreshing the dynamic table.",
         )
     st.divider()
+    st.write(
+        "Please fill out the following fields to start building your semantic model."
+    )
     col1, col2 = st.columns(2)
     with col1:
         model_name = input_semantic_file_name()
@@ -231,14 +235,13 @@ def set_looker_semantic() -> None:
             with st.spinner("Saving Explore as a Snowflake table..."):
 
                 # Cortex model generation reqires fully-qualified table name
-                full_tablename = f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}"
+                full_tablename = f"{st.session_state['looker_target_schema']}.{st.session_state['looker_target_table_name']}".upper()
 
                 looker_columns = render_looker_explore_as_table(
                     conn=get_snowflake_connection(),
                     model_name=st.session_state["looker_model_name"].lower(),
                     explore_name=st.session_state["looker_explore_name"].lower(),
-                    snowflake_context=st.session_state["looker_target_schema"],
-                    table_name=st.session_state["looker_target_table_name"].upper(),
+                    table_name=full_tablename,
                     optional_db=st.session_state["looker_connection_db"],
                     fields=None,  # TO DO - Add support for field selection
                     dynamic=dynamic_table,
@@ -255,13 +258,23 @@ def set_looker_semantic() -> None:
                     sample_values,
                     [full_tablename],
                 )
-
                 st.session_state["partner_setup"] = True
+
+                # Tag looker setup with SIT query tag
                 set_sit_query_tag(
                     get_snowflake_connection(),
                     vendor="looker",
                     action="setup_complete",
                 )
+                # Tag table with SIT query tag
+                # We set table comment after generating semantic file to avoid using comment in description generation
+                set_table_comment(
+                    get_snowflake_connection(),
+                    full_tablename,
+                    get_sit_query_tag(vendor="looker", action="materialize"),
+                    table_type="DYNAMIC" if dynamic_table else None,
+                )
+
                 # Take user to iteration using generated semantic file.
                 # User can merge Looker metadata with generated semantic file on iteration page.
                 st.session_state["page"] = GeneratorAppScreen.ITERATION
@@ -373,7 +386,6 @@ def create_query_id(
 
 def create_explore_ctas(
     query_string: str,
-    snowflake_context: str,
     table_name: str,
     column_list: list[str],
     dynamic: Optional[bool] = False,
@@ -385,8 +397,12 @@ def create_explore_ctas(
     Augments Looker Explore SQL with CTAS prefix to create a materialized view.
     Args:
         query_string (str): SQL select statement to render Looker Explore.
-        snowflake_context (str): Database_name.Schema_name for Snowflake
-        table_name (str): Name of table to create in snowflake_context context.
+        table_name (str): Fully-qualified name of table to create in Snowflake.
+        column_list (list[str]): List of column names to create in Snowflake table.
+        dynamic (bool): Flag to create dynamic table. Default is False.
+        target_lag (int): Target lag for dynamic table. Default is 20.
+        target_lag_unit (str): Target lag unit for dynamic table. Default is "minutes".
+        warehouse (str): Snowflake warehouse for dynamic table. Default is None.
 
     Returns: str CTAS statement
     """
@@ -396,16 +412,14 @@ def create_explore_ctas(
     filtered_lines = [
         line for line in lines if not line.strip().startswith(("LIMIT", "FETCH"))
     ]
+    # full_table_name = f"{snowflake_context}.{table_name}"
     filtered_query_string = "\n".join(filtered_lines)
     columns = ", ".join(column_list)
-    comment = (
-        f"COMMENT = '{get_sit_query_tag(vendor = 'looker', action = 'materialize')}'"
-    )
 
     if dynamic:
         if not [x for x in (target_lag, target_lag_unit, warehouse) if x is None]:
             ctas_clause = f"""
-            CREATE OR REPLACE DYNAMIC TABLE {snowflake_context}.{table_name}({columns})
+            CREATE OR REPLACE DYNAMIC TABLE {table_name}({columns})
             TARGET_LAG = '{target_lag} {target_lag_unit}'
             WAREHOUSE = {warehouse}
             """
@@ -416,15 +430,11 @@ def create_explore_ctas(
                        Standard materialization will be used.
                        """
             )
-            ctas_clause = (
-                f"CREATE OR REPLACE TABLE {snowflake_context}.{table_name}({columns}) "
-            )
+            ctas_clause = f"CREATE OR REPLACE TABLE {table_name}({columns}) "
     else:
-        ctas_clause = (
-            f"CREATE OR REPLACE TABLE {snowflake_context}.{table_name}({columns}) "
-        )
+        ctas_clause = f"CREATE OR REPLACE TABLE {table_name}({columns}) "
 
-    ctas_clause += comment + " AS\n" + filtered_query_string
+    ctas_clause += " AS\n" + filtered_query_string
     return ctas_clause
 
 
@@ -469,7 +479,6 @@ def render_looker_explore_as_table(
     conn: SnowflakeConnection,
     model_name: str,
     explore_name: str,
-    snowflake_context: str,
     table_name: str,
     optional_db: Optional[str] = None,
     fields: Optional[str] = None,
@@ -484,10 +493,13 @@ def render_looker_explore_as_table(
         conn: SnowflakeConnection to run the query
         model_name (str): Looker model name. Should be lowercase.
         explore_name (str): Looker explore name. Should be lowercase.
-        snowflake_context (str): Database_name.Schema_name for Snowflake
-        table_name: The fully-qualified name of the table.
+        table_name: Fully-qualified name of table to create in Snowflake.
         fields (list): List-like str of fields to extract from the Explore. Default is None.
                        Example: "id, name, description, fields",
+        dynamic (bool): Flag to create dynamic table. Default is False.
+        target_lag (int): Target lag for dynamic table. Default is 20.
+        target_lag_unit (str): Target lag unit for dynamic table. Default is "minutes".
+        warehouse (str): Snowflake warehouse for dynamic table. Default is None.
 
     Returns: dict[str, dict[str, str]] column metadata
     """
@@ -515,7 +527,6 @@ def render_looker_explore_as_table(
         return None
     ctas = create_explore_ctas(
         explore_sql,
-        snowflake_context,
         table_name,
         clean_columns,
         dynamic,
@@ -526,7 +537,7 @@ def render_looker_explore_as_table(
 
     # Create materialized equivalent of Explore
     # Looker sources don't require explicit database qualification but instead use connection database implicitly.
-    # Set optional_db if user provides it. Need to reset back to original afterwards.
+    # Set optional_db if user provides it. May need to reset back to original afterwards.
     if optional_db:
         current_db = conn.cursor().execute("SELECT CURRENT_DATABASE();").fetchone()[0]  # type: ignore
         conn.cursor().execute(f"USE DATABASE {optional_db};")

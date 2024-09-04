@@ -912,6 +912,22 @@ def set_sit_query_tag(
     conn.cursor().execute("alter session set query_tag=''")
 
 
+def set_table_comment(
+    conn: SnowflakeConnection,
+    tablename: str,
+    comment: str,
+    table_type: Optional[str] = None,
+) -> None:
+    """
+    Sets comment on provided table.
+    Returns: None
+    """
+    if table_type is None:
+        table_type = ""
+    query = f"ALTER {table_type} TABLE {tablename} SET COMMENT = '{comment}'"
+    conn.cursor().execute(query)
+
+
 def render_image(image_file: str, size: tuple[int, int]) -> None:
     """
     Renders image in streamlit app with custom width x height by pixel.
