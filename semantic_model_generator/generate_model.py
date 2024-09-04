@@ -246,7 +246,7 @@ def comment_out_section(yaml_str: str, section_name: str) -> str:
     updated_yaml = []
     lines = yaml_str.split("\n")
     in_section = False
-    section_indent_level = None
+    section_indent_level = 0
 
     for line in lines:
         stripped_line = line.strip()
