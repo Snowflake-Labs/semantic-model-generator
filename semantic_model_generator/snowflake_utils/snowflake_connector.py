@@ -90,6 +90,7 @@ def _get_table_comment(
                 conn.cursor()  # type: ignore[union-attr]
                 .execute(f"select get_ddl('table', '{table_name}');")
                 .fetchall()[0][0]
+                .replace("'", "\\'")
             )
             comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
             complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
