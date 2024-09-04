@@ -94,9 +94,6 @@ if __name__ == "__main__":
                 use_container_width=True,
                 type="primary",
             ):
-                st.session_state["partner_setup"] = (
-                    False  # Resets to normal builder flow
-                )
                 builder.show()
             st.markdown("")
             if st.button(
