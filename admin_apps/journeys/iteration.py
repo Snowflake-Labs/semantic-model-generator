@@ -14,7 +14,6 @@ from admin_apps.partner.partner_utils import integrate_partner_semantics
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
-    return_home_button,
     changed_from_last_validated_model,
     download_yaml,
     format_snowflake_context,
@@ -22,6 +21,7 @@ from admin_apps.shared_utils import (
     get_available_schemas,
     get_snowflake_connection,
     init_session_states,
+    return_home_button,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
