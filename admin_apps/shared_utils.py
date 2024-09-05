@@ -122,12 +122,17 @@ class GeneratorAppScreen(str, Enum):
     ITERATION = "iteration"
 
 
-def add_logo() -> None:
-    st.logo(
-        image=LOGO_URL_LARGE,
-        link="https://www.snowflake.com/en/data-cloud/cortex/",
-        icon_image=LOGO_URL_SMALL,
-    )
+def return_home_button() -> None:
+    if st.button("Return to Home"):
+        st.session_state["page"] = GeneratorAppScreen.ONBOARDING
+        # Reset environment variables related to the semantic model, so that builder/iteration flows can start fresh.
+        if "semantic_model" in st.session_state:
+            del st.session_state["semantic_model"]
+        if "yaml" in st.session_state:
+            del st.session_state["yaml"]
+        if "snowflake_stage" in st.session_state:
+            del st.session_state["snowflake_stage"]
+        st.rerun()
 
 
 def update_last_validated_model() -> None:

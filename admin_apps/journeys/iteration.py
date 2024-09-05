@@ -14,7 +14,7 @@ from admin_apps.partner.partner_utils import integrate_partner_semantics
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
-    add_logo,
+    return_home_button,
     changed_from_last_validated_model,
     download_yaml,
     format_snowflake_context,
@@ -665,7 +665,7 @@ def show() -> None:
         # If coming from the builder flow, there's no need to collect this information until the user wants to upload.
         set_up_requirements()
     else:
-        add_logo()
+        return_home_button()
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
             yaml = download_yaml(st.session_state.file_name, get_snowflake_connection())
