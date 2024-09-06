@@ -169,6 +169,28 @@ set SNOWFLAKE_AUTHENTICATOR=externalbrowser
 os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'externalbrowser'
 ```
 
+4. Private Key based authentication
+```bash
+SNOWFLAKE_AUTHENTICATOR=
+SNOWFLAKE_PRIVATE_KEY_FILE="<your-private-key-file>"
+SNOWFLAKE_PRIVATE_KEY_FILE_PWD="<your-private-key-file-pwd>" 
+
+# MacOS/Linux
+export SNOWFLAKE_AUTHENTICATOR=
+export SNOWFLAKE_PRIVATE_KEY_FILE="<your-private-key-file>"
+export SNOWFLAKE_PRIVATE_KEY_FILE_PWD="<your-private-key-file-pwd>" 
+
+# Windows
+set SNOWFLAKE_AUTHENTICATOR=
+set SNOWFLAKE_PRIVATE_KEY_FILE=<your-private-key-file>
+set SNOWFLAKE_PRIVATE_KEY_FILE_PWD=<your-private-key-file-pwd>
+
+# Python
+os.environ['SNOWFLAKE_AUTHENTICATOR'] = None
+os.environ['SNOWFLAKE_PRIVATE_KEY_FILE'] = '<your-private-key-file>'
+os.environ['SNOWFLAKE_PRIVATE_KEY_FILE_PWD'] = '<your-private-key-file-pwd>'
+```
+
 ## Streamlit App
 
 We offer a convenient Streamlit app that supports creating semantic models from scratch as well as iterating on existing ones uploaded to a Snowflake stage.

@@ -16,6 +16,9 @@ SNOWFLAKE_ACCOUNT_LOCATOR = os.getenv("SNOWFLAKE_ACCOUNT_LOCATOR")
 SNOWFLAKE_MFA_PASSCODE = os.getenv("SNOWFLAKE_MFA_PASSCODE")
 SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD = os.getenv("SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD")
 
+SNOWFLAKE_PRIVATE_KEY_FILE = os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE")
+SNOWFLAKE_PRIVATE_KEY_FILE_PWD = os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD")
+
 
 def assert_required_env_vars() -> list[str]:
     """
@@ -35,15 +38,16 @@ def assert_required_env_vars() -> list[str]:
         missing_env_vars.append("SNOWFLAKE_ACCOUNT_LOCATOR")
     if not SNOWFLAKE_HOST:
         missing_env_vars.append("SNOWFLAKE_HOST")
-    if not SNOWFLAKE_PASSWORD and not SNOWFLAKE_AUTHENTICATOR:
-        missing_env_vars.append("SNOWFLAKE_PASSWORD/SNOWFLAKE_AUTHENTICATOR")
+    if not SNOWFLAKE_AUTHENTICATOR:
+        if not SNOWFLAKE_PASSWORD and not SNOWFLAKE_PRIVATE_KEY_FILE:
+            missing_env_vars.append("SNOWFLAKE_PASSWORD/SNOWFLAKE_PRIVATE_KEY_FILE/SNOWFLAKE_AUTHENTICATOR")
 
     # Assert that SNOWFLAKE_PASSWORD is required unless the user is using the externalbrowser authenticator
     if (
         SNOWFLAKE_AUTHENTICATOR
         and SNOWFLAKE_AUTHENTICATOR.lower() != "externalbrowser"
-        and not SNOWFLAKE_PASSWORD
+        and (not SNOWFLAKE_PASSWORD and not SNOWFLAKE_PRIVATE_KEY_FILE)
     ):
-        missing_env_vars.append("SNOWFLAKE_PASSWORD")
+        missing_env_vars.append("SNOWFLAKE_PASSWORD/SNOWFLAKE_PRIVATE_KEY_FILE")
 
     return missing_env_vars
