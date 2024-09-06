@@ -232,6 +232,49 @@ def raw_schema_to_semantic_context(
     return context
 
 
+def comment_out_section(yaml_str: str, section_name: str) -> str:
+    """
+    Comments out all lines in the specified section of a YAML string.
+
+    Parameters:
+    - yaml_str (str): The YAML string to process.
+    - section_name (str): The name of the section to comment out.
+
+    Returns:
+    - str: The modified YAML string with the specified section commented out.
+    """
+    updated_yaml = []
+    lines = yaml_str.split("\n")
+    in_section = False
+    section_indent_level = 0
+
+    for line in lines:
+        stripped_line = line.strip()
+
+        # When we find a section with the provided name, we can start commenting out lines.
+        if stripped_line.startswith(f"{section_name}:"):
+            in_section = True
+            section_indent_level = len(line) - len(line.lstrip())
+            comment_indent = " " * section_indent_level
+            updated_yaml.append(f"{comment_indent}# {line.strip()}")
+            continue
+
+        # Since this method parses a raw YAML string, we track whether we're in the section by the indentation level.
+        # This is a pretty rough heuristic.
+        if in_section:
+            current_indent_level = len(line) - len(line.lstrip())
+            if current_indent_level <= section_indent_level and stripped_line:
+                in_section = False
+
+        if in_section:
+            comment_indent = " " * section_indent_level
+            updated_yaml.append(f"{comment_indent}# {line.strip()}")
+        else:
+            updated_yaml.append(line)
+
+    return "\n".join(updated_yaml)
+
+
 def append_comment_to_placeholders(yaml_str: str) -> str:
     """
     Finds all instances of a specified placeholder in a YAML string and appends a given text to these placeholders.
@@ -366,6 +409,8 @@ def generate_model_str_from_snowflake(
     yaml_str = proto_utils.proto_to_yaml(context)
     # Once we have the yaml, update to include to # <FILL-OUT> tokens.
     yaml_str = append_comment_to_placeholders(yaml_str)
+    # Comment out the filters section as we don't have a way to auto-generate these yet.
+    yaml_str = comment_out_section(yaml_str, "filters")
 
     return yaml_str
 
