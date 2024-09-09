@@ -31,8 +31,7 @@ run_admin_app:
 
 # Installs dependencies for the admin app.
 setup_admin_app:
-	pip install $(shell ls dist/*.whl) && \
-	pip install -r admin_apps/requirements.txt
+	pip install .
 
 # Linting and formatting below.
 run_mypy:  ## Run mypy
