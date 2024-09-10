@@ -9,22 +9,21 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 ## Table of Contents
 
-  * [Table of Contents](#table-of-contents)
-  * [Setup](#setup)
-  * [Streamlit App](#streamlit-app)
-  * [CLI Tool](#cli-tool)
+* [Table of Contents](#table-of-contents)
+* [Setup](#setup)
+* [Streamlit App](#streamlit-app)
+* [CLI Tool](#cli-tool)
     + [Generation](#generation)
     + [Validation](#validation)
-  * [Python](#python)
+* [Python](#python)
     + [Generation](#generation-1)
     + [Validation](#validation-1)
-  * [Usage](#usage)
+* [Usage](#usage)
     + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
     + [Auto-Generated Descriptions](#auto-generated-descriptions)
     + [Additional Fields to Fill Out](#additional-fields-to-fill-out)
-  * [Examples](#examples)
-  * [Release](#release)
-
+* [Examples](#examples)
+* [Release](#release)
 
 ## Setup
 
@@ -41,7 +40,8 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility
   on API.
-* It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit the `https://` prefix.
+* It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit
+  the `https://` prefix.
 * `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
   your Snowflake deployment. We would recommend setting it regardless.
 
@@ -171,7 +171,8 @@ os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'externalbrowser'
 
 ## Streamlit App
 
-We offer a convenient Streamlit app that supports creating semantic models from scratch as well as iterating on existing ones uploaded to a Snowflake stage.
+We offer a convenient Streamlit app that supports creating semantic models from scratch as well as iterating on existing
+ones uploaded to a Snowflake stage.
 
 To install dependencies for the Streamlit app, run
 
@@ -179,7 +180,11 @@ To install dependencies for the Streamlit app, run
 make setup_admin_app
 ```
 
-Once installed, you can run the app using the provided Makefile target, or with your current version of Python manually specified:
+This uses `pip` to install dependencies from the root `pyproject.toml`; feel free to use `conda` or any package manager
+you prefer.
+
+Once installed, you can run the app using the provided Makefile target, or with your current version of Python manually
+specified:
 
 ```bash
 # Make target
@@ -191,18 +196,21 @@ python3.11 -m streamlit run admin_apps/app.py
 
 ## CLI Tool
 
-You may also generate a semantic model directly from the CLI. To do this, first install the CLI tool dependencies, which differ from the Streamlit app's dependencies.
+You may also generate a semantic model directly from the CLI. To do this, first install the CLI tool dependencies, which
+differ from the Streamlit app's dependencies.
 
-Unlike the Streamlit route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv` for Python versions.
+Unlike the Streamlit route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv`
+for Python versions.
 This has only been tested on MacOS/Linux.
 
 1. If you need brew, run `make install-homebrew`.
 2. If you need pyenv, `make install-pyenv` and `make install-python-3.8`.
-3. Run `make setup` to install all external dependencies into your Poetry environment. This will also install `poetry` if needed.
+3. Run `make setup` to install all external dependencies into your Poetry environment. This will also install `poetry`
+   if needed.
 4. Spawn a shell in the virtual environment using `poetry shell`. This will activate your virtual environment.
 
-
 ### Generation
+
 You are now ready to generate semantic models via the CLI! The generation command uses the following syntax:
 
 ```bash
@@ -218,8 +226,8 @@ format. Each table in this list should be a physical table or a view present in 
 All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from
 the root of this project or the current directory you're in.
 
-
 ### Validation
+
 You may also use the CLI tool to validate one of your semantic models. From inside your Poetry shell, run
 
 ```bash
@@ -230,7 +238,8 @@ python -m semantic_model_generator.validate_model \
 
 ## Python
 
-You may also create/validate your semantic models from directly within your Python code. First, ensure that you have installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
+You may also create/validate your semantic models from directly within your Python code. First, ensure that you have
+installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
 
 ```bash
 pip install dist/*.whl
@@ -268,13 +277,15 @@ validate_from_local_path(
 
 ```
 
-
 ## Usage
 
 ### Semantic Model Context Length Constraints
-Due to context window as well as quality constraints, we currently limit the size of the generated semantic model to <30,980 tokens (~123,920 characters).
 
-Please note sample values and verified queries is not counted into this token length constraints. You can include as much sample values or verified queries as you'd like with limiting the overall file to <1MB.
+Due to context window as well as quality constraints, we currently limit the size of the generated semantic model to <
+30,980 tokens (~123,920 characters).
+
+Please note sample values and verified queries is not counted into this token length constraints. You can include as
+much sample values or verified queries as you'd like with limiting the overall file to <1MB.
 
 ### Auto-Generated Descriptions
 
@@ -300,17 +311,16 @@ In addition, consider adding the following elements to your semantic model:
 
 ### Partner Semantic Support
 
-We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst semantic files using logic and metadata from partner tools.
-Please see below for details about current partner support. 
+We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst
+semantic files using logic and metadata from partner tools.
+Please see below for details about current partner support.
 
-**IMPORTANT**: Use the [Streamlit App](#streamlit-app) to leverage existing partner semantic/metric layers. 
+**IMPORTANT**: Use the [Streamlit App](#streamlit-app) to leverage existing partner semantic/metric layers.
 
-| Tool     | Method  | Requirements  |
-| -------- | ------- | ------- |
-| DBT      | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table.    |  DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake.   |
-| Looker   |We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file. |  Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly.  |
-
-
+| Tool   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
+|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DBT    | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake.                                                                                                                                                                                                                                                                                                                      |
+| Looker | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
 
 ## Examples
 

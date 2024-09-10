@@ -42,11 +42,6 @@ jobs:
         run: |
           $HOME/.local/bin/poetry install --no-interaction
 
-      - name: Install admin app dependencies using Poetry
-        working-directory: admin_apps
-        run: |
-          pip install -r requirements.txt
-
       - name: Test
         run: |
           make test_github_workflow
