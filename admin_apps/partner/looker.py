@@ -1,11 +1,8 @@
 import os
 from typing import Any, Optional
-
-import looker_sdk
 import pandas as pd
 import streamlit as st
 from loguru import logger
-from looker_sdk import models40 as models
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 
 from admin_apps.partner.cortex import (
@@ -30,6 +27,16 @@ from admin_apps.shared_utils import (
     set_table_comment,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_dict
+
+try:
+    import looker_sdk
+    from looker_sdk import models40 as models
+except ImportError:
+    raise ImportError(
+        "The looker extra is required. You can install it using pip:\n\n"
+        "pip install -e '.[looker]'\n"
+    )
+
 
 # Partner semantic support instructions
 LOOKER_IMAGE = "admin_apps/images/looker.png"
@@ -286,7 +293,13 @@ def set_looker_config() -> looker_sdk.sdk.api40.methods.Looker40SDK:
     Sets Looker SDK connection
     """
 
-    import looker_sdk
+    try:
+        import looker_sdk
+    except ImportError:
+        raise ImportError(
+            "The looker extra is required. You can install it using pip:\n\n"
+            "pip install -e '.[looker]'\n"
+        )
 
     os.environ["LOOKERSDK_BASE_URL"] = st.session_state[
         "looker_base_url"
@@ -295,7 +308,8 @@ def set_looker_config() -> looker_sdk.sdk.api40.methods.Looker40SDK:
         "4.0"  # As of Looker v23.18+, the 3.0 and 3.1 versions of the API are removed. Use "4.0" here.
     )
     os.environ["LOOKERSDK_VERIFY_SSL"] = (
-        "true"  # Defaults to true if not set. SSL verification should generally be on unless you have a real good reason not to use it. Valid options: true, y, t, yes, 1.
+        "true"
+        # Defaults to true if not set. SSL verification should generally be on unless you have a real good reason not to use it. Valid options: true, y, t, yes, 1.
     )
     os.environ["LOOKERSDK_TIMEOUT"] = (
         "120"  # Seconds till request timeout. Standard default is 120.
