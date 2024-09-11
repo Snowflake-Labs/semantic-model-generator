@@ -194,6 +194,15 @@ make run_admin_app
 python3.11 -m streamlit run admin_apps/app.py
 ```
 
+### Partner Support
+
+The generator supports merging data from your existing semantic models built with partners such as dbt and Looker. To
+use the Looker features, please install the extras:
+
+```bash
+pip install -e ".[looker]"
+```
+
 ## CLI Tool
 
 You may also generate a semantic model directly from the CLI. To do this, first install the CLI tool dependencies, which
