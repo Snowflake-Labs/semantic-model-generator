@@ -10,7 +10,6 @@ from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_monaco import st_monaco
 
-from admin_apps.partner.partner_utils import integrate_partner_semantics
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
@@ -500,6 +499,8 @@ def yaml_editor(yaml_str: str) -> None:
         ):
             upload_dialog(content)
         if st.session_state.get("partner_setup", False):
+            from admin_apps.partner.partner_utils import integrate_partner_semantics
+
             if four.button(
                 "Integrate Partner",
                 use_container_width=True,
