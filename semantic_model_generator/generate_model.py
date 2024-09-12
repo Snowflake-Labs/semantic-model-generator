@@ -171,6 +171,7 @@ def raw_schema_to_semantic_context(
     semantic_model_name: str,
     conn: Optional[SnowflakeConnection] = None,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
+    allow_joins: Optional[bool] = False,
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -246,7 +247,7 @@ def raw_schema_to_semantic_context(
         table_objects.append(table_object)
     # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
 
-    placeholder_relationships = _get_placeholder_joins()
+    placeholder_relationships = _get_placeholder_joins() if allow_joins else None
     context = semantic_model_pb2.SemanticModel(
         name=semantic_model_name,
         tables=table_objects,
@@ -404,6 +405,7 @@ def generate_model_str_from_snowflake(
     semantic_model_name: str,
     conn: Optional[SnowflakeConnection] = None,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
+    allow_joins: Optional[bool] = False,
 ) -> str:
     """
     Generates a base semantic context from specified Snowflake tables and returns the raw string.
@@ -423,6 +425,7 @@ def generate_model_str_from_snowflake(
         snowflake_account=snowflake_account,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
+        allow_joins=allow_joins,
         conn=conn,
     )
     # Validate the generated yaml is within context limits.

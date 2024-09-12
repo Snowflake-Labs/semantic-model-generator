@@ -116,12 +116,22 @@ def table_selector_dialog() -> None:
     )
 
     st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
+    experimental_features = st.checkbox(
+        "Enable experimental features (optional)",
+        help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account.",
+    )
+    allow_joins = False
+    if experimental_features:
+        allow_joins = True
+        st.session_state["experimental_features"] = True
+
     submit = st.button("Submit", use_container_width=True, type="primary")
     if submit:
         run_generate_model_str_from_snowflake(
             model_name,
             sample_values,
             st.session_state["selected_tables"],
+            allow_joins=allow_joins,
         )
         st.session_state["page"] = GeneratorAppScreen.ITERATION
         st.rerun()
