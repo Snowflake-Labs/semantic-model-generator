@@ -44,6 +44,25 @@ def _get_placeholder_filter() -> List[semantic_model_pb2.NamedFilter]:
     ]
 
 
+def _get_placeholder_joins() -> List[semantic_model_pb2.Relationship]:
+    return [
+        semantic_model_pb2.Relationship(
+            name=_PLACEHOLDER_COMMENT,
+            left_table=_PLACEHOLDER_COMMENT,
+            right_table=_PLACEHOLDER_COMMENT,
+            join_type=semantic_model_pb2.JoinType.inner,
+            relationship_columns=[
+                semantic_model_pb2.RelationKey(
+                    left_column=_PLACEHOLDER_COMMENT,
+                    right_column=_PLACEHOLDER_COMMENT,
+                )
+            ],
+            relationship_type=semantic_model_pb2.RelationshipType.many_to_one,
+            expr=_PLACEHOLDER_COMMENT,
+        )
+    ]
+
+
 def _raw_table_to_semantic_context_table(
     database: str, schema: str, raw_table: data_types.Table
 ) -> semantic_model_pb2.Table:
@@ -226,8 +245,12 @@ def raw_schema_to_semantic_context(
         )
         table_objects.append(table_object)
     # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
+
+    placeholder_relationships = _get_placeholder_joins()
     context = semantic_model_pb2.SemanticModel(
-        name=semantic_model_name, tables=table_objects
+        name=semantic_model_name,
+        tables=table_objects,
+        relationships=placeholder_relationships,
     )
     return context
 
@@ -411,6 +434,7 @@ def generate_model_str_from_snowflake(
     yaml_str = append_comment_to_placeholders(yaml_str)
     # Comment out the filters section as we don't have a way to auto-generate these yet.
     yaml_str = comment_out_section(yaml_str, "filters")
+    yaml_str = comment_out_section(yaml_str, "relationships")
 
     return yaml_str
 
