@@ -1018,8 +1018,8 @@ def input_sample_value_num() -> int:
     sample_values: int = st.selectbox(  # type: ignore
         "Maximum number of sample values per column",
         list(range(1, 40)),
-        index=0,
-        help="NOTE: For dimensions, time measures, and measures, we enforce a minimum of 25, 3, and 3 sample values respectively.",
+        index=2,
+        help="Specifies the maximum number of distinct sample values we fetch for each column.",
     )
     return sample_values
 
