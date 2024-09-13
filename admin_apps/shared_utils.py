@@ -1019,7 +1019,7 @@ def input_sample_value_num() -> int:
         "Maximum number of sample values per column",
         list(range(1, 40)),
         index=2,
-        help="Specifies the maximum number of distinct sample values we fetch for each column.",
+        help="Specifies the maximum number of distinct sample values we fetch for each column. We suggest keeping this number as low as possible to reduce latency.",
     )
     return sample_values
 
