@@ -9,7 +9,6 @@ import yaml
 
 from admin_apps.partner.cortex import CortexSemanticTable
 from admin_apps.partner.dbt import DBTSemanticModel, upload_dbt_semantic
-from admin_apps.partner.looker import LookerSemanticTable, set_looker_semantic
 from admin_apps.shared_utils import (
     get_snowflake_connection,
     render_image,
@@ -75,6 +74,8 @@ def configure_partner_semantic() -> None:
     if st.session_state["partner_tool"] == "dbt":
         upload_dbt_semantic()
     if st.session_state["partner_tool"] == "looker":
+        from admin_apps.partner.looker import set_looker_semantic
+
         set_looker_semantic()
 
 
@@ -251,7 +252,10 @@ def integrate_partner_semantics() -> None:
     if st.session_state.get("partner_setup", False):
         # Execute pre-processing behind the scenes based on vendor tool
         CortexSemanticTable.create_cortex_table_list()
+
         if st.session_state.get("selected_partner", None) == "looker":
+            from admin_apps.partner.looker import LookerSemanticTable
+
             LookerSemanticTable.create_cortex_table_list()
         elif st.session_state.get("selected_partner", None) == "dbt":
             pass
@@ -300,6 +304,8 @@ def integrate_partner_semantics() -> None:
             )
 
             if st.session_state.get("selected_partner", None) == "looker":
+                from admin_apps.partner.looker import LookerSemanticTable
+
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
                     semantic_partner_tbl
                 )

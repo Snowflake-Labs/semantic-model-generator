@@ -1,13 +1,12 @@
 import streamlit as st
 
-from admin_apps.partner.partner_utils import configure_partner_semantic
-
 
 @st.dialog("Partner Semantic Support", width="large")
 def partner_semantic_setup() -> None:
     """
     Renders the partner semantic setup dialog with instructions.
     """
+    from admin_apps.partner.partner_utils import configure_partner_semantic
 
     st.write(
         """

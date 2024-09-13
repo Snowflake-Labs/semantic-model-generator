@@ -172,7 +172,7 @@ files = [
 name = "cattrs"
 version = "24.1.0"
 description = "Composable complex class support for attrs and dataclasses."
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "cattrs-24.1.0-py3-none-any.whl", hash = "sha256:043bb8af72596432a7df63abcff0055ac0f198a4d2e95af8db5a936a7074a761"},
@@ -1273,7 +1273,7 @@ dev = ["Sphinx (==7.2.5)", "colorama (==0.4.5)", "colorama (==0.4.6)", "exceptio
 name = "looker-sdk"
 version = "24.14.0"
 description = "Looker REST API"
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "looker_sdk-24.14.0-py3-none-any.whl", hash = "sha256:81f75bd77330193e8870da0327da7eb350d72e11a69d86bd2f0d6cb2510c83d5"},
@@ -3413,7 +3413,10 @@ enabler = ["pytest-enabler (>=2.2)"]
 test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
 type = ["pytest-mypy"]
 
+[extras]
+looker = ["looker-sdk"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "d1a8ca6acd973f044ab094b569e38e38b0c123e031f1a0f06b8e7fcde30660e6"
+content-hash = "18363e209a32f2941a1a77ed592ddc607286d15bcde20d798dbfd5e9100d9c16"
