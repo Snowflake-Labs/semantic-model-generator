@@ -183,16 +183,6 @@ message PrimaryKey {
   repeated string columns = 1;
 }
 
-// Defines a foreign key that references the primary key of another table.
-message ForeignKey {
-  // Base column names of the foreign key table.
-  repeated string fkey_columns = 1;
-  // The primary key table that this foreign key references.
-  FullyQualifiedTable pkey_table = 2;
-  // Base column names of the primary key table.
-  repeated string pkey_columns = 3;
-}
-
 // Table is analogous to a database table and provides a simple view over an
 // existing database table.  A table can leave out some columns from the base
 // table and/or introduce new derived columns.
@@ -220,8 +210,6 @@ message Table {
 
   // Primary key of the table, if any.
   PrimaryKey primary_key = 6 [(optional) = true];
-  // Foreign keys of the table, if any.
-  repeated ForeignKey foreign_keys = 7 [(optional) = true];
   // Predefined filters on this table, if any.
   repeated NamedFilter filters = 8 [(optional) = true];
   // NEXT_TAG: 12.

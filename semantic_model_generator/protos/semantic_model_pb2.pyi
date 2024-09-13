@@ -179,18 +179,8 @@ class PrimaryKey(_message.Message):
     columns: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, columns: _Optional[_Iterable[str]] = ...) -> None: ...
 
-class ForeignKey(_message.Message):
-    __slots__ = ("fkey_columns", "pkey_table", "pkey_columns")
-    FKEY_COLUMNS_FIELD_NUMBER: _ClassVar[int]
-    PKEY_TABLE_FIELD_NUMBER: _ClassVar[int]
-    PKEY_COLUMNS_FIELD_NUMBER: _ClassVar[int]
-    fkey_columns: _containers.RepeatedScalarFieldContainer[str]
-    pkey_table: FullyQualifiedTable
-    pkey_columns: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, fkey_columns: _Optional[_Iterable[str]] = ..., pkey_table: _Optional[_Union[FullyQualifiedTable, _Mapping]] = ..., pkey_columns: _Optional[_Iterable[str]] = ...) -> None: ...
-
 class Table(_message.Message):
-    __slots__ = ("name", "synonyms", "description", "base_table", "columns", "dimensions", "time_dimensions", "measures", "primary_key", "foreign_keys", "filters")
+    __slots__ = ("name", "synonyms", "description", "base_table", "columns", "dimensions", "time_dimensions", "measures", "primary_key", "filters")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SYNONYMS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -200,7 +190,6 @@ class Table(_message.Message):
     TIME_DIMENSIONS_FIELD_NUMBER: _ClassVar[int]
     MEASURES_FIELD_NUMBER: _ClassVar[int]
     PRIMARY_KEY_FIELD_NUMBER: _ClassVar[int]
-    FOREIGN_KEYS_FIELD_NUMBER: _ClassVar[int]
     FILTERS_FIELD_NUMBER: _ClassVar[int]
     name: str
     synonyms: _containers.RepeatedScalarFieldContainer[str]
@@ -211,9 +200,8 @@ class Table(_message.Message):
     time_dimensions: _containers.RepeatedCompositeFieldContainer[TimeDimension]
     measures: _containers.RepeatedCompositeFieldContainer[Measure]
     primary_key: PrimaryKey
-    foreign_keys: _containers.RepeatedCompositeFieldContainer[ForeignKey]
     filters: _containers.RepeatedCompositeFieldContainer[NamedFilter]
-    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., base_table: _Optional[_Union[FullyQualifiedTable, _Mapping]] = ..., columns: _Optional[_Iterable[_Union[Column, _Mapping]]] = ..., dimensions: _Optional[_Iterable[_Union[Dimension, _Mapping]]] = ..., time_dimensions: _Optional[_Iterable[_Union[TimeDimension, _Mapping]]] = ..., measures: _Optional[_Iterable[_Union[Measure, _Mapping]]] = ..., primary_key: _Optional[_Union[PrimaryKey, _Mapping]] = ..., foreign_keys: _Optional[_Iterable[_Union[ForeignKey, _Mapping]]] = ..., filters: _Optional[_Iterable[_Union[NamedFilter, _Mapping]]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., base_table: _Optional[_Union[FullyQualifiedTable, _Mapping]] = ..., columns: _Optional[_Iterable[_Union[Column, _Mapping]]] = ..., dimensions: _Optional[_Iterable[_Union[Dimension, _Mapping]]] = ..., time_dimensions: _Optional[_Iterable[_Union[TimeDimension, _Mapping]]] = ..., measures: _Optional[_Iterable[_Union[Measure, _Mapping]]] = ..., primary_key: _Optional[_Union[PrimaryKey, _Mapping]] = ..., filters: _Optional[_Iterable[_Union[NamedFilter, _Mapping]]] = ...) -> None: ...
 
 class Metric(_message.Message):
     __slots__ = ("name", "synonyms", "description", "expr", "filter")
