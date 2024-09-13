@@ -63,8 +63,6 @@ message Column {
   // table.
   string expr = 4 [(sql_expression) = true];
   // The data type of this column.
-  // TODO(nsehrawat): Consider creating an enum instead, with all snowflake
-  // support data types.
   string data_type = 5;
   // The kind of this column - dimension or measure.
   ColumnKind kind = 6;
@@ -101,8 +99,6 @@ message Dimension {
   // physical table.
   string expr = 4 [(sql_expression) = true];
   // The data type of this dimension.
-  // TODO(nsehrawat): Consider creating an enum instead with all snowflake
-  // support data types.
   string data_type = 5;
   // If true, assume that this dimension has unique values.
   bool unique = 6 [(optional) = true];
@@ -128,8 +124,6 @@ message TimeDimension {
   // physical table.
   string expr = 4 [(sql_expression) = true];
   // The data type of this time dimension.
-  // TODO(nsehrawat): Consider creating an enum instead, with all snowflake
-  // support data types.
   string data_type = 5;
   // If true, assume that this time dimension has unique values.
   bool unique = 6 [(optional) = true];
@@ -153,8 +147,6 @@ message Measure {
   // the underlying physical table.
   string expr = 4 [(sql_expression) = true];
   // The data type of this measure.
-  // TODO(nsehrawat): Consider creating an enum instead, with all snowflake
-  // support data types.
   string data_type = 5;
   // If no aggregation is specified, then this is the default aggregation
   // applied to this measure in contxt of a grouping.
@@ -164,8 +156,6 @@ message Measure {
 }
 
 // Filter represents a named SQL expression that's used for filtering.
-// TODO: add validation. we should only support where clause style filter (no
-// aggregations) and reject having clauses.
 message NamedFilter {
   // A descriptive name for this filter.
   string name = 1;
@@ -188,12 +178,6 @@ message FullyQualifiedTable {
 
 // Defines a primary key of a table. In the general case, primary keys
 // are a collection of columns of the table.
-// For discussion: PK FK are potentially duplicative to join path in a semantic
-// model. However, it implies uniqueness which can be informative for getting
-// right aggregation level. For that reason, we are exposing only the PrimaryKey
-// currently. Join paths seem more extensible than foreign keys for supporting
-// join. Further experimentation is needed to see if JoinPath and ForeignKey can
-// yield similar results.
 message PrimaryKey {
   // Base column names that constitute the primary key.
   repeated string columns = 1;
@@ -292,10 +276,8 @@ message Relationship {
   string left_table = 2;
   // The right hand side table of the join.
   string right_table = 3;
-  // The expression used to join left and right tables. Only used internally.
-  string expr = 4 [(sql_expression) = true, (optional) = true];
   // Keys directly represent the join relationship.
-  repeated RelationKey relationship_columns = 7 [(optional) = true];
+  repeated RelationKey relationship_columns = 7;
   // Type of the join.
   JoinType join_type = 5;
   // Type of the relationship.
@@ -318,8 +300,6 @@ message SemanticModel {
   repeated Relationship relationships = 5 [(optional) = true];
   // List of verified queries for this semantic model.
   repeated VerifiedQuery verified_queries = 6 [(optional) = true];
-  // List of suggested questions for this semantic model.
-  repeated SuggestedQuestion suggested_questions = 7 [(optional) = true];
 }
 
 // VerifiedQuery represents a (question, sql) pair that has been manually
@@ -342,10 +322,3 @@ message VerifiedQuery {
 
 // VerifiedQueryRepository is a simply a collection of verified queries.
 message VerifiedQueryRepository {repeated VerifiedQuery verified_queries = 1;}
-
-// SuggestedQuestion is a proposed question by the semantic context admin
-// that the semantic context is able to answer
-message SuggestedQuestion {
-  // The suggested question
-  string question = 1;
-}

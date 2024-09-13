@@ -244,40 +244,36 @@ class RelationKey(_message.Message):
     def __init__(self, left_column: _Optional[str] = ..., right_column: _Optional[str] = ...) -> None: ...
 
 class Relationship(_message.Message):
-    __slots__ = ("name", "left_table", "right_table", "expr", "relationship_columns", "join_type", "relationship_type")
+    __slots__ = ("name", "left_table", "right_table", "relationship_columns", "join_type", "relationship_type")
     NAME_FIELD_NUMBER: _ClassVar[int]
     LEFT_TABLE_FIELD_NUMBER: _ClassVar[int]
     RIGHT_TABLE_FIELD_NUMBER: _ClassVar[int]
-    EXPR_FIELD_NUMBER: _ClassVar[int]
     RELATIONSHIP_COLUMNS_FIELD_NUMBER: _ClassVar[int]
     JOIN_TYPE_FIELD_NUMBER: _ClassVar[int]
     RELATIONSHIP_TYPE_FIELD_NUMBER: _ClassVar[int]
     name: str
     left_table: str
     right_table: str
-    expr: str
     relationship_columns: _containers.RepeatedCompositeFieldContainer[RelationKey]
     join_type: JoinType
     relationship_type: RelationshipType
-    def __init__(self, name: _Optional[str] = ..., left_table: _Optional[str] = ..., right_table: _Optional[str] = ..., expr: _Optional[str] = ..., relationship_columns: _Optional[_Iterable[_Union[RelationKey, _Mapping]]] = ..., join_type: _Optional[_Union[JoinType, str]] = ..., relationship_type: _Optional[_Union[RelationshipType, str]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., left_table: _Optional[str] = ..., right_table: _Optional[str] = ..., relationship_columns: _Optional[_Iterable[_Union[RelationKey, _Mapping]]] = ..., join_type: _Optional[_Union[JoinType, str]] = ..., relationship_type: _Optional[_Union[RelationshipType, str]] = ...) -> None: ...
 
 class SemanticModel(_message.Message):
-    __slots__ = ("name", "description", "tables", "metrics", "relationships", "verified_queries", "suggested_questions")
+    __slots__ = ("name", "description", "tables", "metrics", "relationships", "verified_queries")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     TABLES_FIELD_NUMBER: _ClassVar[int]
     METRICS_FIELD_NUMBER: _ClassVar[int]
     RELATIONSHIPS_FIELD_NUMBER: _ClassVar[int]
     VERIFIED_QUERIES_FIELD_NUMBER: _ClassVar[int]
-    SUGGESTED_QUESTIONS_FIELD_NUMBER: _ClassVar[int]
     name: str
     description: str
     tables: _containers.RepeatedCompositeFieldContainer[Table]
     metrics: _containers.RepeatedCompositeFieldContainer[Metric]
     relationships: _containers.RepeatedCompositeFieldContainer[Relationship]
     verified_queries: _containers.RepeatedCompositeFieldContainer[VerifiedQuery]
-    suggested_questions: _containers.RepeatedCompositeFieldContainer[SuggestedQuestion]
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., metrics: _Optional[_Iterable[_Union[Metric, _Mapping]]] = ..., relationships: _Optional[_Iterable[_Union[Relationship, _Mapping]]] = ..., verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ..., suggested_questions: _Optional[_Iterable[_Union[SuggestedQuestion, _Mapping]]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., metrics: _Optional[_Iterable[_Union[Metric, _Mapping]]] = ..., relationships: _Optional[_Iterable[_Union[Relationship, _Mapping]]] = ..., verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ...) -> None: ...
 
 class VerifiedQuery(_message.Message):
     __slots__ = ("name", "semantic_model_name", "question", "sql", "verified_at", "verified_by")
@@ -300,9 +296,3 @@ class VerifiedQueryRepository(_message.Message):
     VERIFIED_QUERIES_FIELD_NUMBER: _ClassVar[int]
     verified_queries: _containers.RepeatedCompositeFieldContainer[VerifiedQuery]
     def __init__(self, verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ...) -> None: ...
-
-class SuggestedQuestion(_message.Message):
-    __slots__ = ("question",)
-    QUESTION_FIELD_NUMBER: _ClassVar[int]
-    question: str
-    def __init__(self, question: _Optional[str] = ...) -> None: ...
