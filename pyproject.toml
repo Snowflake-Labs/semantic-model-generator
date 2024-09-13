@@ -11,7 +11,7 @@ python = ">=3.9,<3.9.7 || >3.9.7,<3.12"
 pandas = "^2.0.1"
 loguru = "^0.7.2"
 snowflake-connector-python = { extras = ["secure-local-storage", "pandas"], version = "^3.11.0" }
-protobuf = "^4.25.3"
+protobuf = "5.26.1"
 pydantic = "^2.6.4"
 PyYAML = "^6.0.1"
 "ruamel.yaml" = "^0.18.6"
@@ -40,6 +40,7 @@ pytest = "^8.1.1"
 types-pyyaml = "^6.0.12.20240311"
 types-protobuf = "^4.24.0.20240311"
 pip-licenses = "^4.4.0"
+grpcio-tools = "1.64.1"
 
 [tool.poetry.extras]
 looker = ["looker-sdk"]
