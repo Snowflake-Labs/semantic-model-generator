@@ -58,7 +58,6 @@ def _get_placeholder_joins() -> List[semantic_model_pb2.Relationship]:
                 )
             ],
             relationship_type=semantic_model_pb2.RelationshipType.many_to_one,
-            expr=_PLACEHOLDER_COMMENT,
         )
     ]
 
