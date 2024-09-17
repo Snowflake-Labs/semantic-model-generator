@@ -284,13 +284,17 @@ def comment_out_section(yaml_str: str, section_name: str) -> str:
 
         # Since this method parses a raw YAML string, we track whether we're in the section by the indentation level.
         # This is a pretty rough heuristic.
-        if in_section:
-            current_indent_level = len(line) - len(line.lstrip())
-            if current_indent_level <= section_indent_level and stripped_line:
-                in_section = False
+        current_indent_level = len(line) - len(line.lstrip())
+        if (
+            in_section
+            and current_indent_level <= section_indent_level
+            and stripped_line
+        ):
+            in_section = False
 
-        if in_section:
-            comment_indent = " " * section_indent_level
+        # Comment out the field and its subsections, preserving the indentation level.
+        if in_section and line.strip():
+            comment_indent = " " * current_indent_level
             updated_yaml.append(f"{comment_indent}# {line.strip()}")
         else:
             updated_yaml.append(line)
