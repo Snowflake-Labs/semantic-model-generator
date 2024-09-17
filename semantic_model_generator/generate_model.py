@@ -44,6 +44,24 @@ def _get_placeholder_filter() -> List[semantic_model_pb2.NamedFilter]:
     ]
 
 
+def _get_placeholder_joins() -> List[semantic_model_pb2.Relationship]:
+    return [
+        semantic_model_pb2.Relationship(
+            name=_PLACEHOLDER_COMMENT,
+            left_table=_PLACEHOLDER_COMMENT,
+            right_table=_PLACEHOLDER_COMMENT,
+            join_type=semantic_model_pb2.JoinType.inner,
+            relationship_columns=[
+                semantic_model_pb2.RelationKey(
+                    left_column=_PLACEHOLDER_COMMENT,
+                    right_column=_PLACEHOLDER_COMMENT,
+                )
+            ],
+            relationship_type=semantic_model_pb2.RelationshipType.many_to_one,
+        )
+    ]
+
+
 def _raw_table_to_semantic_context_table(
     database: str, schema: str, raw_table: data_types.Table
 ) -> semantic_model_pb2.Table:
@@ -152,6 +170,7 @@ def raw_schema_to_semantic_context(
     semantic_model_name: str,
     conn: Optional[SnowflakeConnection] = None,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
+    allow_joins: Optional[bool] = False,
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -226,8 +245,12 @@ def raw_schema_to_semantic_context(
         )
         table_objects.append(table_object)
     # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
+
+    placeholder_relationships = _get_placeholder_joins() if allow_joins else None
     context = semantic_model_pb2.SemanticModel(
-        name=semantic_model_name, tables=table_objects
+        name=semantic_model_name,
+        tables=table_objects,
+        relationships=placeholder_relationships,
     )
     return context
 
@@ -261,13 +284,17 @@ def comment_out_section(yaml_str: str, section_name: str) -> str:
 
         # Since this method parses a raw YAML string, we track whether we're in the section by the indentation level.
         # This is a pretty rough heuristic.
-        if in_section:
-            current_indent_level = len(line) - len(line.lstrip())
-            if current_indent_level <= section_indent_level and stripped_line:
-                in_section = False
+        current_indent_level = len(line) - len(line.lstrip())
+        if (
+            in_section
+            and current_indent_level <= section_indent_level
+            and stripped_line
+        ):
+            in_section = False
 
-        if in_section:
-            comment_indent = " " * section_indent_level
+        # Comment out the field and its subsections, preserving the indentation level.
+        if in_section and line.strip():
+            comment_indent = " " * current_indent_level
             updated_yaml.append(f"{comment_indent}# {line.strip()}")
         else:
             updated_yaml.append(line)
@@ -299,6 +326,15 @@ def append_comment_to_placeholders(yaml_str: str) -> str:
             updated_yaml.append(updated_line)
         elif line.rstrip("'").endswith(AUTOGEN_TOKEN):
             updated_line = line + _AUTOGEN_COMMENT_TOKEN
+            updated_yaml.append(updated_line)
+        # Add comments to specific fields in certain sections.
+        elif line.lstrip().startswith("join_type"):
+            updated_line = line + _FILL_OUT_TOKEN + "  supported: inner, left_outer"
+            updated_yaml.append(updated_line)
+        elif line.lstrip().startswith("relationship_type"):
+            updated_line = (
+                line + _FILL_OUT_TOKEN + " supported: many_to_one, one_to_one"
+            )
             updated_yaml.append(updated_line)
         else:
             updated_yaml.append(line)
@@ -381,6 +417,7 @@ def generate_model_str_from_snowflake(
     semantic_model_name: str,
     conn: Optional[SnowflakeConnection] = None,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
+    allow_joins: Optional[bool] = False,
 ) -> str:
     """
     Generates a base semantic context from specified Snowflake tables and returns the raw string.
@@ -400,6 +437,7 @@ def generate_model_str_from_snowflake(
         snowflake_account=snowflake_account,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
+        allow_joins=allow_joins,
         conn=conn,
     )
     # Validate the generated yaml is within context limits.
@@ -411,6 +449,7 @@ def generate_model_str_from_snowflake(
     yaml_str = append_comment_to_placeholders(yaml_str)
     # Comment out the filters section as we don't have a way to auto-generate these yet.
     yaml_str = comment_out_section(yaml_str, "filters")
+    yaml_str = comment_out_section(yaml_str, "relationships")
 
     return yaml_str
 

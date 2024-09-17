@@ -1028,6 +1028,7 @@ def run_generate_model_str_from_snowflake(
     model_name: str,
     sample_values: int,
     base_tables: list[str],
+    allow_joins: Optional[bool] = False,
 ) -> None:
     """
     Runs generate_model_str_from_snowflake to generate cortex semantic shell.
@@ -1051,6 +1052,7 @@ def run_generate_model_str_from_snowflake(
                 semantic_model_name=model_name,
                 n_sample_values=sample_values,  # type: ignore
                 conn=get_snowflake_connection(),
+                allow_joins=allow_joins,
             )
 
             st.session_state["yaml"] = yaml_str
