@@ -327,6 +327,15 @@ def append_comment_to_placeholders(yaml_str: str) -> str:
         elif line.rstrip("'").endswith(AUTOGEN_TOKEN):
             updated_line = line + _AUTOGEN_COMMENT_TOKEN
             updated_yaml.append(updated_line)
+        # Add comments to specific fields in certain sections.
+        elif line.lstrip().startswith("join_type"):
+            updated_line = line + _FILL_OUT_TOKEN + "  supported: inner, left_outer"
+            updated_yaml.append(updated_line)
+        elif line.lstrip().startswith("relationship_type"):
+            updated_line = (
+                line + _FILL_OUT_TOKEN + " supported: many_to_one, one_to_one"
+            )
+            updated_yaml.append(updated_line)
         else:
             updated_yaml.append(line)
 
