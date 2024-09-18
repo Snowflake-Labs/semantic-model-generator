@@ -30,6 +30,7 @@ def joins_dialog() -> None:
                 index=default_left_table,
                 key=f"left_table_{idx}",
             )
+            relationship.left_table = left_table
 
             right_table = st.selectbox(
                 "Right Table",
@@ -39,13 +40,17 @@ def joins_dialog() -> None:
                 index=default_right_table,
                 key=f"right_table_{idx}",
             )
+            relationship.right_table = right_table
 
             join_type = st.selectbox(
                 "Join Type",
                 options=["inner", "left_outer"],
-                index=relationship.join_type,
+                index=["inner", "left_outer"].index(
+                    semantic_model_pb2.JoinType.Name(relationship.join_type)
+                ),
                 key=f"join_type_{idx}",
             )
+            relationship.join_type = join_type
 
             relationship_type = st.selectbox(
                 "Relationship Type",
@@ -53,9 +58,14 @@ def joins_dialog() -> None:
                     "one_to_one",
                     "many_to_one",
                 ],
-                index=relationship.relationship_type,
+                index=["one_to_one", "many_to_one"].index(
+                    semantic_model_pb2.RelationshipType.Name(
+                        relationship.relationship_type
+                    ),
+                ),
                 key=f"relationship_type_{idx}",
             )
+            relationship.relationship_type = relationship_type
 
             for col_idx, join_cols in enumerate(relationship.relationship_columns):
                 left_table_object = next(
@@ -73,6 +83,8 @@ def joins_dialog() -> None:
                         if table.name == right_table
                     )
                 )
+
+                st.divider()
                 try:
                     left_columns = []
                     left_columns.extend(left_table_object.columns)
@@ -95,18 +107,24 @@ def joins_dialog() -> None:
                 except ValueError:
                     default_left_col = 0
                     default_right_col = 0
+
                 left_col = st.selectbox(
                     "Left Column",
                     options=[col.name for col in left_columns],
                     index=default_left_col,
                     key=f"left_col_{idx}_{col_idx}",
                 )
+                join_cols.left_column = left_col
                 right_col = st.selectbox(
                     "Right Column",
                     options=[col.name for col in right_columns],
                     index=default_right_col,
                     key=f"right_col_{idx}_{col_idx}",
                 )
+                join_cols.right_column = right_col
+
+                if st.button("Delete join key", key=f"delete_join_key_{idx}_{col_idx}"):
+                    relationship.relationship_columns.pop(col_idx)
 
             if st.button("Add join keys", key=f"add_join_keys_{idx}"):
                 relationship.relationship_columns.append(
@@ -118,7 +136,7 @@ def joins_dialog() -> None:
 
     # If the user clicks "Add join", add a new join to the relationships list
     if st.button("Add join"):
-        st.session_state.semantic_model.relationships.append(
+        st.session_state.builder_joins.append(
             semantic_model_pb2.Relationship(
                 left_table="",
                 right_table="",
@@ -130,5 +148,8 @@ def joins_dialog() -> None:
 
     # If the user clicks "Save", save the relationships list to the session state
     if st.button("Save"):
-        st.session_state.semantic_model.relationships = st.session_state.builder_joins
+        del st.session_state.semantic_model.relationships[:]
+        st.session_state.semantic_model.relationships.extend(
+            st.session_state.builder_joins
+        )
         st.rerun()
