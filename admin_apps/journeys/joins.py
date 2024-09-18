@@ -6,12 +6,11 @@ from semantic_model_generator.protos import semantic_model_pb2
 @st.dialog("Join Builder", width="large")
 def joins_dialog() -> None:
 
-    if "builder_joins" not in st.session_state:
-        st.session_state.builder_joins = st.session_state.semantic_model.relationships
-
     # For each relationship, render a relationship builder
     for idx, relationship in enumerate(st.session_state.builder_joins):
-        with st.expander(f"Join {idx}"):
+        with st.expander(relationship.name or f"Join {idx}"):
+            name = st.text_input("Name", value=relationship.name, key=f"name_{idx}")
+            relationship.name = name
             try:
                 default_left_table = [
                     table.name for table in st.session_state.semantic_model.tables
@@ -133,6 +132,7 @@ def joins_dialog() -> None:
                         right_column="",
                     )
                 )
+                st.rerun(scope="fragment")
 
     # If the user clicks "Add join", add a new join to the relationships list
     if st.button("Add join"):
@@ -145,6 +145,7 @@ def joins_dialog() -> None:
                 relationship_columns=[],
             )
         )
+        st.rerun(scope="fragment")
 
     # If the user clicks "Save", save the relationships list to the session state
     if st.button("Save"):
@@ -152,4 +153,4 @@ def joins_dialog() -> None:
         st.session_state.semantic_model.relationships.extend(
             st.session_state.builder_joins
         )
-        st.rerun()
+        st.rerun(scope="app")
