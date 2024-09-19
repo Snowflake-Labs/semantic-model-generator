@@ -511,7 +511,6 @@ def yaml_editor(yaml_str: str) -> None:
         "Add joins",
         use_container_width=True,
     ):
-        st.session_state.builder_joins = st.session_state.semantic_model.relationships
         joins_dialog()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.

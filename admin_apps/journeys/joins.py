@@ -1,3 +1,5 @@
+import copy
+
 import streamlit as st
 
 from semantic_model_generator.protos import semantic_model_pb2
@@ -6,11 +8,18 @@ from semantic_model_generator.protos import semantic_model_pb2
 @st.dialog("Join Builder", width="large")
 def joins_dialog() -> None:
 
+    if "builder_joins" not in st.session_state:
+        # Making a copy of the original relationships list so we can modify freely without affecting the original.
+        st.session_state.builder_joins = st.session_state.semantic_model.relationships[
+            :
+        ]
+
     # For each relationship, render a relationship builder
     for idx, relationship in enumerate(st.session_state.builder_joins):
-        with st.expander(relationship.name or f"Join {idx}"):
+        with st.expander(f"Join {idx}"):
             name = st.text_input("Name", value=relationship.name, key=f"name_{idx}")
             relationship.name = name
+            # Logic to preselect the tables in the dropdown based on what's in the semantic model.
             try:
                 default_left_table = [
                     table.name for table in st.session_state.semantic_model.tables
@@ -67,6 +76,8 @@ def joins_dialog() -> None:
             relationship.relationship_type = relationship_type
 
             for col_idx, join_cols in enumerate(relationship.relationship_columns):
+                # Grabbing references to the exact Table objects that the relationship is pointing to.
+                # This allows us to pull the columns.
                 left_table_object = next(
                     (
                         table
@@ -74,7 +85,6 @@ def joins_dialog() -> None:
                         if table.name == left_table
                     )
                 )
-
                 right_table_object = next(
                     (
                         table
@@ -124,6 +134,7 @@ def joins_dialog() -> None:
 
                 if st.button("Delete join key", key=f"delete_join_key_{idx}_{col_idx}"):
                     relationship.relationship_columns.pop(col_idx)
+                    st.rerun(scope="fragment")
 
             if st.button("Add join keys", key=f"add_join_keys_{idx}"):
                 relationship.relationship_columns.append(
@@ -153,4 +164,4 @@ def joins_dialog() -> None:
         st.session_state.semantic_model.relationships.extend(
             st.session_state.builder_joins
         )
-        st.rerun(scope="app")
+        st.rerun()
