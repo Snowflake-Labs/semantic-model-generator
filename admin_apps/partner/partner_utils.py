@@ -24,13 +24,19 @@ def set_partner_instructions() -> None:
     """
 
     if st.session_state.get("partner_tool", None):
-        if st.session_state["partner_tool"] == "dbt":
-            from admin_apps.partner.dbt import DBT_IMAGE, DBT_INSTRUCTIONS
+        if st.session_state["partner_tool"] == "dbt - SQL Model":
+            from admin_apps.partner.dbt import DBT_IMAGE, DBT_MODEL_INSTRUCTIONS
 
-            instructions = DBT_INSTRUCTIONS
+            instructions = DBT_MODEL_INSTRUCTIONS
             image = DBT_IMAGE
             image_size = (72, 32)
-        elif st.session_state["partner_tool"] == "looker":
+        elif st.session_state["partner_tool"] == "dbt - Semantic Model":
+            from admin_apps.partner.dbt import DBT_IMAGE, DBT_SEMANTIC_INSTRUCTIONS
+
+            instructions = DBT_SEMANTIC_INSTRUCTIONS
+            image = DBT_IMAGE
+            image_size = (72, 32)
+        elif st.session_state["partner_tool"] == "Looker - Explore":
             from admin_apps.partner.looker import LOOKER_IMAGE, LOOKER_INSTRUCTIONS
 
             instructions = LOOKER_INSTRUCTIONS
@@ -47,7 +53,7 @@ def configure_partner_semantic() -> None:
     Returns: None
     """
 
-    partners = [None, "dbt", "looker"]
+    partners = [None, "dbt - SQL Model", "dbt - Semantic Model", "Looker - Explore"]
 
     st.selectbox(
         "Select the partner tool",
@@ -58,7 +64,7 @@ def configure_partner_semantic() -> None:
     )
     if st.session_state.get("partner_tool", None):
         with st.expander(
-            f"{st.session_state.get('partner_tool', '').title()} Instructions",
+            "Instructions",
             expanded=True,
         ):
             render_image(
@@ -71,9 +77,9 @@ def configure_partner_semantic() -> None:
     if st.session_state.get("partner_tool", None):
         st.session_state["selected_partner"] = st.session_state["partner_tool"]
 
-    if st.session_state["partner_tool"] == "dbt":
+    if st.session_state["partner_tool"] == "dbt - Semantic Model":
         upload_dbt_semantic()
-    if st.session_state["partner_tool"] == "looker":
+    if st.session_state["partner_tool"] == "Looker - Explore":
         from admin_apps.partner.looker import set_looker_semantic
 
         set_looker_semantic()
