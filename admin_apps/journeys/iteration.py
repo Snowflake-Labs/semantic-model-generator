@@ -507,11 +507,12 @@ def yaml_editor(yaml_str: str) -> None:
         ):
             integrate_partner_semantics()
 
-    if button_container.button(
-        "Join Editor",
-        use_container_width=True,
-    ):
-        joins_dialog()
+    if st.session_state.experimental_features:
+        if button_container.button(
+            "Join Editor",
+            use_container_width=True,
+        ):
+            joins_dialog()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
