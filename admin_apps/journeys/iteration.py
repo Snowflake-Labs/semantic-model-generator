@@ -508,7 +508,7 @@ def yaml_editor(yaml_str: str) -> None:
             integrate_partner_semantics()
 
     if button_container.button(
-        "Add joins",
+        "Join Editor",
         use_container_width=True,
     ):
         joins_dialog()

@@ -2,6 +2,7 @@ import copy
 from typing import Optional
 
 import streamlit as st
+from streamlit_extras.row import row
 
 from semantic_model_generator.protos import semantic_model_pb2
 
@@ -26,12 +27,14 @@ def relationship_builder(
     Renders a UI for building/editing a semantic model relationship.
     Args:
         relationship: The relationship object to edit.
-        key: An optional key to use for the UI elements.
 
     Returns:
 
     """
-    with st.expander(f"Join {key}"):
+    with st.expander(
+        relationship.name or f"{relationship.left_table} ↔️ {relationship.right_table}",
+        expanded=True,
+    ):
         relationship.name = st.text_input(
             "Name", value=relationship.name, key=f"name_{key}"
         )
@@ -65,6 +68,7 @@ def relationship_builder(
             options=SUPPORTED_JOIN_TYPES,
             format_func=lambda join_type: semantic_model_pb2.JoinType.Name(join_type),
             index=SUPPORTED_JOIN_TYPES.index(relationship.join_type),
+            key=f"join_type_{key}",
         )
 
         relationship.relationship_type = st.radio(  # type: ignore
@@ -74,8 +78,10 @@ def relationship_builder(
                 relationship_type
             ),
             index=SUPPORTED_RELATIONSHIP_TYPES.index(relationship.relationship_type),
+            key=f"relationship_type_{key}",
         )
 
+        st.divider()
         # Builder section for the relationship's columns.
         for col_idx, join_cols in enumerate(relationship.relationship_columns):
             # Grabbing references to the exact Table objects that the relationship is pointing to.
@@ -95,7 +101,6 @@ def relationship_builder(
                 )
             )
 
-            st.divider()
             try:
                 left_columns = []
                 left_columns.extend(left_table_object.columns)
@@ -136,13 +141,29 @@ def relationship_builder(
                 relationship.relationship_columns.pop(col_idx)
                 st.rerun(scope="fragment")
 
-        if st.button("Add join keys", key=f"add_join_keys_{key}"):
+            st.divider()
+
+        join_editor_row = row(2, vertical_align="center")
+        if join_editor_row.button(
+            "Add new join key",
+            key=f"add_join_keys_{key}",
+            use_container_width=True,
+            type="primary",
+        ):
             relationship.relationship_columns.append(
                 semantic_model_pb2.RelationKey(
                     left_column="",
                     right_column="",
                 )
             )
+            st.rerun(scope="fragment")
+
+        if join_editor_row.button(
+            "🗑️ Delete join path",
+            key=f"delete_join_path_{key}",
+            use_container_width=True,
+        ):
+            st.session_state.builder_joins.pop(key)
             st.rerun(scope="fragment")
 
 
@@ -159,7 +180,7 @@ def joins_dialog() -> None:
         relationship_builder(relationship, idx)
 
     # If the user clicks "Add join", add a new join to the relationships list
-    if st.button("Add join"):
+    if st.button("Add new join path", use_container_width=True):
         st.session_state.builder_joins.append(
             semantic_model_pb2.Relationship(
                 left_table="",
@@ -172,9 +193,28 @@ def joins_dialog() -> None:
         st.rerun(scope="fragment")
 
     # If the user clicks "Save", save the relationships list to the session state
-    if st.button("Save"):
+    if st.button("Save to semantic model", use_container_width=True, type="primary"):
+        # Quickly validate that all of the user's joins have the required fields.
+        for relationship in st.session_state.builder_joins:
+            if not relationship.left_table or not relationship.right_table:
+                st.error("Please fill out left and right tables for all join paths.")
+                return
+
+            if not relationship.name:
+                st.error(
+                    f"The join path between {relationship.left_table} and {relationship.right_table} is missing a name."
+                )
+                return
+
+            if not relationship.relationship_columns:
+                st.error(
+                    f"The join path between {relationship.left_table} and {relationship.right_table} is missing joinable columns."
+                )
+                return
+
         del st.session_state.semantic_model.relationships[:]
         st.session_state.semantic_model.relationships.extend(
             st.session_state.builder_joins
         )
+        st.session_state.validated = None
         st.rerun()
