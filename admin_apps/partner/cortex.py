@@ -3,7 +3,10 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 
-from semantic_model_generator.data_processing.proto_utils import proto_to_dict, yaml_to_semantic_model
+from semantic_model_generator.data_processing.proto_utils import (
+    proto_to_dict,
+    yaml_to_semantic_model,
+)
 
 
 class CortexDimension:
@@ -134,7 +137,9 @@ class CortexSemanticTable:
 
     @staticmethod
     def create_cortex_table_list() -> None:
-        cortex_semantic = proto_to_dict(yaml_to_semantic_model(st.session_state["last_saved_yaml"]))
+        cortex_semantic = proto_to_dict(
+            yaml_to_semantic_model(st.session_state["last_saved_yaml"])
+        )
         # Need to replace table details in current entire yaml
         st.session_state["current_yaml_as_dict"] = cortex_semantic
         tables = []

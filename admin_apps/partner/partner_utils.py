@@ -81,10 +81,10 @@ def configure_partner_semantic() -> None:
         upload_dbt_semantic()
     if st.session_state["partner_tool"] == "Looker - Explore":
         from admin_apps.partner.looker import set_looker_semantic
+
         set_looker_semantic()
     if st.session_state["partner_tool"] == "dbt - SQL Model":
         st.session_state["partner_setup"] = False
-
 
 
 class PartnerCompareRow:
@@ -239,12 +239,10 @@ def integrate_partner_semantics() -> None:
     """
 
     st.write(
-        f"Specify how to merge semantic metadata from your selected partner tool with Cortex Analyst's semantic model."
-        )
-    
-    st.write(
-        f"Partner: **{st.session_state.get('selected_partner', None)}**"
+        "Specify how to merge semantic metadata from your selected partner tool with Cortex Analyst's semantic model."
     )
+
+    st.write(f"Partner: **{st.session_state.get('selected_partner', None)}**")
 
     COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata.
     Where metadata is missing, the other semantic file will be checked."""
