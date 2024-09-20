@@ -453,9 +453,7 @@ def yaml_editor(yaml_str: str) -> None:
     status_container_title = "**Edit**"
     status_container = st.empty()
 
-    if button_container.button(
-        "Validate", use_container_width=True, help=VALIDATE_HELP
-    ):
+    def validate_and_update_session_state() -> None:
         # Validate new content
         try:
             validate(
@@ -471,6 +469,11 @@ def yaml_editor(yaml_str: str) -> None:
             st.session_state["validated"] = False
             update_container(status_container, "failed", prefix=status_container_title)
             exception_as_dialog(e)
+
+    if button_container.button(
+        "Validate", use_container_width=True, help=VALIDATE_HELP
+    ):
+        validate_and_update_session_state()
 
         # Rerun the app if validation was successful.
         # We shouldn't rerun if validation failed as the error popup would immediately dismiss.
@@ -512,6 +515,8 @@ def yaml_editor(yaml_str: str) -> None:
             "Join Editor",
             use_container_width=True,
         ):
+            with st.spinner("Validating your model..."):
+                validate_and_update_session_state()
             joins_dialog()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
@@ -626,6 +631,11 @@ def set_up_requirements() -> None:
 
     file_name = st.selectbox("File name", options=available_files, index=None)
 
+    experimental_features = st.checkbox(
+        "Enable experimental features (optional)",
+        help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Some features (e.g. joins) are currently in Private Preview and available only to select accounts. Reach out to your account team for access.",
+    )
+
     if st.button(
         "Submit",
         disabled=not st.session_state["selected_iteration_database"]
@@ -643,6 +653,7 @@ def set_up_requirements() -> None:
         st.session_state["user_name"] = SNOWFLAKE_USER
         st.session_state["file_name"] = file_name
         st.session_state["page"] = GeneratorAppScreen.ITERATION
+        st.session_state["experimental_features"] = experimental_features
         st.rerun()
 
 
