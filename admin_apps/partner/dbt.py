@@ -14,8 +14,8 @@ DBT_MODEL_INSTRUCTIONS = """
 Materialize your SQL model(s) as Snowflake table(s) and generate a Cortex Analyst semantic file for them directly.
 > Steps:
 > 1) Update dbt model(s) to be [materialized](https://docs.getdbt.com/docs/build/materializations) in Snowflake.
-> 2) Update dbt model(s) to [persist docs](https://docs.getdbt.com/reference/resource-configs/persist_docs).
-> 3) Run dbt model.
+> 2) Update dbt model(s) to [persist docs](https://docs.getdbt.com/reference/resource-configs/persist_docs) to capture table/column descriptions.
+> 3) Run dbt model(s) to materialize in Snowflake.
 > 4) Select **🛠 Create a new semantic model** on the homepage and select the materialized Snowflake table(s).
 """
 DBT_SEMANTIC_INSTRUCTIONS = """

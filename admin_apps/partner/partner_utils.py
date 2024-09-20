@@ -81,8 +81,10 @@ def configure_partner_semantic() -> None:
         upload_dbt_semantic()
     if st.session_state["partner_tool"] == "Looker - Explore":
         from admin_apps.partner.looker import set_looker_semantic
-
         set_looker_semantic()
+    if st.session_state["partner_tool"] == "dbt - SQL Model":
+        st.session_state["partner_setup"] = False
+
 
 
 class PartnerCompareRow:
@@ -237,7 +239,11 @@ def integrate_partner_semantics() -> None:
     """
 
     st.write(
-        "Specify how to merge semantic metadata from partner tools with Cortex Analyst's semantic model."
+        f"Specify how to merge semantic metadata from your selected partner tool with Cortex Analyst's semantic model."
+        )
+    
+    st.write(
+        f"Partner: **{st.session_state.get('selected_partner', None)}**"
     )
 
     COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata.
@@ -259,11 +265,11 @@ def integrate_partner_semantics() -> None:
         # Execute pre-processing behind the scenes based on vendor tool
         CortexSemanticTable.create_cortex_table_list()
 
-        if st.session_state.get("selected_partner", None) == "looker":
+        if st.session_state.get("selected_partner", None) == "Looker - Explore":
             from admin_apps.partner.looker import LookerSemanticTable
 
             LookerSemanticTable.create_cortex_table_list()
-        elif st.session_state.get("selected_partner", None) == "dbt":
+        elif st.session_state.get("selected_partner", None) == "dbt - Semantic Model":
             pass
         else:
             st.error("Selected partner tool not available.")
@@ -309,13 +315,13 @@ def integrate_partner_semantics() -> None:
                 semantic_cortex_tbl
             )
 
-            if st.session_state.get("selected_partner", None) == "looker":
+            if st.session_state.get("selected_partner", None) == "Looker - Explore":
                 from admin_apps.partner.looker import LookerSemanticTable
 
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
-            if st.session_state.get("selected_partner", None) == "dbt":
+            if st.session_state.get("selected_partner", None) == "dbt - Semantic Model":
                 partner_fields_df = DBTSemanticModel.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
