@@ -481,9 +481,11 @@ class SnowflakeConnector:
             passcode_in_password=self._is_mfa_passcode_in_password(),
         )
         if db_name:
-            set_database(connection, db_name=db_name)
+            pass
+            # set_database(connection, db_name=db_name)
         if schema_name:
-            set_schema(connection, schema_name=schema_name)
+            pass
+            # set_schema(connection, schema_name=schema_name)
 
         if _QUERY_TAG:
             connection.cursor().execute(f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'")

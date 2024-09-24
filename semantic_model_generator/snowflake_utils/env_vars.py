@@ -17,7 +17,7 @@ SNOWFLAKE_MFA_PASSCODE = os.getenv("SNOWFLAKE_MFA_PASSCODE")
 SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD = os.getenv("SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD")
 
 
-def assert_required_env_vars() -> list[str]:
+def assert_required_env_vars():
     """
     Ensures that the required environment variables are set before proceeding.
     Returns: list of missing required environment variables

@@ -17,7 +17,7 @@ from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
 )
 
 
-@st.dialog(title="Setup")
+@st.experimental_dialog(title="Setup")
 def env_setup_popup(missing_env_vars: list[str]) -> None:
     """
     Renders a dialog box to prompt the user to set the required environment variables.
@@ -32,7 +32,7 @@ Please follow the [setup instructions](https://github.com/Snowflake-Labs/semanti
     st.stop()
 
 
-@st.dialog(title="Connection Error")
+@st.experimental_dialog(title="Connection Error")
 def failed_connection_popup() -> None:
     """
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.

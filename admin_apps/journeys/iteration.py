@@ -8,7 +8,7 @@ import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
-from streamlit_monaco import st_monaco
+# from streamlit_monaco import st_monaco
 
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
@@ -137,7 +137,7 @@ def show_expr_for_ref(message_index: int) -> None:
         st.dataframe(col_df, hide_index=True, use_container_width=True, height=250)
 
 
-@st.dialog("Edit", width="large")
+@st.experimental_dialog("Edit", width="large")
 def edit_verified_query(
     conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
@@ -162,9 +162,9 @@ def edit_verified_query(
     with st.container(border=False):
         st.caption("**SQL**")
         with st.container(border=True):
-            user_updated_sql = st_monaco(
-                value=sql_without_cte, language="sql", height=200
-            )
+            # user_updated_sql = st_monaco(
+            #     value=sql_without_cte, language="sql", height=200
+            # )
             run = st.button("Run", use_container_width=True)
 
             if run:
@@ -336,7 +336,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
-@st.dialog("Upload", width="small")
+@st.experimental_dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
@@ -422,7 +422,7 @@ def update_container(
     container.markdown(content)
 
 
-@st.dialog("Error", width="small")
+@st.experimental_dialog("Error", width="small")
 def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
@@ -441,10 +441,9 @@ def yaml_editor(yaml_str: str) -> None:
             or failed).
     """
 
-    content = st_monaco(
+    content = st.text_area(
         value=yaml_str,
         height="600px",
-        language="yaml",
     )
 
     button_container = st.container()
@@ -593,7 +592,7 @@ def stage_selector_container() -> None:
     )
 
 
-@st.dialog("Welcome to the Iteration app! 💬", width="large")
+@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
