@@ -42,7 +42,7 @@ except ImportError:
 # Partner semantic support instructions
 LOOKER_IMAGE = "admin_apps/images/looker.png"
 LOOKER_INSTRUCTIONS = """
-We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file.
+We materialize your [Explore](https://cloud.google.com/looker/docs/reference/param-explore-explore) dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file.
 Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.
 
 **Note**: Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required.

@@ -1,6 +1,7 @@
 import json
 import time
 from typing import Any
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,11 @@ from admin_apps.shared_utils import (
 )
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 
+class PartnerTool(Enum):
+    DBT_SQL_MODEL = "dbt - SQL Model"
+    DBT_SEMANTIC_MODEL = "dbt - Semantic Model"
+    LOOKER_EXPLORE = "Looker - Explore"
+
 
 def set_partner_instructions() -> None:
     """
@@ -24,19 +30,19 @@ def set_partner_instructions() -> None:
     """
 
     if st.session_state.get("partner_tool", None):
-        if st.session_state["partner_tool"] == "dbt - SQL Model":
+        if st.session_state["partner_tool"] == PartnerTool.DBT_SQL_MODEL.value:
             from admin_apps.partner.dbt import DBT_IMAGE, DBT_MODEL_INSTRUCTIONS
 
             instructions = DBT_MODEL_INSTRUCTIONS
             image = DBT_IMAGE
             image_size = (72, 32)
-        elif st.session_state["partner_tool"] == "dbt - Semantic Model":
+        elif st.session_state["partner_tool"] == PartnerTool.DBT_SEMANTIC_MODEL.value:
             from admin_apps.partner.dbt import DBT_IMAGE, DBT_SEMANTIC_INSTRUCTIONS
 
             instructions = DBT_SEMANTIC_INSTRUCTIONS
             image = DBT_IMAGE
             image_size = (72, 32)
-        elif st.session_state["partner_tool"] == "Looker - Explore":
+        elif st.session_state["partner_tool"] == PartnerTool.LOOKER_EXPLORE.value:
             from admin_apps.partner.looker import LOOKER_IMAGE, LOOKER_INSTRUCTIONS
 
             instructions = LOOKER_INSTRUCTIONS
@@ -53,7 +59,7 @@ def configure_partner_semantic() -> None:
     Returns: None
     """
 
-    partners = [None, "dbt - SQL Model", "dbt - Semantic Model", "Looker - Explore"]
+    partners = [tool.value for tool in PartnerTool]
 
     st.selectbox(
         "Select the partner tool",
@@ -77,13 +83,13 @@ def configure_partner_semantic() -> None:
     if st.session_state.get("partner_tool", None):
         st.session_state["selected_partner"] = st.session_state["partner_tool"]
 
-    if st.session_state["partner_tool"] == "dbt - Semantic Model":
+    if st.session_state["partner_tool"] == PartnerTool.DBT_SEMANTIC_MODEL.value:
         upload_dbt_semantic()
-    if st.session_state["partner_tool"] == "Looker - Explore":
+    if st.session_state["partner_tool"] == PartnerTool.LOOKER_EXPLORE.value:
         from admin_apps.partner.looker import set_looker_semantic
 
         set_looker_semantic()
-    if st.session_state["partner_tool"] == "dbt - SQL Model":
+    if st.session_state["partner_tool"] == PartnerTool.DBT_SQL_MODEL.value:
         st.session_state["partner_setup"] = False
 
 
@@ -263,11 +269,11 @@ def integrate_partner_semantics() -> None:
         # Execute pre-processing behind the scenes based on vendor tool
         CortexSemanticTable.create_cortex_table_list()
 
-        if st.session_state.get("selected_partner", None) == "Looker - Explore":
+        if st.session_state.get("selected_partner", None) == PartnerTool.LOOKER_EXPLORE.value:
             from admin_apps.partner.looker import LookerSemanticTable
 
             LookerSemanticTable.create_cortex_table_list()
-        elif st.session_state.get("selected_partner", None) == "dbt - Semantic Model":
+        elif st.session_state.get("selected_partner", None) == PartnerTool.DBT_SEMANTIC_MODEL.value:
             pass
         else:
             st.error("Selected partner tool not available.")
@@ -313,13 +319,13 @@ def integrate_partner_semantics() -> None:
                 semantic_cortex_tbl
             )
 
-            if st.session_state.get("selected_partner", None) == "Looker - Explore":
+            if st.session_state.get("selected_partner", None) == PartnerTool.LOOKER_EXPLORE.value:
                 from admin_apps.partner.looker import LookerSemanticTable
 
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
-            if st.session_state.get("selected_partner", None) == "dbt - Semantic Model":
+            if st.session_state.get("selected_partner", None) == PartnerTool.DBT_SEMANTIC_MODEL.value:
                 partner_fields_df = DBTSemanticModel.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
