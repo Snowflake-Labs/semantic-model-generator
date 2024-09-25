@@ -1,7 +1,7 @@
 import json
 import time
-from typing import Any
 from enum import Enum
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from admin_apps.shared_utils import (
     set_sit_query_tag,
 )
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
+
 
 class PartnerTool(Enum):
     DBT_SQL_MODEL = "dbt - SQL Model"
@@ -269,11 +270,17 @@ def integrate_partner_semantics() -> None:
         # Execute pre-processing behind the scenes based on vendor tool
         CortexSemanticTable.create_cortex_table_list()
 
-        if st.session_state.get("selected_partner", None) == PartnerTool.LOOKER_EXPLORE.value:
+        if (
+            st.session_state.get("selected_partner", None)
+            == PartnerTool.LOOKER_EXPLORE.value
+        ):
             from admin_apps.partner.looker import LookerSemanticTable
 
             LookerSemanticTable.create_cortex_table_list()
-        elif st.session_state.get("selected_partner", None) == PartnerTool.DBT_SEMANTIC_MODEL.value:
+        elif (
+            st.session_state.get("selected_partner", None)
+            == PartnerTool.DBT_SEMANTIC_MODEL.value
+        ):
             pass
         else:
             st.error("Selected partner tool not available.")
@@ -319,13 +326,19 @@ def integrate_partner_semantics() -> None:
                 semantic_cortex_tbl
             )
 
-            if st.session_state.get("selected_partner", None) == PartnerTool.LOOKER_EXPLORE.value:
+            if (
+                st.session_state.get("selected_partner", None)
+                == PartnerTool.LOOKER_EXPLORE.value
+            ):
                 from admin_apps.partner.looker import LookerSemanticTable
 
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
-            if st.session_state.get("selected_partner", None) == PartnerTool.DBT_SEMANTIC_MODEL.value:
+            if (
+                st.session_state.get("selected_partner", None)
+                == PartnerTool.DBT_SEMANTIC_MODEL.value
+            ):
                 partner_fields_df = DBTSemanticModel.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
