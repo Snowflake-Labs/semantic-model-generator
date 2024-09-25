@@ -12,7 +12,7 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 from PIL import Image
-from snowflake.snowpark.context import get_active_session
+from snowflake.connector.connection import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
@@ -56,6 +56,18 @@ def get_connector() -> SnowflakeConnector:
         max_workers=1,
     )
 
+def set_streamlit_location() -> None:
+    """
+    Sets STREAMLIT_LOCATION in session_state indicating the location of the streamlit app as SiS or OSS.
+    """
+    HOME = os.getenv("HOME", None)
+    if HOME == "/home/udf":
+        STREAMLIT_LOCATION = "SiS"
+        import _snowflake
+    else:
+        STREAMLIT_LOCATION = "OSS"
+    st.session_state['STREAMLIT_LOCATION'] = STREAMLIT_LOCATION
+
 
 @st.cache_resource(show_spinner=False)
 def get_snowflake_connection() -> SnowflakeConnection:
@@ -64,7 +76,21 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Marked with st.cache_resource in order to reuse this connection across the app.
     Returns: SnowflakeConnection
     """
-    return get_active_session().connection
+
+    if 'STREAMLIT_LOCATION' not in st.session_state:
+        set_streamlit_location()
+
+    if st.session_state['STREAMLIT_LOCATION'] == "SiS":
+        from snowflake.snowpark.context import get_active_session
+        return get_active_session().connection
+    else:
+        # Rely on streamlit connection that is built on top of many ways to build snowflake connection
+        try:
+            return st.connection("snowflake").raw_connection
+        except:
+            # Continue to support original implementation that relied on environment vars
+            return get_connector().open_connection(db_name="")
+
 
 
 @st.cache_resource(show_spinner=False)

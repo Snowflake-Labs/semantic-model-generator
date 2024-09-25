@@ -88,17 +88,29 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
 
-    host = st.session_state.host_name
-    resp = requests.post(
-        API_ENDPOINT.format(
-            HOST=host,
-        ),
-        json=request_body,
-        headers={
-            "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
-            "Content-Type": "application/json",
-        },
+    if st.session_state['STREAMLIT_LOCATION'] == 'SiS':
+        resp = _snowflake.send_snow_api_request( #type: ignore
+        "POST",
+        f"/api/v2/cortex/analyst/message",
+        {},
+        {},
+        request_body,
+        {},
+        30000,
     )
+    else:
+        host = st.session_state.host_name
+        resp = requests.post(
+            API_ENDPOINT.format(
+                HOST=host,
+            ),
+            json=request_body,
+            headers={
+                "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
+                "Content-Type": "application/json",
+            },
+        )
+        
     if resp.status_code < 400:
         json_resp: Dict[str, Any] = resp.json()
         return json_resp
@@ -442,6 +454,7 @@ def yaml_editor(yaml_str: str) -> None:
     """
 
     content = st.text_area(
+        label = 'placeholder_label',
         value=yaml_str,
         height="600px",
     )
