@@ -267,6 +267,7 @@ message Relationship {
   string right_table = 3;
   // Keys directly represent the join relationship.
   repeated RelationKey relationship_columns = 7;
+  // Type of the join.
   JoinType join_type = 5;
   // Type of the relationship.
   RelationshipType relationship_type = 6;
