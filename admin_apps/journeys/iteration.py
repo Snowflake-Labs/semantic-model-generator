@@ -456,7 +456,7 @@ def yaml_editor(yaml_str: str) -> None:
     content = st.text_area(
         label = 'placeholder_label',
         value=yaml_str,
-        height="600px",
+        height=600,
     )
 
     button_container = st.container()
