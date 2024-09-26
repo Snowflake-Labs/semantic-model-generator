@@ -23,6 +23,7 @@ from strictyaml import (
 )
 
 from semantic_model_generator.protos import semantic_model_pb2
+from semantic_model_generator.validate.keywords import SF_RESERVED_WORDS
 
 scalar_type_map = {
     FieldDescriptor.TYPE_BOOL: Bool,
@@ -40,6 +41,18 @@ class SqlExpression(Str):  # type: ignore
             sqlglot.parse_one(chunk.contents, dialect=sqlglot.dialects.Snowflake)  # type: ignore
         except Exception:
             chunk.expecting_but_found("", "invalid SQL expression")
+        return chunk.contents
+
+
+class IdField(Str):  # type: ignore
+    def validate_scalar(self, chunk):  # type: ignore
+        if not chunk.contents.replace("_", "").replace("$", "").isalnum():
+            chunk.expecting_but_found(
+                "",
+                "name can only contain letters, underscores, decimal digits (0-9), and dollar signs ($).",
+            )
+        if chunk.contents.upper() in SF_RESERVED_WORDS:
+            chunk.expecting_but_found("", "name cannot be a Snowflake reserved keyword")
         return chunk.contents
 
 
@@ -94,6 +107,10 @@ def create_schema_for_field(
         field_descriptor
     ):
         field_type = SqlExpression()
+    elif field_descriptor.type == FieldDescriptor.TYPE_STRING and _is_id_field(
+        field_descriptor
+    ):
+        field_type = IdField()
     elif field_descriptor.type in scalar_type_map:
         field_type = scalar_type_map[field_descriptor.type]()
     else:
@@ -114,6 +131,10 @@ def _is_optional_field(field_descriptor: FieldDescriptor) -> bool:
 
 def _is_sql_expression(field_descriptor: FieldDescriptor) -> bool:
     return _has_field_option(field_descriptor, "sql_expression")
+
+
+def _is_id_field(field_descriptor: FieldDescriptor) -> bool:
+    return _has_field_option(field_descriptor, "id_field")
 
 
 def _has_field_option(field_descriptor: FieldDescriptor, option_name: str) -> bool:
