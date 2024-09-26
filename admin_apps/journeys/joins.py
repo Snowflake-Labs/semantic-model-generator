@@ -6,7 +6,6 @@ from streamlit_extras.row import row
 
 from semantic_model_generator.protos import semantic_model_pb2
 
-
 SUPPORTED_JOIN_TYPES = [
     join_type
     for join_type in semantic_model_pb2.JoinType.values()
