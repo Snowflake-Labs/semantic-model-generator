@@ -840,9 +840,7 @@ def upload_yaml(file_name: str, conn: SnowflakeConnection) -> None:
 
         with open(tmp_file_path, "w") as temp_file:
             temp_file.write(yaml)
-
-        set_database(conn, st.session_state.snowflake_stage.stage_database)
-        set_schema(conn, st.session_state.snowflake_stage.stage_schema)
+        
         upload_sql = f"PUT file://{tmp_file_path} @{st.session_state.snowflake_stage.stage_name} AUTO_COMPRESS=FALSE OVERWRITE=TRUE"
         conn.cursor().execute(upload_sql)
 
@@ -922,8 +920,6 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
     import tempfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        set_database(conn, st.session_state.snowflake_stage.stage_database)
-        set_schema(conn, st.session_state.snowflake_stage.stage_schema)
         # Downloads the YAML to {temp_dir}/{file_name}.
         download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
         conn.cursor().execute(download_yaml_sql)
