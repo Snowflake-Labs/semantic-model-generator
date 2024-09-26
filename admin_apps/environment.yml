@@ -1,0 +1,21 @@
+name: sf_env
+channels:
+- snowflake
+dependencies:
+- python=3.10.* 
+- pandas=2.0.3
+- tqdm=4.66.2
+- streamlit=1.35.0
+- loguru=0.5.3 # downgraded
+- protobuf=4.25.3 # downgraded
+- pydantic=2.8.2 # upgraded
+- pyyaml=6.0.1
+- ruamel.yaml=0.17.21 # downgraded
+- pyarrow=16.1.0 # upgraded
+- sqlglot=25.10.0 # upgraded
+- numpy=1.25.0 # upgraded
+- python-dotenv=0.21.0 # downgraded
+- urllib3=1.26.19
+- requests=2.32.3
+- types-pyyaml=6.0.12.12 # downgraded
+- types-protobuf=4.25.0.20240417 # upgraded
