@@ -226,7 +226,14 @@ def set_looker_semantic() -> None:
     with col2:
         sample_values = input_sample_value_num()
 
+    experimental_features = st.checkbox(
+        "Enable experimental features (optional)",
+        help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Some features (e.g. joins) are currently in Private Preview and available only to select accounts. Reach out to your account team for access.",
+    )
+
     if st.button("Continue", type="primary"):
+        st.session_state["experimental_features"] = experimental_features
+
         if check_valid_session_state_values(
             [
                 "looker_model_name",
@@ -265,6 +272,7 @@ def set_looker_semantic() -> None:
                     model_name,
                     sample_values,
                     [full_tablename],
+                    allow_joins=experimental_features,
                 )
                 st.session_state["partner_setup"] = True
 
