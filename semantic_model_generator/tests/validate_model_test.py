@@ -209,12 +209,10 @@ def test_invalid_yaml_missing_quote(
     mock_logger, temp_invalid_yaml_unmatched_quote_file, mock_snowflake_connection
 ):
     account_name = "snowflake test"
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(YAMLValidationError) as exc_info:
         validate_from_local_path(temp_invalid_yaml_unmatched_quote_file, account_name)
 
-    expected_error_fragment = (
-        "Unable to validate your semantic model. Error = Unable to parse sql statement."
-    )
+    expected_error_fragment = "name can only contain letters, underscores, decimal digits (0-9), and dollar signs ($)."
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
 
     expected_log_call = mock.call.info("Successfully validated!")
