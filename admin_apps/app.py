@@ -1,5 +1,6 @@
 import streamlit as st
 from snowflake.connector import DatabaseError
+from snowflake.connector.connection import SnowflakeConnection
 
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
 st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
@@ -8,12 +9,15 @@ from admin_apps.shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
     set_sit_query_tag,
+    set_account_name,
+    set_host_name,
+    set_user_name,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
-    assert_required_env_vars,
+    # assert_required_env_vars,
 )
 
 
@@ -46,7 +50,7 @@ def failed_connection_popup() -> None:
     st.stop()
 
 
-def verify_environment_setup() -> None:
+def verify_environment_setup() -> None | SnowflakeConnection:
     """
     Ensures that the correct environment variables are set before proceeding.
     """
@@ -59,7 +63,7 @@ def verify_environment_setup() -> None:
         with st.spinner(
             "Validating your connection to Snowflake. If you are using MFA, please check your authenticator app for a push notification."
         ):
-            get_snowflake_connection()
+            return get_snowflake_connection()
     except DatabaseError:
         failed_connection_popup()
 
@@ -73,11 +77,6 @@ if __name__ == "__main__":
         """
 
         # Direct to specific page based instead of default onboarding if user comes from successful partner setup
-        if (
-            st.session_state.get("partner_setup", False)
-            and st.session_state.get("partner_tool", None) == "looker"
-        ):
-            builder.show()
         st.markdown(
             """
                 <div style="text-align: center;">
@@ -118,12 +117,12 @@ if __name__ == "__main__":
                 )
                 partner.show()
 
-    verify_environment_setup()
+    conn = verify_environment_setup()
 
     # Populating common state between builder and iteration apps.
-    st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
-    st.session_state["host_name"] = SNOWFLAKE_HOST
-    st.session_state["user_name"] = SNOWFLAKE_USER
+    set_account_name(conn, SNOWFLAKE_ACCOUNT_LOCATOR)
+    set_host_name(conn, SNOWFLAKE_HOST)
+    set_user_name(conn, SNOWFLAKE_USER)
 
     # When the app first loads, show the onboarding screen.
     if "page" not in st.session_state:

@@ -86,7 +86,7 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
 
-    if st.session_state['STREAMLIT_LOCATION'] == 'SiS':
+    if st.session_state['sis']:
         resp = _snowflake.send_snow_api_request( #type: ignore
         "POST",
         f"/api/v2/cortex/analyst/message",
@@ -97,7 +97,6 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
         30000,
     )
     else:
-        print(f"HELLO JASON: {st.session_state.host_name}")
         host = st.session_state.host_name
         resp = requests.post(
             API_ENDPOINT.format(
@@ -635,9 +634,6 @@ def set_up_requirements() -> None:
             stage_schema=st.session_state["selected_iteration_schema"],
             stage_name=st.session_state["selected_iteration_stage"],
         )
-        st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
-        st.session_state["host_name"] = SNOWFLAKE_HOST
-        st.session_state["user_name"] = SNOWFLAKE_USER
         st.session_state["file_name"] = file_name
         st.session_state["page"] = GeneratorAppScreen.ITERATION
         st.rerun()

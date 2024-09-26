@@ -63,15 +63,15 @@ def get_connector() -> SnowflakeConnector:
 
 def set_streamlit_location() -> None:
     """
-    Sets STREAMLIT_LOCATION in session_state indicating the location of the streamlit app as SiS or OSS.
+    Sets sis in session_state to True if the streamlit app is in SiS.
     """
     HOME = os.getenv("HOME", None)
     if HOME == "/home/udf":
-        STREAMLIT_LOCATION = "SiS"
         import _snowflake
+        sis = True
     else:
-        STREAMLIT_LOCATION = "OSS"
-    st.session_state['STREAMLIT_LOCATION'] = STREAMLIT_LOCATION
+        sis = False
+    st.session_state['sis'] = sis
 
 
 @st.experimental_dialog(title="Setup")
@@ -97,10 +97,10 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Returns: SnowflakeConnection
     """
 
-    if 'STREAMLIT_LOCATION' not in st.session_state:
+    if 'sis' not in st.session_state:
         set_streamlit_location()
 
-    if st.session_state['STREAMLIT_LOCATION'] == "SiS":
+    if st.session_state['sis']:
         from snowflake.snowpark.context import get_active_session
         return get_active_session().connection
     else:
@@ -159,6 +159,53 @@ def get_available_warehouses() -> list[str]:
     """
 
     return fetch_warehouses(get_snowflake_connection())
+
+def set_account_name(conn : SnowflakeConnection,
+                     SNOWFLAKE_ACCOUNT) -> None:
+    """
+    Sets account_name in st.session_state.
+    Used to consolidate from various connection methods.
+    Function not necessary for SiS implementation.
+    """
+    # Only needs to be set for OSS implementation
+    if not st.session_state['sis']:
+        # SNOWFLAKE_ACCOUNT may be specified from user's environment variables
+        # This will not be the case for connections.toml so need to set it ourselves
+        if not SNOWFLAKE_ACCOUNT:
+            SNOWFLAKE_ACCOUNT = conn.cursor().execute("SELECT CURRENT_ACCOUNT()").fetchone()[0]
+        st.session_state['account_name'] = SNOWFLAKE_ACCOUNT
+
+
+def set_host_name(conn : SnowflakeConnection,
+                  SNOWFLAKE_HOST) -> None:
+    """
+    Sets host_name in st.session_state.
+    Used to consolidate from various connection methods.
+    Function not necessary for SiS implementation.
+    """
+    # Only needs to be set for OSS implementation
+    if not st.session_state['sis']:
+        # SNOWFLAKE_HOST may be specified from user's environment variables
+        # This will not be the case for connections.toml so need to set it ourselves
+        if not SNOWFLAKE_HOST:
+            SNOWFLAKE_HOST = conn.host
+        st.session_state['host_name'] = SNOWFLAKE_HOST
+
+
+def set_user_name(conn : SnowflakeConnection,
+                  SNOWFLAKE_USER) -> None:
+    """
+    Sets user_name in st.session_state.
+    Used to consolidate from various connection methods.
+    Function not necessary for SiS implementation.
+    """
+    # Only needs to be set for OSS implementation
+    if not st.session_state['sis']:
+        # SNOWFLAKE_USER may be specified from user's environment variables
+        # This will not be the case for connections.toml so need to set it ourselves
+        if not SNOWFLAKE_USER:
+            SNOWFLAKE_USER = conn.cursor().execute("SELECT CURRENT_USER()").fetchone()[0]
+        st.session_state['user_name'] = SNOWFLAKE_USER
 
 
 class GeneratorAppScreen(str, Enum):
@@ -953,14 +1000,16 @@ def set_sit_query_tag(
 ) -> None:
     """
     Sets query tag on a single zero-compute ping for tracking.
+    Only used if the app is running in the OSS environment.
+
     Returns: None
     """
+    if not st.session_state['sis']:
+        query_tag = get_sit_query_tag(vendor, action)
 
-    query_tag = get_sit_query_tag(vendor, action)
-
-    # conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
-    # conn.cursor().execute("SELECT 'SKIMANTICS';")
-    # conn.cursor().execute("alter session set query_tag=''")
+        conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
+        conn.cursor().execute("SELECT 'SKIMANTICS';")
+        conn.cursor().execute("alter session set query_tag=''")
 
 
 def set_table_comment(
