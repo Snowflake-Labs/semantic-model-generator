@@ -30,8 +30,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
     fetch_warehouses,
-    set_database,
-    set_schema,
 )
 
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
