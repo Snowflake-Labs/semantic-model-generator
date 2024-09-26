@@ -34,6 +34,13 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     set_schema,
 )
 
+from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
+    SNOWFLAKE_ACCOUNT_LOCATOR,
+    SNOWFLAKE_HOST,
+    SNOWFLAKE_USER,
+    assert_required_env_vars,
+)
+
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 _TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -69,6 +76,21 @@ def set_streamlit_location() -> None:
     st.session_state['STREAMLIT_LOCATION'] = STREAMLIT_LOCATION
 
 
+@st.experimental_dialog(title="Setup")
+def env_setup_popup(missing_env_vars: list[str]) -> None:
+    """
+    Renders a dialog box to prompt the user to set the required connection setup.
+    Args:
+        missing_env_vars: A list of missing environment variables.
+    """
+    formatted_missing_env_vars = "\n".join(f"- **{s}**" for s in missing_env_vars)
+    st.markdown(
+        f"""Oops! It looks like the following required environment variables are missing: \n{formatted_missing_env_vars}\n\n
+Please follow the [setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator?tab=readme-ov-file#setup) to properly configure your environment. Restart this app after you've set the required environment variables."""
+    )
+    st.stop()
+
+
 @st.cache_resource(show_spinner=False)
 def get_snowflake_connection() -> SnowflakeConnection:
     """
@@ -89,7 +111,11 @@ def get_snowflake_connection() -> SnowflakeConnection:
             return st.connection("snowflake").raw_connection
         except:
             # Continue to support original implementation that relied on environment vars
-            return get_connector().open_connection(db_name="")
+            missing_env_vars = assert_required_env_vars()
+            if missing_env_vars:
+                env_setup_popup(missing_env_vars)
+            else:
+                return get_connector().open_connection(db_name="")
 
 
 
@@ -863,25 +889,25 @@ def stage_exists() -> bool:
     return "snowflake_stage" in st.session_state
 
 
-def get_environment_variables() -> dict[str, str | None]:
-    import os
+# def get_environment_variables() -> dict[str, str | None]:
+#     import os
 
-    return {
-        key: os.getenv(key)
-        for key in (
-            "SNOWFLAKE_USER",
-            "SNOWFLAKE_PASSWORD",
-            "SNOWFLAKE_ROLE",
-            "SNOWFLAKE_WAREHOUSE",
-            "SNOWFLAKE_HOST",
-            "SNOWFLAKE_ACCOUNT_LOCATOR",
-        )
-    }
+#     return {
+#         key: os.getenv(key)
+#         for key in (
+#             "SNOWFLAKE_USER",
+#             "SNOWFLAKE_PASSWORD",
+#             "SNOWFLAKE_ROLE",
+#             "SNOWFLAKE_WAREHOUSE",
+#             "SNOWFLAKE_HOST",
+#             "SNOWFLAKE_ACCOUNT_LOCATOR",
+#         )
+#     }
 
 
-def environment_variables_exist() -> bool:
-    snowflake_env = get_environment_variables()
-    return all([env is not None for env in snowflake_env.values()])
+# def environment_variables_exist() -> bool:
+#     snowflake_env = get_environment_variables()
+#     return all([env is not None for env in snowflake_env.values()])
 
 
 def model_is_validated() -> bool:
