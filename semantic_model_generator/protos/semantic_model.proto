@@ -15,6 +15,7 @@ package semantic_model_generator;
 extend google.protobuf.FieldOptions {
   optional bool optional = 51234;
   optional bool sql_expression = 51235;
+  optional bool id_field = 51236;
 }
 
 // AggregationType defines a list of various aggregations.
@@ -52,7 +53,7 @@ message RetrievalResult {
 // e.g. `base_column1 + base_column2`.
 message Column {
   // A descriptive name for this column.
-  string name = 1;
+  string name = 1 [(id_field) = true];
   // A list of other terms/phrases used to refer to this column.
   repeated string synonyms = 2 [(optional) = true];
   // A brief description about this column, including things like what data this
@@ -88,7 +89,7 @@ message Column {
 // context_to_column_format() of snowpilot/semantic_context/protos/schema.py.
 message Dimension {
   // A descriptive name for this dimension.
-  string name = 1;
+  string name = 1  [(id_field) = true];
   // A list of other terms/phrases used to refer to this dimension.
   repeated string synonyms = 2 [(optional) = true];
   // A brief description about this dimension, including things like
@@ -113,7 +114,7 @@ message Dimension {
 // to_column_format() of snowpilot/semantic_context/utils/utils.py.
 message TimeDimension {
   // A descriptive name for this time dimension.
-  string name = 1;
+  string name = 1  [(id_field) = true];
   // A list of other terms/phrases used to refer to this time dimension.
   repeated string synonyms = 2 [(optional) = true];
   // A brief description about this time dimension, including things like
@@ -136,7 +137,7 @@ message TimeDimension {
 // to_column_format() of snowpilot/semantic_context/utils/utils.py.
 message Measure {
   // A descriptive name for this measure.
-  string name = 1;
+  string name = 1  [(id_field) = true];
   // A list of other terms/phrases used to refer to this measure.
   repeated string synonyms = 2 [(optional) = true];
   // A brief description about this measure, including things like what data
@@ -188,7 +189,7 @@ message PrimaryKey {
 // table and/or introduce new derived columns.
 message Table {
   // A descriptive name for this table.
-  string name = 1;
+  string name = 1  [(id_field) = true];
   // A list of other term/phrases used to refer to this table.
   repeated string synonyms = 2 [(optional) = true];
   // A brief description of this table, including details of what kinds of
@@ -221,7 +222,7 @@ message Table {
 // tables.
 message Metric {
   // A descriptive name of the metric.
-  string name = 1;
+  string name = 1  [(id_field) = true];
   // A list of other term/phrases used to refer to this metric.
   repeated string synonyms = 2 [(optional) = true];
   // A brief description of this metric, including details of what it computes.
@@ -266,7 +267,6 @@ message Relationship {
   string right_table = 3;
   // Keys directly represent the join relationship.
   repeated RelationKey relationship_columns = 7;
-  // Type of the join.
   JoinType join_type = 5;
   // Type of the relationship.
   RelationshipType relationship_type = 6;
