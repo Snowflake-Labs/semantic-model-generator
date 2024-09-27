@@ -161,7 +161,7 @@ def get_available_warehouses() -> list[str]:
     return fetch_warehouses(get_snowflake_connection())
 
 def set_account_name(conn : SnowflakeConnection,
-                     SNOWFLAKE_ACCOUNT) -> None:
+                     SNOWFLAKE_ACCOUNT: Optional[str] = None) -> None:
     """
     Sets account_name in st.session_state.
     Used to consolidate from various connection methods.
@@ -177,7 +177,7 @@ def set_account_name(conn : SnowflakeConnection,
 
 
 def set_host_name(conn : SnowflakeConnection,
-                  SNOWFLAKE_HOST) -> None:
+                  SNOWFLAKE_HOST: Optional[str] = None) -> None:
     """
     Sets host_name in st.session_state.
     Used to consolidate from various connection methods.
@@ -192,20 +192,17 @@ def set_host_name(conn : SnowflakeConnection,
         st.session_state['host_name'] = SNOWFLAKE_HOST
 
 
-def set_user_name(conn : SnowflakeConnection,
-                  SNOWFLAKE_USER) -> None:
+def set_user_name(conn: SnowflakeConnection,
+                  SNOWFLAKE_USER: Optional[str] = None) -> None:
     """
     Sets user_name in st.session_state.
     Used to consolidate from various connection methods.
-    Function not necessary for SiS implementation.
     """
-    # Only needs to be set for OSS implementation
-    if not st.session_state['sis']:
-        # SNOWFLAKE_USER may be specified from user's environment variables
-        # This will not be the case for connections.toml so need to set it ourselves
-        if not SNOWFLAKE_USER:
-            SNOWFLAKE_USER = conn.cursor().execute("SELECT CURRENT_USER()").fetchone()[0]
-        st.session_state['user_name'] = SNOWFLAKE_USER
+    # SNOWFLAKE_USER may be specified from user's environment variables
+    # This will not be the case for connections.toml so need to set it ourselves
+    if not SNOWFLAKE_USER:
+        SNOWFLAKE_USER = conn.cursor().execute("SELECT CURRENT_USER()").fetchone()[0]
+    st.session_state['user_name'] = SNOWFLAKE_USER
 
 
 class GeneratorAppScreen(str, Enum):
