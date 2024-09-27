@@ -444,9 +444,10 @@ def yaml_editor(yaml_str: str) -> None:
             which we will write the edition status (validated, editing
             or failed).
     """
-    st.session_state.confirm = st.checkbox("Show Formated Code")
+    st.session_state.confirm = st.checkbox("Preview YAML")
     content = st.text_area(
-        label = 'placeholder_label',
+        label='yaml_editor',
+        label_visibility='collapsed',
         value=yaml_str,
         height=600,
     )
@@ -692,7 +693,8 @@ def show() -> None:
 
         with chat_container:
             if st.session_state.confirm:
-                st.code(st.session_state.working_yml, language="yaml")
+                st.code(st.session_state.working_yml, language="yaml",
+                        line_numbers=True)
             else:
                 st.markdown("**Chat**")
                 # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
