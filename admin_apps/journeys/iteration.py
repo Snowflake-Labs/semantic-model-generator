@@ -444,18 +444,19 @@ def yaml_editor(yaml_str: str) -> None:
             which we will write the edition status (validated, editing
             or failed).
     """
-
+    st.session_state.confirm = st.checkbox("Show Formated Code")
     content = st.text_area(
         label = 'placeholder_label',
         value=yaml_str,
         height=600,
     )
-
+    st.session_state.working_yml = content
     button_container = st.container()
     status_container_title = "**Edit**"
     status_container = st.empty()
 
     with button_container:
+
         (one, two, three, four) = st.columns(4)
         if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
             # Validate new content
@@ -690,6 +691,9 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            st.markdown("**Chat**")
-            # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
-            chat_and_edit_vqr(get_snowflake_connection())
+            if st.session_state.confirm:
+                st.code(st.session_state.working_yml, language="yaml")
+            else:
+                st.markdown("**Chat**")
+                # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
+                chat_and_edit_vqr(get_snowflake_connection())
