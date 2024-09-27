@@ -179,10 +179,11 @@ def set_host_name(conn : SnowflakeConnection,
     """
     Sets host_name in st.session_state.
     Used to consolidate from various connection methods.
-    Function not necessary for SiS implementation.
+    Value only necessary for open-source implementation.
     """
-    # Only needs to be set for OSS implementation
-    if not st.session_state['sis']:
+    if st.session_state['sis']:
+        st.session_state['host_name'] = ''
+    else:
         # SNOWFLAKE_HOST may be specified from user's environment variables
         # This will not be the case for connections.toml so need to set it ourselves
         if not SNOWFLAKE_HOST:
