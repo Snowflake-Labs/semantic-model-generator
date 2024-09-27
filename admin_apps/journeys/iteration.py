@@ -8,8 +8,10 @@ import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
+from streamlit_extras.row import row
 from streamlit_monaco import st_monaco
 
+from admin_apps.journeys.joins import joins_dialog
 from admin_apps.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
@@ -447,67 +449,75 @@ def yaml_editor(yaml_str: str) -> None:
         language="yaml",
     )
 
-    button_container = st.container()
+    button_container = row(5, vertical_align="center")
     status_container_title = "**Edit**"
     status_container = st.empty()
 
-    with button_container:
-        (one, two, three, four) = st.columns(4)
-        if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
-            # Validate new content
-            try:
-                validate(
-                    content,
-                    snowflake_account=st.session_state.account_name,
-                    conn=get_snowflake_connection(),
-                )
-                st.session_state["validated"] = True
-                update_container(
-                    status_container, "success", prefix=status_container_title
-                )
-                st.session_state.semantic_model = yaml_to_semantic_model(content)
-                st.session_state.last_saved_yaml = content
-            except Exception as e:
-                st.session_state["validated"] = False
-                update_container(
-                    status_container, "failed", prefix=status_container_title
-                )
-                exception_as_dialog(e)
-
-            # Rerun the app if validation was successful.
-            # We shouldn't rerun if validation failed as the error popup would immediately dismiss.
-            # This must be done outside of the try/except because the generic Exception handling is catching the
-            # exception that st.rerun() properly raises to halt execution.
-            # This is fixed in later versions of Streamlit, but other refactors to the code are required to upgrade.
-            if st.session_state["validated"]:
-                st.rerun()
-
-        if content:
-            two.download_button(
-                label="Download",
-                data=content,
-                file_name="semantic_model.yaml",
-                mime="text/yaml",
-                use_container_width=True,
-                help=DOWNLOAD_HELP,
+    def validate_and_update_session_state() -> None:
+        # Validate new content
+        try:
+            validate(
+                content,
+                snowflake_account=st.session_state.account_name,
+                conn=get_snowflake_connection(),
             )
+            st.session_state["validated"] = True
+            update_container(status_container, "success", prefix=status_container_title)
+            st.session_state.semantic_model = yaml_to_semantic_model(content)
+            st.session_state.last_saved_yaml = content
+        except Exception as e:
+            st.session_state["validated"] = False
+            update_container(status_container, "failed", prefix=status_container_title)
+            exception_as_dialog(e)
 
-        if three.button(
-            "Upload",
+    if button_container.button(
+        "Validate", use_container_width=True, help=VALIDATE_HELP
+    ):
+        validate_and_update_session_state()
+
+        # Rerun the app if validation was successful.
+        # We shouldn't rerun if validation failed as the error popup would immediately dismiss.
+        # This must be done outside of the try/except because the generic Exception handling is catching the
+        # exception that st.rerun() properly raises to halt execution.
+        # This is fixed in later versions of Streamlit, but other refactors to the code are required to upgrade.
+        if st.session_state["validated"]:
+            st.rerun()
+
+    if content:
+        button_container.download_button(
+            label="Download",
+            data=content,
+            file_name="semantic_model.yaml",
+            mime="text/yaml",
             use_container_width=True,
-            help=UPLOAD_HELP,
-        ):
-            upload_dialog(content)
-        if st.session_state.get("partner_setup", False):
-            from admin_apps.partner.partner_utils import integrate_partner_semantics
+            help=DOWNLOAD_HELP,
+        )
 
-            if four.button(
-                "Integrate Partner",
-                use_container_width=True,
-                help=PARTNER_SEMANTIC_HELP,
-                disabled=not st.session_state["validated"],
-            ):
-                integrate_partner_semantics()
+    if button_container.button(
+        "Upload",
+        use_container_width=True,
+        help=UPLOAD_HELP,
+    ):
+        upload_dialog(content)
+    if st.session_state.get("partner_setup", False):
+        from admin_apps.partner.partner_utils import integrate_partner_semantics
+
+        if button_container.button(
+            "Integrate Partner",
+            use_container_width=True,
+            help=PARTNER_SEMANTIC_HELP,
+            disabled=not st.session_state["validated"],
+        ):
+            integrate_partner_semantics()
+
+    if st.session_state.experimental_features:
+        if button_container.button(
+            "Join Editor",
+            use_container_width=True,
+        ):
+            with st.spinner("Validating your model..."):
+                validate_and_update_session_state()
+            joins_dialog()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
     if st.session_state.validated:
@@ -621,6 +631,11 @@ def set_up_requirements() -> None:
 
     file_name = st.selectbox("File name", options=available_files, index=None)
 
+    experimental_features = st.checkbox(
+        "Enable experimental features (optional)",
+        help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Some features (e.g. joins) are currently in Private Preview and available only to select accounts. Reach out to your account team for access.",
+    )
+
     if st.button(
         "Submit",
         disabled=not st.session_state["selected_iteration_database"]
@@ -638,6 +653,7 @@ def set_up_requirements() -> None:
         st.session_state["user_name"] = SNOWFLAKE_USER
         st.session_state["file_name"] = file_name
         st.session_state["page"] = GeneratorAppScreen.ITERATION
+        st.session_state["experimental_features"] = experimental_features
         st.rerun()
 
 
