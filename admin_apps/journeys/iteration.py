@@ -353,7 +353,7 @@ def upload_dialog(content: str) -> None:
         with st.spinner(
             f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
         ):
-            upload_yaml(file_name, conn=get_snowflake_connection())
+            upload_yaml(file_name)
         st.success(
             f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
         )
@@ -670,7 +670,7 @@ def show() -> None:
         return_home_button()
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
-            yaml = download_yaml(st.session_state.file_name, get_snowflake_connection())
+            yaml = download_yaml(st.session_state.file_name)
             st.session_state["yaml"] = yaml
             st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
             if "last_saved_yaml" not in st.session_state:

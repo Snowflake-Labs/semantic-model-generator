@@ -117,7 +117,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
             
 
 @st.cache_resource(show_spinner=False)
-def set_snowpark_session(conn: Optional[SnowflakeConnection] = None) -> None:
+def set_snowpark_session(_conn: Optional[SnowflakeConnection] = None) -> None:
     """
     Creates a snowpark for python session.
     Marked with st.cache_resource in order to reuse this connection across the app.
@@ -131,7 +131,7 @@ def set_snowpark_session(conn: Optional[SnowflakeConnection] = None) -> None:
         from snowflake.snowpark.context import get_active_session
         session = get_active_session()
     else:
-        session = Session.builder.configs({"connection":conn}).create()
+        session = Session.builder.configs({"connection":_conn}).create()
     st.session_state['session'] = session
 
 
@@ -888,7 +888,7 @@ def show_yaml_in_dialog() -> None:
     )
 
 
-def upload_yaml(file_name: str, conn: SnowflakeConnection) -> None:
+def upload_yaml(file_name: str) -> None:
     """util to upload the semantic model."""
     import os
     import tempfile
@@ -900,17 +900,11 @@ def upload_yaml(file_name: str, conn: SnowflakeConnection) -> None:
 
         with open(tmp_file_path, "w") as temp_file:
             temp_file.write(yaml)
-        
-        upload_sql = f"PUT file://{tmp_file_path} @{st.session_state.snowflake_stage.stage_name} AUTO_COMPRESS=FALSE OVERWRITE=TRUE"
-        conn.cursor().execute(upload_sql)
 
-        if file_name != _TMP_FILE_NAME:
-            # If the user did official uploading, delete the saved temp file from stage.
-            try:
-                delete_tmp_sql = f"REMOVE @{st.session_state.snowflake_stage.stage_name}/{_TMP_FILE_NAME}.yaml"
-                conn.cursor().execute(delete_tmp_sql)
-            except Exception:
-                pass
+        st.session_state.session.file.put(tmp_file_path,
+                                          f'@{st.session_state.snowflake_stage.stage_name}',
+                                          auto_compress=False,
+                                          overwrite=True)
 
 
 def validate_and_upload_tmp_yaml(conn: SnowflakeConnection) -> None:
@@ -974,15 +968,14 @@ def model_is_validated() -> bool:
     return False
 
 
-def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
+def download_yaml(file_name: str) -> str:
     """util to download a semantic YAML from a stage."""
     import os
     import tempfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Downloads the YAML to {temp_dir}/{file_name}.
-        download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
-        conn.cursor().execute(download_yaml_sql)
+        st.session_state.session.file.get(f"@{st.session_state.snowflake_stage.stage_name}/{file_name}", temp_dir)
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")
         with open(tmp_file_path, "r") as temp_file:
