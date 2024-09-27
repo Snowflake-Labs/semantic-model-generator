@@ -527,21 +527,3 @@ class SnowflakeConnector:
                     f"Expected a dict for row object. Instead passed {row}"
                 )
         return out_dict
-
-
-# def set_database(conn: SnowflakeConnection, db_name: str) -> None:
-#     try:
-#         conn.cursor().execute(f"USE DATABASE {db_name}")
-#     except Exception as e:
-#         raise ValueError(
-#             f"Could not connect to database {db_name}. Does the database exist in the account?"
-#         ) from e
-
-
-# def set_schema(conn: SnowflakeConnection, schema_name: str) -> None:
-#     try:
-#         conn.cursor().execute(f"USE SCHEMA {schema_name}")
-#     except Exception as e:
-#         raise ValueError(
-#             f"Could not connect to schema {schema_name}. Does the schema exist in the selected database?"
-#         ) from e
