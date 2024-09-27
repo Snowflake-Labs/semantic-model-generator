@@ -43,8 +43,6 @@ from semantic_model_generator.snowflake_utils.env_vars import (
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_stages_in_schema,
     fetch_yaml_names_in_stage,
-    set_database,
-    set_schema,
 )
 from semantic_model_generator.validate_model import validate
 
@@ -88,7 +86,7 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
 
-    if st.session_state['STREAMLIT_LOCATION'] == 'SiS':
+    if st.session_state['sis']:
         resp = _snowflake.send_snow_api_request( #type: ignore
         "POST",
         f"/api/v2/cortex/analyst/message",
@@ -186,13 +184,6 @@ def edit_verified_query(
                     )
 
                     connection = get_snowflake_connection()
-                    if "snowflake_stage" in st.session_state:
-                        set_database(
-                            connection, st.session_state.snowflake_stage.stage_database
-                        )
-                        set_schema(
-                            connection, st.session_state.snowflake_stage.stage_schema
-                        )
                     st.session_state["successful_sql"] = False
                     df = pd.read_sql(sql_to_execute, connection)
                     st.code(user_updated_sql)
@@ -575,7 +566,6 @@ def stage_selector_container() -> None:
     if stage_database:
         # When a valid database is selected, fetch the available schemas in that database.
         try:
-            set_database(get_snowflake_connection(), stage_database)
             available_schemas = get_available_schemas(stage_database)
         except (ValueError, ProgrammingError):
             st.error("Insufficient permissions to read from the selected database.")
@@ -591,7 +581,6 @@ def stage_selector_container() -> None:
     if stage_schema:
         # When a valid schema is selected, fetch the available stages in that schema.
         try:
-            set_schema(get_snowflake_connection(), stage_schema)
             available_stages = get_available_stages(stage_schema)
         except (ValueError, ProgrammingError):
             st.error("Insufficient permissions to read from the selected schema.")
@@ -646,9 +635,6 @@ def set_up_requirements() -> None:
             stage_schema=st.session_state["selected_iteration_schema"],
             stage_name=st.session_state["selected_iteration_stage"],
         )
-        st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
-        st.session_state["host_name"] = SNOWFLAKE_HOST
-        st.session_state["user_name"] = SNOWFLAKE_USER
         st.session_state["file_name"] = file_name
         st.session_state["page"] = GeneratorAppScreen.ITERATION
         st.rerun()

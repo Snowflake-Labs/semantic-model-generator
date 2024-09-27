@@ -17,8 +17,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     get_table_representation,
     get_valid_schemas_tables_columns_df,
-    set_database,
-    set_schema,
 )
 from semantic_model_generator.snowflake_utils.utils import create_fqn_table
 from semantic_model_generator.validate.context_length import validate_context_length
@@ -212,10 +210,6 @@ def raw_schema_to_semantic_context(
             conn = connector.open_connection(
                 db_name=fqn_table.database, schema_name=fqn_table.schema_name
             )
-        else:
-            pass
-            # set_database(conn, fqn_table.database)
-            # set_schema(conn, fqn_table.schema_name)
 
         logger.info(f"Pulling column information from {fqn_table}")
         valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(

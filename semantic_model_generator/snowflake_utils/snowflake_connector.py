@@ -480,12 +480,6 @@ class SnowflakeConnector:
             passcode=self._get_mfa_passcode(),
             passcode_in_password=self._is_mfa_passcode_in_password(),
         )
-        if db_name:
-            pass
-            # set_database(connection, db_name=db_name)
-        if schema_name:
-            pass
-            # set_schema(connection, schema_name=schema_name)
 
         if _QUERY_TAG:
             connection.cursor().execute(f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'")
@@ -535,19 +529,19 @@ class SnowflakeConnector:
         return out_dict
 
 
-def set_database(conn: SnowflakeConnection, db_name: str) -> None:
-    try:
-        conn.cursor().execute(f"USE DATABASE {db_name}")
-    except Exception as e:
-        raise ValueError(
-            f"Could not connect to database {db_name}. Does the database exist in the account?"
-        ) from e
+# def set_database(conn: SnowflakeConnection, db_name: str) -> None:
+#     try:
+#         conn.cursor().execute(f"USE DATABASE {db_name}")
+#     except Exception as e:
+#         raise ValueError(
+#             f"Could not connect to database {db_name}. Does the database exist in the account?"
+#         ) from e
 
 
-def set_schema(conn: SnowflakeConnection, schema_name: str) -> None:
-    try:
-        conn.cursor().execute(f"USE SCHEMA {schema_name}")
-    except Exception as e:
-        raise ValueError(
-            f"Could not connect to schema {schema_name}. Does the schema exist in the selected database?"
-        ) from e
+# def set_schema(conn: SnowflakeConnection, schema_name: str) -> None:
+#     try:
+#         conn.cursor().execute(f"USE SCHEMA {schema_name}")
+#     except Exception as e:
+#         raise ValueError(
+#             f"Could not connect to schema {schema_name}. Does the schema exist in the selected database?"
+#         ) from e

@@ -13,8 +13,6 @@ from semantic_model_generator.data_processing.cte_utils import (
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
-    set_database,
-    set_schema,
 )
 from semantic_model_generator.validate.context_length import validate_context_length
 
@@ -58,9 +56,6 @@ def validate(
 
     for table in model_in_column_format.tables:
         logger.info(f"Checking logical table: {table.name}")
-        # Each table can be a different database/schema.
-        set_database(conn, table.base_table.database)
-        set_schema(conn, table.base_table.schema)
         try:
             validate_all_cols(table)
             sqls = generate_select(table, 1)
