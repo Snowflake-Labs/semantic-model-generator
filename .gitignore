@@ -1,5 +1,6 @@
 # Local python environment
 pyvenv
+*.DS_Store
 
 # Notebook intermediate state
 *.ipynb_checkpoints
