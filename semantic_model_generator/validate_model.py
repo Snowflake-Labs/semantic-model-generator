@@ -47,12 +47,12 @@ def validate(
 
     model_in_column_format = context_to_column_format(model)
 
-    if conn is None:
-        connector = SnowflakeConnector(
-            account_name=snowflake_account,
-            max_workers=1,
-        )
-        conn = connector.open_connection(db_name="")
+    # if conn is None:
+    #     connector = SnowflakeConnector(
+    #         account_name=snowflake_account,
+    #         max_workers=1,
+    #     )
+    #     conn = connector.open_connection(db_name="")
 
     for table in model_in_column_format.tables:
         logger.info(f"Checking logical table: {table.name}")

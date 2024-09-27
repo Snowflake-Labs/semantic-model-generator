@@ -202,14 +202,14 @@ def raw_schema_to_semantic_context(
         if fqn_databse_schema not in unique_database_schema:
             unique_database_schema.append(fqn_databse_schema)
 
-        if conn is None:
-            connector = SnowflakeConnector(
-                account_name=snowflake_account,
-                max_workers=1,
-            )
-            conn = connector.open_connection(
-                db_name=fqn_table.database, schema_name=fqn_table.schema_name
-            )
+        # if conn is None:
+        #     connector = SnowflakeConnector(
+        #         account_name=snowflake_account,
+        #         max_workers=1,
+        #     )
+        #     conn = connector.open_connection(
+        #         db_name=fqn_table.database, schema_name=fqn_table.schema_name
+        #     )
 
         logger.info(f"Pulling column information from {fqn_table}")
         valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(

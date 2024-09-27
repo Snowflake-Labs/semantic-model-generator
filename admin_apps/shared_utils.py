@@ -71,7 +71,8 @@ def set_streamlit_location() -> None:
         sis = True
     else:
         sis = False
-    st.session_state['sis'] = sis
+    # st.session_state['sis'] = sis
+    return sis
 
 
 @st.experimental_dialog(title="Setup")
@@ -97,8 +98,8 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Returns: SnowflakeConnection
     """
 
-    if 'sis' not in st.session_state:
-        set_streamlit_location()
+    # if 'sis' not in st.session_state:
+    #     set_streamlit_location()
 
     if st.session_state['sis']:
         from snowflake.snowpark.context import get_active_session
@@ -165,15 +166,12 @@ def set_account_name(conn : SnowflakeConnection,
     """
     Sets account_name in st.session_state.
     Used to consolidate from various connection methods.
-    Function not necessary for SiS implementation.
     """
-    # Only needs to be set for OSS implementation
-    if not st.session_state['sis']:
-        # SNOWFLAKE_ACCOUNT may be specified from user's environment variables
-        # This will not be the case for connections.toml so need to set it ourselves
-        if not SNOWFLAKE_ACCOUNT:
-            SNOWFLAKE_ACCOUNT = conn.cursor().execute("SELECT CURRENT_ACCOUNT()").fetchone()[0]
-        st.session_state['account_name'] = SNOWFLAKE_ACCOUNT
+    # SNOWFLAKE_ACCOUNT may be specified from user's environment variables
+    # This will not be the case for connections.toml so need to set it ourselves
+    if not SNOWFLAKE_ACCOUNT:
+        SNOWFLAKE_ACCOUNT = conn.cursor().execute("SELECT CURRENT_ACCOUNT()").fetchone()[0]
+    st.session_state['account_name'] = SNOWFLAKE_ACCOUNT
 
 
 def set_host_name(conn : SnowflakeConnection,

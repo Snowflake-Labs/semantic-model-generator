@@ -144,7 +144,8 @@ def show_expr_for_ref(message_index: int) -> None:
         col_df = pd.DataFrame(
             {"Column Name": k, "Column Expression": v} for k, v in col_dict.items()
         )
-        st.dataframe(col_df, hide_index=True, use_container_width=True, height=250)
+        # Workaround for column_width bug in dataframe object within nested dialog
+        st.table(col_df.set_index(col_df.columns[1]))
 
 
 @st.experimental_dialog("Edit", width="large")

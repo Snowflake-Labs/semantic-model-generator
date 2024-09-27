@@ -12,6 +12,7 @@ from admin_apps.shared_utils import (  # noqa: E402
     set_account_name,
     set_host_name,
     set_user_name,
+    set_streamlit_location,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
@@ -70,6 +71,8 @@ def verify_environment_setup() -> None | SnowflakeConnection:
 
 if __name__ == "__main__":
     from admin_apps.journeys import builder, iteration, partner
+
+    st.session_state['sis'] = set_streamlit_location()
 
     def onboarding_dialog() -> None:
         """
