@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 import pandas as pd
 import streamlit as st
+from snowflake.snowpark import Session
 from PIL import Image
 from snowflake.connector.connection import SnowflakeConnection
 
@@ -61,6 +62,7 @@ def get_connector() -> SnowflakeConnector:
         max_workers=1,
     )
 
+
 def set_streamlit_location() -> None:
     """
     Sets sis in session_state to True if the streamlit app is in SiS.
@@ -93,13 +95,10 @@ Please follow the [setup instructions](https://github.com/Snowflake-Labs/semanti
 @st.cache_resource(show_spinner=False)
 def get_snowflake_connection() -> SnowflakeConnection:
     """
-    Opens a general connection to Snowflake using the provided SnowflakeConnector
+    Opens a general python connector connection to Snowflake.
     Marked with st.cache_resource in order to reuse this connection across the app.
     Returns: SnowflakeConnection
     """
-
-    # if 'sis' not in st.session_state:
-    #     set_streamlit_location()
 
     if st.session_state['sis']:
         from snowflake.snowpark.context import get_active_session
@@ -115,7 +114,25 @@ def get_snowflake_connection() -> SnowflakeConnection:
                 env_setup_popup(missing_env_vars)
             else:
                 return get_connector().open_connection(db_name="")
+            
 
+@st.cache_resource(show_spinner=False)
+def set_snowpark_session(conn: Optional[SnowflakeConnection] = None) -> None:
+    """
+    Creates a snowpark for python session.
+    Marked with st.cache_resource in order to reuse this connection across the app.
+    If the app is running in SiS, it will use the active session.
+    If the app is running locally with a python connector connection is available, it will create a new session.
+    Snowpark session necessary for upload/downloads in SiS.
+    Returns: Snowpark session
+    """
+
+    if st.session_state['sis']:
+        from snowflake.snowpark.context import get_active_session
+        session = get_active_session()
+    else:
+        session = Session.builder.configs({"connection":conn}).create()
+    st.session_state['session'] = session
 
 
 @st.cache_resource(show_spinner=False)
@@ -197,6 +214,8 @@ def set_user_name(conn: SnowflakeConnection,
     Sets user_name in st.session_state.
     Used to consolidate from various connection methods.
     """
+    if st.session_state['sis']:
+        st.session_state['user_name'] = st.experimental_user_name
     # SNOWFLAKE_USER may be specified from user's environment variables
     # This will not be the case for connections.toml so need to set it ourselves
     if not SNOWFLAKE_USER:

@@ -13,6 +13,7 @@ from admin_apps.shared_utils import (  # noqa: E402
     set_host_name,
     set_user_name,
     set_streamlit_location,
+    set_snowpark_session,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
@@ -121,6 +122,7 @@ if __name__ == "__main__":
                 partner.show()
 
     conn = verify_environment_setup()
+    set_snowpark_session(conn)
 
     # Populating common state between builder and iteration apps.
     set_account_name(conn, SNOWFLAKE_ACCOUNT_LOCATOR)
