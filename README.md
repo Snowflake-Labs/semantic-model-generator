@@ -1,23 +1,17 @@
 # semantic-model-generator
 
-The `Semantic Model Generator` is used to generate a semantic model for use in your Snowflake account.
+The `Semantic Model Generator` is an open-source tool used to generate and curate a semantic model for Snowflake [Cortex Analyst](add link).
 
-You can generate semantic models through our Streamlit app, the command line, or directly in your Python code.
-Please complete the instructions in [setup](#setup), then proceed to the instructions for your desired approach.
+The tool is rendered as a Streamlit application, which can be started in [Streamlit in Snowflake](add link) or locally with open-source Streamlit.
+Setup instructions are separated below for the two methods - Please proceed to the instructions [SiS setup](add link) or [local setup](add link).
 
 If you want to see what a semantic model looks like, skip to [Examples](#examples).
 
 ## Table of Contents
 
 * [Table of Contents](#table-of-contents)
-* [Setup](#setup)
-* [Streamlit App](#streamlit-app)
-* [CLI Tool](#cli-tool)
-    + [Generation](#generation)
-    + [Validation](#validation)
-* [Python](#python)
-    + [Generation](#generation-1)
-    + [Validation](#validation-1)
+* [Streamlit in Snowflake Setup](#streamlit-in-snowflake-setup)
+* [Local Setup](#local-setup)
 * [Usage](#usage)
     + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
     + [Auto-Generated Descriptions](#auto-generated-descriptions)
@@ -25,85 +19,56 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 * [Examples](#examples)
 * [Release](#release)
 
-## Setup
+## Streamlit in Snowflake Setup
 
-We currently leverage credentials saved as environment variables.
+Deploying the Streamlit app in Snowflake requires [add tools with links]. Follow the below instructions to deploy.
+[add instructions]
 
-A. To find your Account locator, please execute the following sql command in your account.
+## Local Setup
+
+Localy usage of the Streamlit app offers Snowflake connections via Snowflake [connections.toml](add link) OR [environment variables](add link). The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
+
+### Setup connections.toml (Option 1)
+[add instructions for this]
+
+### Environment Variables (Option 2)
+At minimum, the below environment variables are required if using this method to connect to Snowflake.
+
+```bash
+SNOWFLAKE_ROLE
+SNOWFLAKE_WAREHOUSE
+SNOWFLAKE_USER
+SNOWFLAKE_ACCOUNT_LOCATOR
+SNOWFLAKE_HOST
+```
+
+For your convenience, we have created examples of setting these environment variables in [`.env.example`](.env.example). If using environment variables, we recommend creating a `.env` file in the root directory of this repo. Please feel free to set your environment variables directly in terminal if preferred.
+
+To find your Account locator, please execute the following sql command in your account.
 
 ```sql
 SELECT CURRENT_ACCOUNT_LOCATOR();
 ```
 
-B. To find the `SNOWFLAKE_HOST` for your
+To find the `SNOWFLAKE_HOST` for your
 account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
 
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility
   on API.
 * It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit
   the `https://` prefix.
-* `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
-  your Snowflake deployment. We would recommend setting it regardless.
 
-We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. See the
-examples in [`.env.example`](.env.example) for reference and proper syntax for `.env` files.
-
-However, if you would like to set these variables directly in your shell/Python environment,
-
-1. MacOS/Linux syntax:
-
-```bash
-export SNOWFLAKE_ROLE="<your-snowflake-role>"
-export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
-export SNOWFLAKE_USER="<your-snowflake-user>"
-export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
-export SNOWFLAKE_HOST="<your-snowflake-host>"
-```
-
-2. Windows syntax:
-
-```bash
-set SNOWFLAKE_ROLE=<your-snowflake-role>
-set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
-set SNOWFLAKE_USER=<your-snowflake-user>
-set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
-set SNOWFLAKE_HOST=<your-snowflake-host>
-```
-
-3. Python syntax:
-
-```python
-import os
-
-# Setting environment variables
-os.environ['SNOWFLAKE_ROLE'] = '<your-snowflake-role>'
-os.environ['SNOWFLAKE_WAREHOUSE'] = '<your-snowflake-warehouse>'
-os.environ['SNOWFLAKE_USER'] = '<your-snowflake-user>'
-os.environ['SNOWFLAKE_ACCOUNT_LOCATOR'] = '<your-snowflake-account-locator>'
-os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
-```
-
-Our semantic model generators currently support three types of authentication. If no `SNOWFLAKE_AUTHENTICATOR`
-environment variable
-is set, the default is `snowflake`, which uses standard username/password support.
+Our semantic model generators currently support three types of authentication. 
+If no `SNOWFLAKE_AUTHENTICATOR` environment variable is set, the default is `snowflake`, which uses standard username/password support (#1 below).
 
 1. Username and Password
 
-**Note**: If you have MFA enabled, using this default authenticator should send a push notification to your device.
-
+Set the below environment variables:
 ```bash
-# no SNOWFLAKE_AUTHENTICATOR needed
-SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-
-# MacOS/Linux
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-
-# Windows
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
-
-# Python
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+SNOWFLAKE_USER="<your-snowflake-username>" 
+SNOWFLAKE_PASSWORD="<your-snowflake-password>" 
 ```
+If you have MFA enabled, using this default authenticator should send a push notification to your device.
 
 2. Username/Password with MFA passcode
 
@@ -113,21 +78,6 @@ Using a passcode from your authenticator app:
 SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" # if your authenticator app reads "123 456", fill in "123456" (No spaces)
-
-# MacOS/Linux
-export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>"
-
-# Windows
-set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
-set SNOWFLAKE_MFA_PASSCODE=<your-snowflake-mfa-passcode>
-
-# Python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
-os.environ['SNOWFLAKE_MFA_PASSCODE'] = '<your-snowflake-mfa-passcode>'
 ```
 
 Using a passcode embedded in the password:
@@ -136,21 +86,6 @@ Using a passcode embedded in the password:
 SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
-
-# MacOS/Linux
-export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-export SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
-
-# Windows
-set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
-set SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD=true
-
-# Python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
-os.environ['SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD'] = 'true'
 ```
 
 3. Single Sign-On (SSO) with Okta
@@ -158,21 +93,11 @@ os.environ['SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD'] = 'true'
 ```bash
 # no SNOWFLAKE_PASSWORD needed
 SNOWFLAKE_AUTHENTICATOR="externalbrowser"
-
-# MacOS/Linux
-export SNOWFLAKE_AUTHENTICATOR="externalbrowser"
-
-# Windows
-set SNOWFLAKE_AUTHENTICATOR=externalbrowser
-
-# Python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'externalbrowser'
 ```
 
-## Streamlit App
+### Start Local Streamlit App
 
-We offer a convenient Streamlit app that supports creating semantic models from scratch as well as iterating on existing
-ones uploaded to a Snowflake stage.
+Once you have completed 1 of the 2 setup options above, you're ready to start the local Streamlit app.
 
 To install dependencies for the Streamlit app, run
 
@@ -203,89 +128,6 @@ use the Looker features, please install the extras:
 pip install -e ".[looker]"
 ```
 
-## CLI Tool
-
-You may also generate a semantic model directly from the CLI. To do this, first install the CLI tool dependencies, which
-differ from the Streamlit app's dependencies.
-
-Unlike the Streamlit route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv`
-for Python versions.
-This has only been tested on MacOS/Linux.
-
-1. If you need brew, run `make install-homebrew`.
-2. If you need pyenv, `make install-pyenv` and `make install-python-3.8`.
-3. Run `make setup` to install all external dependencies into your Poetry environment. This will also install `poetry`
-   if needed.
-4. Spawn a shell in the virtual environment using `poetry shell`. This will activate your virtual environment.
-
-### Generation
-
-You are now ready to generate semantic models via the CLI! The generation command uses the following syntax:
-
-```bash
-python -m semantic_model_generator.generate_model \
-    --base_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']" \
-    --semantic_model_name "<a-meaningful-semantic-model-name>" \
-    --snowflake_account="<your-snowflake-account>"
-```
-
-You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}`
-format. Each table in this list should be a physical table or a view present in your database.
-
-All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from
-the root of this project or the current directory you're in.
-
-### Validation
-
-You may also use the CLI tool to validate one of your semantic models. From inside your Poetry shell, run
-
-```bash
-python -m semantic_model_generator.validate_model \
-    --yaml_path="/path/to/your/model_yaml.yaml \
-    --snowflake_account="<your-account-name>"
-```
-
-## Python
-
-You may also create/validate your semantic models from directly within your Python code. First, ensure that you have
-installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
-
-```bash
-pip install dist/*.whl
-```
-
-### Generation
-
-```python
-from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
-
-BASE_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>',
-               '<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']
-SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
-SEMANTIC_MODEL_NAME = "<a-meaningful-semantic-model-name>"
-
-generate_base_semantic_model_from_snowflake(
-    base_tables=BASE_TABLES,
-    snowflake_account=SNOWFLAKE_ACCOUNT,
-    semantic_model_name=SEMANTIC_MODEL_NAME,
-)
-```
-
-### Validation
-
-```python
-from semantic_model_generator.validate_model import validate_from_local_path
-
-YAML_PATH = "/path/to/your/model_yaml.yaml"
-SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
-
-validate_from_local_path(
-    yaml_path=YAML_PATH,
-    snowflake_account=SNOWFLAKE_ACCOUNT
-)
-
-```
-
 ## Usage
 
 ### Semantic Model Context Length Constraints
@@ -294,7 +136,7 @@ Due to context window as well as quality constraints, we currently limit the siz
 30,980 tokens (~123,920 characters).
 
 Please note sample values and verified queries is not counted into this token length constraints. You can include as
-much sample values or verified queries as you'd like with limiting the overall file to <1MB.
+many sample values or verified queries as you'd like with limiting the overall file to <1MB.
 
 ### Auto-Generated Descriptions
 
