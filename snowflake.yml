@@ -1,0 +1,14 @@
+definition_version: 1
+streamlit:
+  name: semantic_model_generator
+  title: "Semantic Model Generator"
+  stage: my_streamlit_stage
+  query_warehouse: <set_your_warehouse>
+  main_file: app.py
+  env_file: environment.yml
+  pages_dir: journeys/
+  additional_source_files:
+    - semantic_model_generator/
+    - images/
+    - partner/
+    - shared_utils.py
