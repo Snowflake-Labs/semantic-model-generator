@@ -88,16 +88,16 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
 
-    if st.session_state['sis']:
-        resp = _snowflake.send_snow_api_request( #type: ignore
-        "POST",
-        f"/api/v2/cortex/analyst/message",
-        {},
-        {},
-        request_body,
-        {},
-        30000,
-    )
+    if st.session_state["sis"]:
+        resp = _snowflake.send_snow_api_request(  # type: ignore
+            "POST",
+            f"/api/v2/cortex/analyst/message",
+            {},
+            {},
+            request_body,
+            {},
+            30000,
+        )
     else:
         host = st.session_state.host_name
         resp = requests.post(
@@ -110,7 +110,7 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
                 "Content-Type": "application/json",
             },
         )
-        
+
     if resp.status_code < 400:
         json_resp: Dict[str, Any] = resp.json()
         return json_resp
@@ -176,8 +176,8 @@ def edit_verified_query(
         st.caption("**SQL**")
         with st.container(border=True):
             user_updated_sql = st.text_area(
-                label='sql_editor',
-                label_visibility='collapsed',
+                label="sql_editor",
+                label_visibility="collapsed",
                 value=sql_without_cte,
             )
             run = st.button("Run", use_container_width=True)
@@ -450,8 +450,8 @@ def yaml_editor(yaml_str: str) -> None:
     """
     st.session_state.confirm = st.checkbox("Preview YAML")
     content = st.text_area(
-        label='yaml_editor',
-        label_visibility='collapsed',
+        label="yaml_editor",
+        label_visibility="collapsed",
         value=yaml_str,
         height=600,
     )
@@ -459,6 +459,7 @@ def yaml_editor(yaml_str: str) -> None:
     button_container = st.container()
     status_container_title = "**Edit**"
     status_container = st.empty()
+
     def validate_and_update_session_state() -> None:
         # Validate new content
         try:
@@ -518,12 +519,21 @@ def yaml_editor(yaml_str: str) -> None:
             integrate_partner_semantics()
 
     if st.session_state.experimental_features:
+        # Preserve a session state variable that maintains whether the join dialog is open.
+        # This is necessary because the join dialog calls `st.rerun()` from within, which closes the modal
+        # unless its state is being tracked.
+        if "join_dialog_open" not in st.session_state:
+            st.session_state["join_dialog_open"] = False
+
         if button_row.button(
             "Join Editor",
             use_container_width=True,
         ):
             with st.spinner("Validating your model..."):
                 validate_and_update_session_state()
+            st.session_state["join_dialog_open"] = True
+
+        if st.session_state["join_dialog_open"]:
             joins_dialog()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
@@ -710,8 +720,9 @@ def show() -> None:
 
         with chat_container:
             if st.session_state.confirm:
-                st.code(st.session_state.working_yml, language="yaml",
-                        line_numbers=True)
+                st.code(
+                    st.session_state.working_yml, language="yaml", line_numbers=True
+                )
             else:
                 st.markdown("**Chat**")
                 # We still initialize an empty connector and pass it down in order to propagate the connector auth token.

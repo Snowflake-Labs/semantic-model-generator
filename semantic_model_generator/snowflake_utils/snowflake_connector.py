@@ -356,7 +356,7 @@ def get_valid_schemas_tables_columns_df(
         logger.warning(
             "Provided table_name without table_schema, cannot filter to fetch the specific table"
         )
-
+    conn.cursor().execute("USE DATABASE " + db_name)
     where_clause = ""
     if table_schema:
         where_clause += f" where t.table_schema ilike '{table_schema}' "
@@ -364,8 +364,8 @@ def get_valid_schemas_tables_columns_df(
             table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
             where_clause += f"AND LOWER(t.table_name) in ({table_names_str}) "
     query = f"""select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
-from {db_name}.information_schema.tables as t
-join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
+from information_schema.tables as t
+join information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
 order by 1, 2, c.ordinal_position"""
     cursor_execute = conn.cursor().execute(query)
     assert cursor_execute, "cursor_execute should not be None here"
