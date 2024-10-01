@@ -1,9 +1,9 @@
 # semantic-model-generator
 
-The `Semantic Model Generator` is an open-source tool used to generate and curate a semantic model for Snowflake [Cortex Analyst](add link).
+The `Semantic Model Generator` is an open-source tool used to generate and curate a semantic model for Snowflake [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst).
 
-The tool is rendered as a Streamlit application, which can be started in [Streamlit in Snowflake](add link) or locally with open-source Streamlit.
-Setup instructions are separated below for the two methods - Please proceed to the instructions [SiS setup](add link) or [local setup](add link).
+The tool is rendered as a Streamlit application, which can be started in [Streamlit in Snowflake](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit) or locally with open-source Streamlit.
+Setup instructions are separated below for the two methods - Please proceed to your preferred deployment method: [SiS setup](#streamlit-in-snowflake-setup) or [local setup](#local-setup).
 
 If you want to see what a semantic model looks like, skip to [Examples](#examples).
 
@@ -85,10 +85,12 @@ Add additional python packages...
 
 ## Local Setup
 
-Localy usage of the Streamlit app offers Snowflake connections via Snowflake [connections.toml](add link) OR [environment variables](add link). The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
+Localy usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
 
 ### Setup connections.toml (Option 1)
-[add instructions for this]
+The Snowflake Python connector lets you add connection definitions to a connections.toml configuration file. A connection definition refers to a collection of connection-related parameters. Snowflake Python libraries currently support TOML version 1.0.0.
+
+Please follow these [instructions](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) to create the appropriate connections.toml file. For convenience, we recommend setting the desired connection as your default.
 
 ### Environment Variables (Option 2)
 At minimum, the below environment variables are required if using this method to connect to Snowflake.
@@ -225,12 +227,13 @@ We continue to add support for partner semantic and metric layers. Our aim is to
 semantic files using logic and metadata from partner tools.
 Please see below for details about current partner support.
 
-**IMPORTANT**: Use the [Streamlit App](#streamlit-app) to leverage existing partner semantic/metric layers.
+**IMPORTANT**: Instructions for each of the below sources are provided in the Streamlit application.
 
-| Tool   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Source   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
 |--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| DBT    | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake.                                                                                                                                                                                                                                                                                                                      |
-| Looker | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
+| DBT Semantic Model   | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake. |
+| DBT SQL Model | DBT SQL Models should be materialized in Snowflake with persist docs to capture comments. A new semantic file can be generated for these newly materialized tables/views in Snowflake directly.| |
+| Looker Explore | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
 
 ## Examples
 
