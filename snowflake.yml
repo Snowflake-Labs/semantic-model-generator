@@ -18,5 +18,4 @@ identifer:
     - images/
     - partner/
     - app_utils/
-    # - strictyaml
-    # - jsonargparse
+    - strictyaml # Will need to figure out dir nesting  here
