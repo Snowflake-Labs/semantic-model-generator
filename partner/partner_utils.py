@@ -9,7 +9,7 @@ import yaml
 
 from partner.cortex import CortexSemanticTable
 from partner.dbt import DBTSemanticModel, upload_dbt_semantic
-from shared_utils import (
+from app_utils.shared_utils import (
     get_snowflake_connection,
     render_image,
     set_sit_query_tag,
@@ -284,7 +284,7 @@ def integrate_partner_semantics() -> None:
             help=COMPARE_SEMANTICS_HELP,
         )
         orphan_label, orphan_col1, orphan_col2 = st.columns(
-            3, vertical_alignment="center", gap="small"
+            3, gap="small"
         )
         with orphan_label:
             st.write("Retain unmatched fields:")

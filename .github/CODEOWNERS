@@ -4,5 +4,5 @@
 /journeys/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
 /partner/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
 /app.py @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
-/shared_utils.py @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/app_utils/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
 /semantic_model_generator/ @sfc-gh-nsehrawat @sfc-gh-rehuang @sfc-gh-dasilva @sfc-gh-cnivera @sfc-gh-yayin

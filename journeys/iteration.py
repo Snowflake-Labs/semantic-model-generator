@@ -10,7 +10,7 @@ from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 # from streamlit_monaco import st_monaco
 
-from shared_utils import (
+from app_utils.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
     changed_from_last_validated_model,

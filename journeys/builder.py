@@ -2,7 +2,7 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError
 
-from shared_utils import (
+from app_utils.shared_utils import (
     GeneratorAppScreen,
     format_snowflake_context,
     get_available_databases,

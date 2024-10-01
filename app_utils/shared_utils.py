@@ -829,7 +829,7 @@ def display_semantic_model() -> None:
             placeholder="The model describes the data and metrics available for Foocorp",
         )
 
-        left, right = st.columns((1, 4), vertical_alignment="center")
+        left, right = st.columns((1, 4))
         if left.form_submit_button("Create", use_container_width=True):
             st.session_state.semantic_model.name = name
             st.session_state.semantic_model.description = description

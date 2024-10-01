@@ -12,7 +12,7 @@ from partner.cortex import (
     CortexSemanticTable,
     CortexTimeDimension,
 )
-from shared_utils import (
+from app_utils.shared_utils import (
     GeneratorAppScreen,
     check_valid_session_state_values,
     format_snowflake_context,
@@ -153,7 +153,7 @@ def set_looker_semantic() -> None:
         )
 
     st.divider()
-    col1, col2 = st.columns(2, vertical_alignment="center")
+    col1, col2 = st.columns(2)
     with col1:
         st.write(
             """

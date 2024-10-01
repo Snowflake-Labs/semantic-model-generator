@@ -5,7 +5,7 @@ from snowflake.connector.connection import SnowflakeConnection
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
 st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
 
-from shared_utils import (  # noqa: E402
+from app_utils.shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
     set_sit_query_tag,

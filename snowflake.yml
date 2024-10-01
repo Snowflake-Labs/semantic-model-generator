@@ -11,4 +11,4 @@ streamlit:
     - semantic_model_generator/
     - images/
     - partner/
-    - shared_utils.py
+    - app_utils/

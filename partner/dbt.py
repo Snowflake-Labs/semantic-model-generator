@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 import yaml
 
-from shared_utils import get_snowflake_connection, set_sit_query_tag
+from app_utils.shared_utils import get_snowflake_connection, set_sit_query_tag
 
 # Partner semantic support instructions
 DBT_IMAGE = "images/dbt-signature_tm_black.png"
