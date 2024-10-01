@@ -170,7 +170,7 @@ def test_get_valid_schema_table_columns_df(
     mock_valid_tables.return_value = valid_tables
 
     got = snowflake_connector.get_valid_schemas_tables_columns_df(
-        mock_conn, "TEST_SCHEMA_1", ["table_1"]
+        mock_conn, "TEST_DB", "TEST_SCHEMA_1", ["table_1"]
     )
 
     want_data = {
@@ -188,7 +188,7 @@ def test_get_valid_schema_table_columns_df(
     assert_frame_equal(want, got)
 
     # Assert that the connection executed the expected queries.
-    query = "select t.TABLE_SCHEMA, t.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COMMENT as COLUMN_COMMENT\nfrom information_schema.tables as t\njoin information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name where t.table_schema ilike 'TEST_SCHEMA_1' AND LOWER(t.table_name) in ('table_1') \norder by 1, 2, c.ordinal_position"
+    query = "select t.TABLE_SCHEMA, t.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COMMENT as COLUMN_COMMENT\nfrom TEST_DB.information_schema.tables as t\njoin TEST_DB.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name where t.table_schema ilike 'TEST_SCHEMA_1' AND LOWER(t.table_name) in ('table_1') \norder by 1, 2, c.ordinal_position"
     mock_conn.cursor().execute.assert_any_call(query)
 
 

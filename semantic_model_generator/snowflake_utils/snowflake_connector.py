@@ -348,6 +348,7 @@ def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str) -> lis
 
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection,
+    db_name: str,
     table_schema: Optional[str] = None,
     table_names: Optional[List[str]] = None,
 ) -> pd.DataFrame:
@@ -363,8 +364,8 @@ def get_valid_schemas_tables_columns_df(
             table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
             where_clause += f"AND LOWER(t.table_name) in ({table_names_str}) "
     query = f"""select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
-from information_schema.tables as t
-join information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
+from {db_name}.information_schema.tables as t
+join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
 order by 1, 2, c.ordinal_position"""
     cursor_execute = conn.cursor().execute(query)
     assert cursor_execute, "cursor_execute should not be None here"

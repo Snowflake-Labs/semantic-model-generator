@@ -214,6 +214,7 @@ def raw_schema_to_semantic_context(
         logger.info(f"Pulling column information from {fqn_table}")
         valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
             conn=conn,
+            db_name=fqn_table.database,
             table_schema=fqn_table.schema_name,
             table_names=[fqn_table.table],
         )
