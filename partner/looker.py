@@ -6,13 +6,13 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 
-from admin_apps.partner.cortex import (
+from partner.cortex import (
     CortexDimension,
     CortexMeasure,
     CortexSemanticTable,
     CortexTimeDimension,
 )
-from admin_apps.shared_utils import (
+from shared_utils import (
     GeneratorAppScreen,
     check_valid_session_state_values,
     format_snowflake_context,
@@ -40,7 +40,7 @@ except ImportError:
 
 
 # Partner semantic support instructions
-LOOKER_IMAGE = "admin_apps/images/looker.png"
+LOOKER_IMAGE = "images/looker.png"
 LOOKER_INSTRUCTIONS = """
 We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file.
 Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.

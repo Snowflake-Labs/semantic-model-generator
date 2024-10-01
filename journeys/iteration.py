@@ -10,7 +10,7 @@ from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 # from streamlit_monaco import st_monaco
 
-from admin_apps.shared_utils import (
+from shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
     changed_from_last_validated_model,
@@ -173,9 +173,11 @@ def edit_verified_query(
     with st.container(border=False):
         st.caption("**SQL**")
         with st.container(border=True):
-            # user_updated_sql = st_monaco(
-            #     value=sql_without_cte, language="sql", height=200
-            # )
+            user_updated_sql = st.text_area(
+                label='sql_editor',
+                label_visibility='collapsed',
+                value=sql_without_cte,
+            )
             run = st.button("Run", use_container_width=True)
 
             if run:
@@ -505,7 +507,7 @@ def yaml_editor(yaml_str: str) -> None:
         ):
             upload_dialog(content)
         if st.session_state.get("partner_setup", False):
-            from admin_apps.partner.partner_utils import integrate_partner_semantics
+            from partner.partner_utils import integrate_partner_semantics
 
             if four.button(
                 "Integrate Partner",

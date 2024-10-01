@@ -5,7 +5,7 @@ from snowflake.connector.connection import SnowflakeConnection
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
 st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
 
-from admin_apps.shared_utils import (  # noqa: E402
+from shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
     set_sit_query_tag,
@@ -71,7 +71,7 @@ def verify_environment_setup() -> None | SnowflakeConnection:
 
 
 if __name__ == "__main__":
-    from admin_apps.journeys import builder, iteration, partner
+    from journeys import builder, iteration, partner
 
     st.session_state['sis'] = set_streamlit_location()
 

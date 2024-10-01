@@ -1,3 +1,8 @@
 * @sfc-gh-cnivera @sfc-gh-jsummer @sfc-gh-twhite @sfc-gh-yayin
-/admin_apps/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/artifacts/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/images/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/journeys/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/partner/ @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/app.py @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
+/shared_utils.py @sfc-gh-cnivera @sfc-gh-yayin @sfc-gh-jsummer
 /semantic_model_generator/ @sfc-gh-nsehrawat @sfc-gh-rehuang @sfc-gh-dasilva @sfc-gh-cnivera @sfc-gh-yayin

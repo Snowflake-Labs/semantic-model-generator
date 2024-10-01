@@ -175,7 +175,7 @@ specified:
 make run_admin_app
 
 # directly
-python3.11 -m streamlit run admin_apps/app.py
+python3.11 -m streamlit run app.py
 ```
 
 ### Partner Support
