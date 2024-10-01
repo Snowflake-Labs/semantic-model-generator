@@ -27,60 +27,29 @@ Deploying the Streamlit app in Snowflake requires [Snowflake CLI](https://docs.s
 
 Follow [instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/specify-credentials) for your preferred connection method to connect Snowflake CLI to your Snowflake account. Please [test](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/manage-connections#label-snowcli-connection-test) your connection. Depending on your connection configuration, you may need to continue passing credentials for subsequent Snowflake CLI commands.
 
-2. Create Snowflake Database
+2. Create Snowflake tag
 
+Setting object tags helps to monitor usage trends that could lead to code improvements and communication of changes to customers. 
 ```bash
-snow object create database name=cortex_analyst_semantics comment='{
-        "origin": "sf_sit",
-        "name": "skimantics",
-        "version": {"major": 2, "minor": 0},
-        "attributes": {"deployment": "sis"}
-    }'
+COMMENT='{"origin": "sf_sit","name": "skimantics","version": {"major": 2, "minor": 0},"attributes": {"deployment": "sis"}\}'
 ```
 
-3. Create Snowflake Schema
+3. Create Snowflake Database
 
 ```bash
-snow object create schema name=semantic_model_generator database=cortex_analyst_semantics comment='{
-        "origin": "sf_sit",
-        "name": "skimantics",
-        "version": {"major": 2, "minor": 0},
-        "attributes": {"deployment": "sis"}
-    }'
+snow object create database name=cortex_analyst_semantics comment=$COMMENT
 ```
 
-4. Create Snowflake Stage
+4. Create Snowflake Schema
 
 ```bash
-snow stage create app_stage --database=cortex_analyst_semantics --schema=semantic_model_generator --comment='{
-        "origin": "sf_sit",
-        "name": "skimantics",
-        "version": {"major": 2, "minor": 0},
-        "attributes": {"deployment": "sis"}
-    }'
+snow object create schema name=semantic_model_generator database=cortex_analyst_semantics comment=$COMMENT
 ```
 
-5. Copy application logic to Snowflake Stage
-
-Navigate to ...
-```bash
-cd ...
-```
-
-** The below may not be necessary?**
-```bash
-snow stage copy ... @app_stage --database=cortex_analyst_semantics --schema=semantic_model_generator --recursive
-```
-
-Add additional python packages...
-```bash
-...
-```
-
-6. Create Streamlit in Snowflake application
+5. Create Streamlit in Snowflake application
 
 ```bash
-
+snow streamlit deploy --replace
 ```
 
 ## Local Setup
