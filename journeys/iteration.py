@@ -8,6 +8,7 @@ import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
+from streamlit_extras.row import row
 
 from journeys.joins import joins_dialog
 
@@ -475,8 +476,9 @@ def yaml_editor(yaml_str: str) -> None:
             update_container(status_container, "failed", prefix=status_container_title)
             exception_as_dialog(e)
 
-    (one, two, three, four, five) = st.columns(5)
-    if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
+    # (one, two, three, four, five) = st.columns(5)
+    button_row = row(5)
+    if button_row.button("Validate", use_container_width=True, help=VALIDATE_HELP):
         # Validate new content
         validate_and_update_session_state()
 
@@ -489,7 +491,7 @@ def yaml_editor(yaml_str: str) -> None:
             st.rerun()
 
     if content:
-        two.download_button(
+        button_row.download_button(
             label="Download",
             data=content,
             file_name="semantic_model.yaml",
@@ -498,7 +500,7 @@ def yaml_editor(yaml_str: str) -> None:
             help=UPLOAD_HELP,
         )
 
-    if three.button(
+    if button_row.button(
         "Upload",
         use_container_width=True,
         help=UPLOAD_HELP,
@@ -507,7 +509,7 @@ def yaml_editor(yaml_str: str) -> None:
     if st.session_state.get("partner_setup", False):
         from partner.partner_utils import integrate_partner_semantics
 
-        if four.button(
+        if button_row.button(
             "Integrate Partner",
             use_container_width=True,
             help=PARTNER_SEMANTIC_HELP,
@@ -516,7 +518,7 @@ def yaml_editor(yaml_str: str) -> None:
             integrate_partner_semantics()
 
     if st.session_state.experimental_features:
-        if five.button(
+        if button_row.button(
             "Join Editor",
             use_container_width=True,
         ):
