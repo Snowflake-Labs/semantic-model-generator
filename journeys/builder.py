@@ -120,10 +120,8 @@ def table_selector_dialog() -> None:
         "Enable experimental features (optional)",
         help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Some features (e.g. joins) are currently in Private Preview and available only to select accounts. Reach out to your account team for access.",
     )
-    allow_joins = False
-    if experimental_features:
-        allow_joins = True
-        st.session_state["experimental_features"] = True
+
+    st.session_state["experimental_features"] = experimental_features
 
     submit = st.button("Submit", use_container_width=True, type="primary")
     if submit:
@@ -131,7 +129,7 @@ def table_selector_dialog() -> None:
             model_name,
             sample_values,
             st.session_state["selected_tables"],
-            allow_joins=allow_joins,
+            allow_joins=experimental_features,
         )
         st.session_state["page"] = GeneratorAppScreen.ITERATION
         st.rerun()

@@ -7,9 +7,21 @@ import yaml
 from app_utils.shared_utils import get_snowflake_connection, set_sit_query_tag
 
 # Partner semantic support instructions
-DBT_IMAGE = "images/dbt-signature_tm_black.png"
-DBT_INSTRUCTIONS = """
-We extract metadata from your **DBT** semantic yaml file(s) and merge it with a generated Cortex Analyst semantic file.
+DBT_IMAGE = "admin_apps/images/dbt-signature_tm_black.png"
+DBT_MODEL_INSTRUCTIONS = """
+### [SQL Model](https://docs.getdbt.com/docs/build/sql-models)
+
+Materialize your SQL model(s) as Snowflake table(s) and generate a Cortex Analyst semantic file for them directly.
+> Steps:
+> 1) Update dbt model(s) to be [materialized](https://docs.getdbt.com/docs/build/materializations) in Snowflake.
+> 2) Update dbt model(s) to [persist docs](https://docs.getdbt.com/reference/resource-configs/persist_docs) to capture table/column descriptions.
+> 3) Run dbt model(s) to materialize in Snowflake.
+> 4) Select **🛠 Create a new semantic model** on the homepage and select the materialized Snowflake table(s).
+"""
+DBT_SEMANTIC_INSTRUCTIONS = """
+### [Semantic Model](https://docs.getdbt.com/docs/build/semantic-models)
+
+We extract metadata from your dbt semantic yaml file(s) and merge it with a generated Cortex Analyst semantic file.
 
 **Note**: The DBT semantic layer must be sourced from tables/views in Snowflake.
 > Steps:

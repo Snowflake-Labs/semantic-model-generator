@@ -58,6 +58,8 @@ OPTIONAL_FIELD_NUMBER: _ClassVar[int]
 optional: _descriptor.FieldDescriptor
 SQL_EXPRESSION_FIELD_NUMBER: _ClassVar[int]
 sql_expression: _descriptor.FieldDescriptor
+ID_FIELD_FIELD_NUMBER: _ClassVar[int]
+id_field: _descriptor.FieldDescriptor
 
 class RetrievalResult(_message.Message):
     __slots__ = ("value", "score")

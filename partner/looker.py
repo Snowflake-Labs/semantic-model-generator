@@ -42,7 +42,7 @@ except ImportError:
 # Partner semantic support instructions
 LOOKER_IMAGE = "images/looker.png"
 LOOKER_INSTRUCTIONS = """
-We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file.
+We materialize your [Explore](https://cloud.google.com/looker/docs/reference/param-explore-explore) dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file.
 Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.
 
 **Note**: Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required.
@@ -226,7 +226,14 @@ def set_looker_semantic() -> None:
     with col2:
         sample_values = input_sample_value_num()
 
+    experimental_features = st.checkbox(
+        "Enable experimental features (optional)",
+        help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Some features (e.g. joins) are currently in Private Preview and available only to select accounts. Reach out to your account team for access.",
+    )
+
     if st.button("Continue", type="primary"):
+        st.session_state["experimental_features"] = experimental_features
+
         if check_valid_session_state_values(
             [
                 "looker_model_name",
@@ -265,6 +272,7 @@ def set_looker_semantic() -> None:
                     model_name,
                     sample_values,
                     [full_tablename],
+                    allow_joins=experimental_features,
                 )
                 st.session_state["partner_setup"] = True
 

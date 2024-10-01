@@ -1,5 +1,6 @@
 import json
 import time
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -17,6 +18,12 @@ from app_utils.shared_utils import (
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 
 
+class PartnerTool(Enum):
+    DBT_SQL_MODEL = "dbt - SQL Model"
+    DBT_SEMANTIC_MODEL = "dbt - Semantic Model"
+    LOOKER_EXPLORE = "Looker - Explore"
+
+
 def set_partner_instructions() -> None:
     """
     Sets instructions and partner logo in session_state based on selected partner.
@@ -24,13 +31,19 @@ def set_partner_instructions() -> None:
     """
 
     if st.session_state.get("partner_tool", None):
-        if st.session_state["partner_tool"] == "dbt":
-            from partner.dbt import DBT_IMAGE, DBT_INSTRUCTIONS
+        if st.session_state["partner_tool"] == PartnerTool.DBT_SQL_MODEL.value:
+            from partner.dbt import DBT_IMAGE, DBT_MODEL_INSTRUCTIONS
 
-            instructions = DBT_INSTRUCTIONS
+            instructions = DBT_MODEL_INSTRUCTIONS
             image = DBT_IMAGE
             image_size = (72, 32)
-        elif st.session_state["partner_tool"] == "looker":
+        elif st.session_state["partner_tool"] == PartnerTool.DBT_SEMANTIC_MODEL.value:
+            from partner.dbt import DBT_IMAGE, DBT_SEMANTIC_INSTRUCTIONS
+
+            instructions = DBT_SEMANTIC_INSTRUCTIONS
+            image = DBT_IMAGE
+            image_size = (72, 32)
+        elif st.session_state["partner_tool"] == PartnerTool.LOOKER_EXPLORE.value:
             from partner.looker import LOOKER_IMAGE, LOOKER_INSTRUCTIONS
 
             instructions = LOOKER_INSTRUCTIONS
@@ -47,7 +60,7 @@ def configure_partner_semantic() -> None:
     Returns: None
     """
 
-    partners = [None, "dbt", "looker"]
+    partners = [tool.value for tool in PartnerTool]
 
     st.selectbox(
         "Select the partner tool",
@@ -58,7 +71,7 @@ def configure_partner_semantic() -> None:
     )
     if st.session_state.get("partner_tool", None):
         with st.expander(
-            f"{st.session_state.get('partner_tool', '').title()} Instructions",
+            "Instructions",
             expanded=True,
         ):
             render_image(
@@ -71,12 +84,14 @@ def configure_partner_semantic() -> None:
     if st.session_state.get("partner_tool", None):
         st.session_state["selected_partner"] = st.session_state["partner_tool"]
 
-    if st.session_state["partner_tool"] == "dbt":
+    if st.session_state["partner_tool"] == PartnerTool.DBT_SEMANTIC_MODEL.value:
         upload_dbt_semantic()
-    if st.session_state["partner_tool"] == "looker":
+    if st.session_state["partner_tool"] == PartnerTool.LOOKER_EXPLORE.value:
         from partner.looker import set_looker_semantic
 
         set_looker_semantic()
+    if st.session_state["partner_tool"] == PartnerTool.DBT_SQL_MODEL.value:
+        st.session_state["partner_setup"] = False
 
 
 class PartnerCompareRow:
@@ -231,8 +246,10 @@ def integrate_partner_semantics() -> None:
     """
 
     st.write(
-        "Specify how to merge semantic metadata from partner tools with Cortex Analyst's semantic model."
+        "Specify how to merge semantic metadata from your selected partner tool with Cortex Analyst's semantic model."
     )
+
+    st.write(f"Partner: **{st.session_state.get('selected_partner', None)}**")
 
     COMPARE_SEMANTICS_HELP = """Which semantic file should be checked first for necessary metadata.
     Where metadata is missing, the other semantic file will be checked."""
@@ -253,11 +270,17 @@ def integrate_partner_semantics() -> None:
         # Execute pre-processing behind the scenes based on vendor tool
         CortexSemanticTable.create_cortex_table_list()
 
-        if st.session_state.get("selected_partner", None) == "looker":
+        if (
+            st.session_state.get("selected_partner", None)
+            == PartnerTool.LOOKER_EXPLORE.value
+        ):
             from partner.looker import LookerSemanticTable
 
             LookerSemanticTable.create_cortex_table_list()
-        elif st.session_state.get("selected_partner", None) == "dbt":
+        elif (
+            st.session_state.get("selected_partner", None)
+            == PartnerTool.DBT_SEMANTIC_MODEL.value
+        ):
             pass
         else:
             st.error("Selected partner tool not available.")
@@ -303,13 +326,19 @@ def integrate_partner_semantics() -> None:
                 semantic_cortex_tbl
             )
 
-            if st.session_state.get("selected_partner", None) == "looker":
+            if (
+                st.session_state.get("selected_partner", None)
+                == PartnerTool.LOOKER_EXPLORE.value
+            ):
                 from partner.looker import LookerSemanticTable
 
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
-            if st.session_state.get("selected_partner", None) == "dbt":
+            if (
+                st.session_state.get("selected_partner", None)
+                == PartnerTool.DBT_SEMANTIC_MODEL.value
+            ):
                 partner_fields_df = DBTSemanticModel.retrieve_df_by_name(
                     semantic_partner_tbl
                 )
