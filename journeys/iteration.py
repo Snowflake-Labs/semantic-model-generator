@@ -9,7 +9,7 @@ import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 
-from joins import joins_dialog
+from journeys.joins import joins_dialog
 
 from app_utils.shared_utils import (
     GeneratorAppScreen,
@@ -474,24 +474,10 @@ def yaml_editor(yaml_str: str) -> None:
             st.session_state["validated"] = False
             update_container(status_container, "failed", prefix=status_container_title)
             exception_as_dialog(e)
-    with button_container:
 
-        (one, two, three, four) = st.columns(4)
-        if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
-            # Validate new content
-            validate_and_update_session_state()
-
-            # Rerun the app if validation was successful.
-            # We shouldn't rerun if validation failed as the error popup would immediately dismiss.
-            # This must be done outside of the try/except because the generic Exception handling is catching the
-            # exception that st.rerun() properly raises to halt execution.
-            # This is fixed in later versions of Streamlit, but other refactors to the code are required to upgrade.
-            if st.session_state["validated"]:
-                st.rerun()
-
-    if button_container.button(
-        "Validate", use_container_width=True, help=VALIDATE_HELP
-    ):
+    (one, two, three, four, five) = st.columns(5)
+    if one.button("Validate", use_container_width=True, help=VALIDATE_HELP):
+        # Validate new content
         validate_and_update_session_state()
 
         # Rerun the app if validation was successful.
@@ -503,7 +489,7 @@ def yaml_editor(yaml_str: str) -> None:
             st.rerun()
 
     if content:
-        button_container.download_button(
+        two.download_button(
             label="Download",
             data=content,
             file_name="semantic_model.yaml",
@@ -512,7 +498,7 @@ def yaml_editor(yaml_str: str) -> None:
             help=UPLOAD_HELP,
         )
 
-    if button_container.button(
+    if three.button(
         "Upload",
         use_container_width=True,
         help=UPLOAD_HELP,
@@ -521,7 +507,7 @@ def yaml_editor(yaml_str: str) -> None:
     if st.session_state.get("partner_setup", False):
         from partner.partner_utils import integrate_partner_semantics
 
-        if button_container.button(
+        if four.button(
             "Integrate Partner",
             use_container_width=True,
             help=PARTNER_SEMANTIC_HELP,
@@ -530,7 +516,7 @@ def yaml_editor(yaml_str: str) -> None:
             integrate_partner_semantics()
 
     if st.session_state.experimental_features:
-        if button_container.button(
+        if five.button(
             "Join Editor",
             use_container_width=True,
         ):

@@ -27,6 +27,7 @@ numpy = "^1.24.4"
 python-dotenv = "^1.0.1"
 urllib3 = "^1.26.19"
 requests = "^2.32.3"
+snowflake-snowpark-python = "1.18.0"
 
 # Optional dependencies for functionality such as partner semantic model support.
 looker-sdk = { version = "^24.14.0", optional = true }

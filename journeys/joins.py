@@ -165,7 +165,7 @@ def relationship_builder(
             st.rerun(scope="fragment")
 
 
-@st.dialog("Join Builder", width="large")
+@st.experimental_dialog("Join Builder", width="large")
 def joins_dialog() -> None:
 
     if "builder_joins" not in st.session_state:

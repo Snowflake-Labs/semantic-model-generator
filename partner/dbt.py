@@ -7,7 +7,7 @@ import yaml
 from app_utils.shared_utils import get_snowflake_connection, set_sit_query_tag
 
 # Partner semantic support instructions
-DBT_IMAGE = "admin_apps/images/dbt-signature_tm_black.png"
+DBT_IMAGE = "images/dbt-signature_tm_black.png"
 DBT_MODEL_INSTRUCTIONS = """
 ### [SQL Model](https://docs.getdbt.com/docs/build/sql-models)
 

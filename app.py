@@ -72,6 +72,7 @@ def verify_environment_setup() -> None | SnowflakeConnection:
 
 if __name__ == "__main__":
     from journeys import builder, iteration, partner
+    
 
     st.session_state['sis'] = set_streamlit_location()
 
