@@ -79,7 +79,7 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
 def _get_table_comment(
-    conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
+    conn: SnowflakeConnection, schema_name: str, table_name: str, columns_df: pd.DataFrame
 ) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
         return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
@@ -88,7 +88,7 @@ def _get_table_comment(
         try:
             tbl_ddl = (
                 conn.cursor()  # type: ignore[union-attr]
-                .execute(f"select get_ddl('table', '{table_name}');")
+                .execute(f"select get_ddl('table', '{schema_name}.{table_name}');")
                 .fetchall()[0][0]
                 .replace("'", "\\'")
             )
@@ -131,7 +131,7 @@ def get_table_representation(
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    table_comment = _get_table_comment(conn, table_name, columns_df)
+    table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
@@ -180,7 +180,7 @@ def _get_column_representation(
             cursor = conn.cursor(DictCursor)
             assert cursor is not None, "Cursor is unexpectedly None"
             cursor_execute = cursor.execute(
-                f'select distinct "{column_name}" from "{schema_name}"."{table_name}" limit {ndv}'
+                f'select distinct "{column_name}" from {schema_name}.{table_name} limit {ndv}'
             )
             assert cursor_execute is not None, "cursor_execute should not be none "
             res = cursor_execute.fetchall()

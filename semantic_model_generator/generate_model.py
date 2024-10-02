@@ -198,7 +198,8 @@ def raw_schema_to_semantic_context(
         # Verify this is a valid FQN table. For now, we check that the table follows the following format.
         # {database}.{schema}.{table}
         fqn_table = create_fqn_table(table)
-        fqn_databse_schema = f"{fqn_table.database}_{fqn_table.schema_name}"
+        fqn_databse_schema = f"{fqn_table.database}.{fqn_table.schema_name}"
+                      
         if fqn_databse_schema not in unique_database_schema:
             unique_database_schema.append(fqn_databse_schema)
 
@@ -227,8 +228,8 @@ def raw_schema_to_semantic_context(
 
         raw_table = get_table_representation(
             conn=conn,
-            schema_name=fqn_table.schema_name,
-            table_name=fqn_table.table,
+            schema_name=fqn_databse_schema, # Fully-qualified schema
+            table_name=fqn_table.table, # Non-qualified table name
             table_index=0,
             ndv_per_column=n_sample_values,  # number of sample values to pull per column.
             columns_df=valid_columns_df_this_table,
