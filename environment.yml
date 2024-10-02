@@ -21,3 +21,4 @@ dependencies:
 - types-protobuf=4.25.0.20240417
 - snowflake-snowpark-python=1.18.0
 - streamlit-extras=0.4.3
+- cattrs=23.1.2

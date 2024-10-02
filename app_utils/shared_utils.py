@@ -100,7 +100,16 @@ def get_snowflake_connection() -> SnowflakeConnection:
     """
 
     if st.session_state['sis']:
+        # Import SiS-required modules
+        import sys
         from snowflake.snowpark.context import get_active_session
+
+        # Non-Anaconda supported packages must be added to path to import from stage
+        addl_modules = [
+            "looker_sdk.zip",
+            "looker_sdk.zip",
+        ]
+        sys.path.extend(addl_modules)
         return get_active_session().connection
     else:
         # Rely on streamlit connection that is built on top of many ways to build snowflake connection
