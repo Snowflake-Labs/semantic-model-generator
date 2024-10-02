@@ -68,7 +68,6 @@ def set_streamlit_location() -> None:
     """
     HOME = os.getenv("HOME", None)
     if HOME == "/home/udf":
-        import _snowflake
         sis = True
     else:
         sis = False

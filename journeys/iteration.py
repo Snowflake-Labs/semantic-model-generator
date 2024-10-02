@@ -89,6 +89,7 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
     }
 
     if st.session_state["sis"]:
+        import _snowflake
         resp = _snowflake.send_snow_api_request(  # type: ignore
             "POST",
             f"/api/v2/cortex/analyst/message",
@@ -98,6 +99,11 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
             {},
             30000,
         )
+        if resp['status'] < 400:
+            json_resp: Dict[str, Any] = json.loads(resp['content'])
+            return json_resp
+        else:
+            raise Exception(f"Failed request with status {resp['status']}: {resp}")
     else:
         host = st.session_state.host_name
         resp = requests.post(
@@ -110,12 +116,11 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
                 "Content-Type": "application/json",
             },
         )
-
-    if resp.status_code < 400:
-        json_resp: Dict[str, Any] = resp.json()
-        return json_resp
-    else:
-        raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")
+        if resp.status_code < 400:
+            json_resp: Dict[str, Any] = resp.json()
+            return json_resp
+        else:
+            raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")
 
 
 def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
