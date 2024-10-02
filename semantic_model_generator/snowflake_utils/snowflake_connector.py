@@ -211,7 +211,7 @@ def _get_column_representation(
     return column
 
 
-def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
+def _fetch_valid_tables_and_views(conn: SnowflakeConnection, db_name: str,) -> pd.DataFrame:
     def _get_df(query: str) -> pd.DataFrame:
         cursor = conn.cursor().execute(query)
         assert cursor is not None, "cursor should not be none here."
@@ -227,8 +227,8 @@ def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
             )
         )
 
-    tables = _get_df("show tables in database")
-    views = _get_df("show views in database")
+    tables = _get_df(f"show tables in database {db_name}")
+    views = _get_df(f"show views in database {db_name}")
     return pd.concat([tables, views], axis=0)
 
 
@@ -370,7 +370,7 @@ order by 1, 2, c.ordinal_position"""
     assert cursor_execute, "cursor_execute should not be None here"
     schemas_tables_columns_df = cursor_execute.fetch_pandas_all()
 
-    valid_tables_and_views_df = _fetch_valid_tables_and_views(conn=conn)
+    valid_tables_and_views_df = _fetch_valid_tables_and_views(conn=conn, db_name=db_name)
 
     valid_schemas_tables_columns_df = valid_tables_and_views_df.merge(
         schemas_tables_columns_df, how="inner", on=(_TABLE_SCHEMA_COL, _TABLE_NAME_COL)
