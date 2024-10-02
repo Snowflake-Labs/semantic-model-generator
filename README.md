@@ -43,10 +43,23 @@ snow object create database name=cortex_analyst_semantics comment=$COMMENT
 4. Create Snowflake Schema
 
 ```bash
-snow object create schema name=semantic_model_generator database=cortex_analyst_semantics comment=$COMMENT
+snow object create schema name=semantic_model_generator --database=cortex_analyst_semantics comment=$COMMENT
 ```
 
-5. Create Streamlit in Snowflake application
+5. Create Snowflake Stage and Upload 3rd Party Packages
+
+```bash
+snow stage create streamlit_stage --database=cortex_analyst_semantics --schema=semantic_model_generator
+```
+
+```bash
+snow stage copy app_utils/looker_sdk.zip @streamlit_stage --database cortex_analyst_semantics --schema semantic_model_generator --overwrite
+
+snow stage copy app_utils/strictyaml.zip @streamlit_stage --database cortex_analyst_semantics --schema semantic_model_generator --overwrite
+```
+
+
+6. Create Streamlit in Snowflake application
 
 ```bash
 snow streamlit deploy --replace

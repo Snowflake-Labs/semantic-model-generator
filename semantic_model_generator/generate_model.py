@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-import jsonargparse
+# import jsonargparse
 from loguru import logger
 from snowflake.connector import SnowflakeConnection
 

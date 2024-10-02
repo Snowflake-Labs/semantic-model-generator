@@ -223,7 +223,7 @@ def set_user_name(conn: SnowflakeConnection,
     Used to consolidate from various connection methods.
     """
     if st.session_state['sis']:
-        st.session_state['user_name'] = st.experimental_user_name
+        st.session_state['user_name'] = st.experimental_user.user_name
     # SNOWFLAKE_USER may be specified from user's environment variables
     # This will not be the case for connections.toml so need to set it ourselves
     if not SNOWFLAKE_USER:
