@@ -156,15 +156,13 @@ pip install -e ".[looker]"
 2) You can run the app using the provided Makefile target if you have Make on your machine.
 
 ```bash
-# Make target
 make run_admin_app
 ```
 
-Alternatively, you can use your current version of Python to start the app manually.
+Alternatively, you can use your current version of Python to start the app manually. Please use Python 3.8-3.11.
 
 ```bash
-# directly
-python3.11 -m streamlit run app.py
+python3 -m streamlit run app.py
 ```
 
 ## Partner Semantic Translation
