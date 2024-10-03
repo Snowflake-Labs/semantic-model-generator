@@ -23,7 +23,6 @@ from app_utils.shared_utils import (
     return_home_button,
     upload_yaml,
     validate_and_upload_tmp_yaml,
-    
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -85,6 +84,7 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
 
     if st.session_state["sis"]:
         import _snowflake
+
         resp = _snowflake.send_snow_api_request(  # type: ignore
             "POST",
             f"/api/v2/cortex/analyst/message",
@@ -94,8 +94,8 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
             {},
             30000,
         )
-        if resp['status'] < 400:
-            json_resp: Dict[str, Any] = json.loads(resp['content'])
+        if resp["status"] < 400:
+            json_resp: Dict[str, Any] = json.loads(resp["content"])
             return json_resp
         else:
             raise Exception(f"Failed request with status {resp['status']}: {resp}")
@@ -115,7 +115,9 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
             json_resp: Dict[str, Any] = resp.json()
             return json_resp
         else:
-            raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")
+            raise Exception(
+                f"Failed request with status {resp.status_code}: {resp.text}"
+            )
 
 
 def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
@@ -465,7 +467,6 @@ def yaml_editor(yaml_str: str) -> None:
         try:
             validate(
                 content,
-                snowflake_account=st.session_state.account_name,
                 conn=get_snowflake_connection(),
             )
             st.session_state["validated"] = True

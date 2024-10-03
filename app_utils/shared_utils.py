@@ -101,7 +101,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
     Returns: SnowflakeConnection
     """
 
-    if st.session_state['sis']:
+    if st.session_state["sis"]:
         # Import SiS-required modules
         import sys
         from snowflake.snowpark.context import get_active_session
@@ -124,7 +124,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
                 env_setup_popup(missing_env_vars)
             else:
                 return get_connector().open_connection(db_name="")
-            
+
 
 @st.cache_resource(show_spinner=False)
 def set_snowpark_session(_conn: Optional[SnowflakeConnection] = None) -> None:
@@ -137,12 +137,13 @@ def set_snowpark_session(_conn: Optional[SnowflakeConnection] = None) -> None:
     Returns: Snowpark session
     """
 
-    if st.session_state['sis']:
+    if st.session_state["sis"]:
         from snowflake.snowpark.context import get_active_session
+
         session = get_active_session()
     else:
-        session = Session.builder.configs({"connection":_conn}).create()
-    st.session_state['session'] = session
+        session = Session.builder.configs({"connection": _conn}).create()
+    st.session_state["session"] = session
 
 
 @st.cache_resource(show_spinner=False)
@@ -263,8 +264,10 @@ def get_yamls_from_stage(stage: str, include_yml: bool = False) -> List[str]:
     """
     return fetch_yaml_names_in_stage(get_snowflake_connection(), stage, include_yml)
 
-def set_account_name(conn : SnowflakeConnection,
-                     SNOWFLAKE_ACCOUNT: Optional[str] = None) -> None:
+
+def set_account_name(
+    conn: SnowflakeConnection, SNOWFLAKE_ACCOUNT: Optional[str] = None
+) -> None:
     """
     Sets account_name in st.session_state.
     Used to consolidate from various connection methods.
@@ -272,40 +275,44 @@ def set_account_name(conn : SnowflakeConnection,
     # SNOWFLAKE_ACCOUNT may be specified from user's environment variables
     # This will not be the case for connections.toml so need to set it ourselves
     if not SNOWFLAKE_ACCOUNT:
-        SNOWFLAKE_ACCOUNT = conn.cursor().execute("SELECT CURRENT_ACCOUNT()").fetchone()[0]
-    st.session_state['account_name'] = SNOWFLAKE_ACCOUNT
+        SNOWFLAKE_ACCOUNT = (
+            conn.cursor().execute("SELECT CURRENT_ACCOUNT()").fetchone()[0]
+        )
+    st.session_state["account_name"] = SNOWFLAKE_ACCOUNT
 
 
-def set_host_name(conn : SnowflakeConnection,
-                  SNOWFLAKE_HOST: Optional[str] = None) -> None:
+def set_host_name(
+    conn: SnowflakeConnection, SNOWFLAKE_HOST: Optional[str] = None
+) -> None:
     """
     Sets host_name in st.session_state.
     Used to consolidate from various connection methods.
     Value only necessary for open-source implementation.
     """
-    if st.session_state['sis']:
-        st.session_state['host_name'] = ''
+    if st.session_state["sis"]:
+        st.session_state["host_name"] = ""
     else:
         # SNOWFLAKE_HOST may be specified from user's environment variables
         # This will not be the case for connections.toml so need to set it ourselves
         if not SNOWFLAKE_HOST:
             SNOWFLAKE_HOST = conn.host
-        st.session_state['host_name'] = SNOWFLAKE_HOST
+        st.session_state["host_name"] = SNOWFLAKE_HOST
 
 
-def set_user_name(conn: SnowflakeConnection,
-                  SNOWFLAKE_USER: Optional[str] = None) -> None:
+def set_user_name(
+    conn: SnowflakeConnection, SNOWFLAKE_USER: Optional[str] = None
+) -> None:
     """
     Sets user_name in st.session_state.
     Used to consolidate from various connection methods.
     """
-    if st.session_state['sis']:
-        st.session_state['user_name'] = st.experimental_user.user_name
+    if st.session_state["sis"]:
+        st.session_state["user_name"] = st.experimental_user.user_name
     # SNOWFLAKE_USER may be specified from user's environment variables
     # This will not be the case for connections.toml so need to set it ourselves
     if not SNOWFLAKE_USER:
         SNOWFLAKE_USER = conn.cursor().execute("SELECT CURRENT_USER()").fetchone()[0]
-    st.session_state['user_name'] = SNOWFLAKE_USER
+    st.session_state["user_name"] = SNOWFLAKE_USER
 
 
 class GeneratorAppScreen(str, Enum):
@@ -877,7 +884,6 @@ def add_new_table() -> None:
                     base_tables=[
                         f"{table.base_table.database}.{table.base_table.schema}.{table.base_table.table}"
                     ],
-                    snowflake_account=SNOWFLAKE_ACCOUNT,
                     semantic_model_name="foo",  # A placeholder name that's not used anywhere.
                     conn=get_snowflake_connection(),
                 )
@@ -986,10 +992,12 @@ def upload_yaml(file_name: str) -> None:
         with open(tmp_file_path, "w") as temp_file:
             temp_file.write(yaml)
 
-        st.session_state.session.file.put(tmp_file_path,
-                                          f'@{st.session_state.snowflake_stage.stage_name}',
-                                          auto_compress=False,
-                                          overwrite=True)
+        st.session_state.session.file.put(
+            tmp_file_path,
+            f"@{st.session_state.snowflake_stage.stage_name}",
+            auto_compress=False,
+            overwrite=True,
+        )
 
 
 def validate_and_upload_tmp_yaml(conn: SnowflakeConnection) -> None:
@@ -1060,7 +1068,9 @@ def download_yaml(file_name: str) -> str:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Downloads the YAML to {temp_dir}/{file_name}.
-        st.session_state.session.file.get(f"@{st.session_state.snowflake_stage.stage_name}/{file_name}", temp_dir)
+        st.session_state.session.file.get(
+            f"@{st.session_state.snowflake_stage.stage_name}/{file_name}", temp_dir
+        )
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")
         with open(tmp_file_path, "r") as temp_file:
@@ -1097,7 +1107,7 @@ def set_sit_query_tag(
 
     Returns: None
     """
-    if not st.session_state['sis']:
+    if not st.session_state["sis"]:
         query_tag = get_sit_query_tag(vendor, action)
 
         conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
@@ -1236,7 +1246,6 @@ def run_generate_model_str_from_snowflake(
         with st.spinner("Generating model. This may take a minute or two..."):
             yaml_str = generate_model_str_from_snowflake(
                 base_tables=base_tables,
-                snowflake_account=st.session_state["account_name"],
                 semantic_model_name=model_name,
                 n_sample_values=sample_values,  # type: ignore
                 conn=get_snowflake_connection(),
