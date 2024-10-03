@@ -8,7 +8,7 @@ CREATE OR REPLACE NETWORK RULE looker_rule
 
 CREATE OR REPLACE SECRET looker_client_secret
   TYPE = GENERIC_STRING
-  SECRET_STRING = '<% api_key %>';
+  SECRET_STRING = '<% client_secret %>';
 
 CREATE OR REPLACE EXTERNAL ACCESS INTEGRATION looker_access_int
   ALLOWED_NETWORK_RULES = (looker_rule)

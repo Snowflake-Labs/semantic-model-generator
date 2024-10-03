@@ -12,6 +12,7 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 * [Table of Contents](#table-of-contents)
 * [Streamlit in Snowflake Setup](#streamlit-in-snowflake-setup)
 * [Local Setup](#local-setup)
+* [Partner Tool Translation](#partner-tool-translation)
 * [Usage](#usage)
     + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
     + [Auto-Generated Descriptions](#auto-generated-descriptions)
@@ -19,50 +20,39 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 * [Examples](#examples)
 * [Release](#release)
 
-## Streamlit in Snowflake Setup
+## Streamlit in Snowflake Setup 
 
-Deploying the Streamlit app in Snowflake requires [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index). Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake once Snowflake CLI is installed.
+[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deplying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
 1. Configure Snowflake CLI
 
 Follow [instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/specify-credentials) for your preferred connection method to connect Snowflake CLI to your Snowflake account. Please [test](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/manage-connections#label-snowcli-connection-test) your connection. Depending on your connection configuration, you may need to continue passing credentials for subsequent Snowflake CLI commands.
 
-2. Create Snowflake tag
+2. Deploy app in Streamlit in Snowflake
 
-Setting object tags helps to monitor usage trends that could lead to code improvements and communication of changes to customers. 
+Run the below command(s) from the project root directory to create all necessary objects in Snowflake. 
+Before running, replace `<STREAMLIT_WAREHOUSE>` with an available warehouse to power the app. 
+
+**Hint**: The owner of the app will be the role specified in your Snowflake CLI connection. To use a different role, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
+
 ```bash
-COMMENT='{"origin": "sf_sit","name": "skimantics","version": {"major": 2, "minor": 0},"attributes": {"deployment": "sis"}\}'
+cd sis_setup
+snow sql -f app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
 ```
 
-3. Create Snowflake Database
+3. **OPTIONAL**: 
+
+The Semantic Model Generator supports translating metadata from a Looker Explore. To add this functionality to the Streamlit in Snowflake app, we need to create an external access integration to allow Snowflake to reach your Looker instance. 
+
+Run the below command to create the external access integration. Before running, replace the following parameters:
+- `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url)
+- `<CLIENT_SECRET>` with your [Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
+- `<APP_ROLE>` with the owning role used in step #2 above
+
+**Hint**: Running the below, which creates external access integrations, may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
-snow object create database name=cortex_analyst_semantics comment=$COMMENT
-```
-
-4. Create Snowflake Schema
-
-```bash
-snow object create schema name=semantic_model_generator --database=cortex_analyst_semantics comment=$COMMENT
-```
-
-5. Create Snowflake Stage and Upload 3rd Party Packages
-
-```bash
-snow stage create streamlit_stage --database=cortex_analyst_semantics --schema=semantic_model_generator
-```
-
-```bash
-snow stage copy app_utils/looker_sdk.zip @streamlit_stage --database cortex_analyst_semantics --schema semantic_model_generator --overwrite
-
-snow stage copy app_utils/strictyaml.zip @streamlit_stage --database cortex_analyst_semantics --schema semantic_model_generator --overwrite
-```
-
-
-6. Create Streamlit in Snowflake application
-
-```bash
-snow streamlit deploy --replace --open
+snow sql -f looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
 ```
 
 ## Local Setup
@@ -142,34 +132,52 @@ SNOWFLAKE_AUTHENTICATOR="externalbrowser"
 
 Once you have completed 1 of the 2 setup options above, you're ready to start the local Streamlit app.
 
-To install dependencies for the Streamlit app, run
+1) If you have Make on your machine, run the below command to install dependencies for the Streamlit app.
 
 ```bash
 make setup_admin_app
 ```
 
-This uses `pip` to install dependencies from the root `pyproject.toml`; feel free to use `conda` or any package manager
-you prefer.
-
-Once installed, you can run the app using the provided Makefile target, or with your current version of Python manually
-specified:
-
+This uses `pip` to install dependencies from the root `pyproject.toml`. Feel free to use `conda` or any package manager
+you prefer. Below is an alternative to the Make command.
 ```bash
-# Make target
-make run_admin_app
-
-# directly
-python3.11 -m streamlit run app.py
+pip install .
 ```
 
-### Partner Support
-
 The generator supports merging data from your existing semantic models built with partners such as dbt and Looker. To
-use the Looker features, please install the extras:
+use the Looker-specific features, please use the below command to install the extras. This is only required for looker translation.
 
 ```bash
 pip install -e ".[looker]"
 ```
+
+2) You can run the app using the provided Makefile target if you have Make on your machine.
+
+```bash
+# Make target
+make run_admin_app
+```
+
+Alternatively, you can use your current version of Python to start the app manually.
+
+```bash
+# directly
+python3.11 -m streamlit run app.py
+```
+
+## Partner Semantic Translation
+
+We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst
+semantic files using logic and metadata from partner tools.
+Please see below for details about current partner support.
+
+**IMPORTANT**: Instructions for each of the below sources are provided in the Streamlit application.
+
+| Source   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
+|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DBT Semantic Model   | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake. |
+| DBT SQL Model | DBT SQL Models should be materialized in Snowflake with persist docs to capture comments. A new semantic file can be generated for these newly materialized tables/views in Snowflake directly.| |
+| Looker Explore | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
 
 ## Usage
 
@@ -202,20 +210,6 @@ In addition, consider adding the following elements to your semantic model:
     * Example: `col1 - col2` could be the `expr` for a logical column.
 2. Synonyms. Any additional synonyms for column names.
 3. Filters. Additional filters with their relevant `expr`.
-
-### Partner Semantic Support
-
-We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst
-semantic files using logic and metadata from partner tools.
-Please see below for details about current partner support.
-
-**IMPORTANT**: Instructions for each of the below sources are provided in the Streamlit application.
-
-| Source   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
-|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| DBT Semantic Model   | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake. |
-| DBT SQL Model | DBT SQL Models should be materialized in Snowflake with persist docs to capture comments. A new semantic file can be generated for these newly materialized tables/views in Snowflake directly.| |
-| Looker Explore | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
 
 ## Examples
 

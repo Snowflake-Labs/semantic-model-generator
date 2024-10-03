@@ -46,7 +46,8 @@ We materialize your [Explore](https://cloud.google.com/looker/docs/reference/par
 Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.
 
 **Note**: Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required.
-Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information.
+If using Streamlit in Snowflake, an external access integration is **required**. See project README for more external access integration instructions.
+Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for credential information.
 
 **Tip**: Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly.
 
