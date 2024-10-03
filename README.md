@@ -3,7 +3,7 @@
 The `Semantic Model Generator` is an open-source tool used to generate and curate a semantic model for Snowflake [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst).
 
 The tool is rendered as a Streamlit application, which can be started in [Streamlit in Snowflake](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit) or locally with open-source Streamlit.
-Setup instructions are separated below for the two methods - Please proceed to your preferred deployment method: [SiS setup](#streamlit-in-snowflake-setup) or [local setup](#local-setup).
+Setup instructions are separated below for the two methods - Please proceed to your preferred deployment method: [SiS deployment](#streamlit-in-snowflake-deployment) or [local deployment](#local-deployment).
 
 If you want to see what a semantic model looks like, skip to [Examples](#examples).
 
@@ -22,9 +22,9 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 ## Streamlit in Snowflake Deployment
 
-[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deplying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
+[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
-If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VSCode Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the Files Upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
 
 1. Configure Snowflake CLI
 
@@ -48,7 +48,7 @@ The Semantic Model Generator supports translating metadata from a Looker Explore
 
 Run the below command to create the external access integration. Before running, replace the following parameters:
 - `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url)
-- `<CLIENT_SECRET>` with your [Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
+- `<CLIENT_SECRET>` with your [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
 - `<APP_ROLE>` with the owning role used in step #2 above
 
 **Hint**: Running the below, which creates external access integrations, may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
@@ -59,7 +59,7 @@ snow sql -f looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secre
 
 ## Local Deployment
 
-Localy usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
+Local usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
 
 ### Setup connections.toml (Option 1)
 The Snowflake Python connector lets you add connection definitions to a connections.toml configuration file. A connection definition refers to a collection of connection-related parameters. Snowflake Python libraries currently support TOML version 1.0.0.
@@ -93,7 +93,7 @@ account, [follow these instructions](https://docs.snowflake.com/en/user-guide/or
 * It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit
   the `https://` prefix.
 
-Our semantic model generators currently support three types of authentication. 
+Our semantic model generator currently support three types of authentication. 
 If no `SNOWFLAKE_AUTHENTICATOR` environment variable is set, the default is `snowflake`, which uses standard username/password support (#1 below).
 
 1. Username and Password
