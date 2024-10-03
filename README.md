@@ -10,8 +10,8 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 ## Table of Contents
 
 * [Table of Contents](#table-of-contents)
-* [Streamlit in Snowflake Setup](#streamlit-in-snowflake-setup)
-* [Local Setup](#local-setup)
+* [Streamlit in Snowflake Deployment](#streamlit-in-snowflake-deployment)
+* [Local Deployment](#local-deployment)
 * [Partner Tool Translation](#partner-tool-translation)
 * [Usage](#usage)
     + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
@@ -20,7 +20,7 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 * [Examples](#examples)
 * [Release](#release)
 
-## Streamlit in Snowflake Setup 
+## Streamlit in Snowflake Deployment
 
 [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deplying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
@@ -57,7 +57,7 @@ Run the below command to create the external access integration. Before running,
 snow sql -f looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
 ```
 
-## Local Setup
+## Local Deployment
 
 Localy usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
 
