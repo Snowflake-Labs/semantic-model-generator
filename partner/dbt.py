@@ -3,8 +3,16 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 import yaml
+from snowflake.connector import ProgrammingError
 
-from app_utils.shared_utils import get_snowflake_connection, set_sit_query_tag
+from app_utils.shared_utils import (
+    get_snowflake_connection, 
+    set_sit_query_tag,
+    stage_selector_container,
+    get_yamls_from_stage,
+    download_yaml,
+    SnowflakeStage,
+)
 
 # Partner semantic support instructions
 DBT_IMAGE = "images/dbt-signature_tm_black.png"
@@ -38,13 +46,42 @@ def upload_dbt_semantic() -> None:
 
     Returns: None
     """
+    uploaded_files = []
+    if st.session_state['sis']:
+        stage_selector_container()
+        # Based on the currently selected stage, show a dropdown of YAML files for the user to pick from.
+        available_files = []
+        if (
+            "selected_iteration_stage" in st.session_state
+            and st.session_state["selected_iteration_stage"]
+        ):
+            # When a valid stage is selected, fetch the available YAML files in that stage.
+            st.session_state["snowflake_stage"] = SnowflakeStage(
+            stage_database=st.session_state["selected_iteration_database"],
+            stage_schema=st.session_state["selected_iteration_schema"],
+            stage_name=st.session_state["selected_iteration_stage"],
+        )
+            try:
+                available_files = get_yamls_from_stage(
+                    st.session_state["selected_iteration_stage"],
+                    include_yml=True,
+                )
+            except (ValueError, ProgrammingError):
+                st.error("Insufficient permissions to read from the selected stage.")
+                st.stop()
 
-    uploaded_files = st.file_uploader(
-        f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
-        type=["yaml", "yml"],
-        accept_multiple_files=True,
-        key="myfile",
-    )
+        stage_files = st.multiselect("Staged files", options=available_files)
+        if stage_files:
+            for staged_file in stage_files:
+                file_content = download_yaml(staged_file)
+                uploaded_files.append(file_content)
+    else:
+        uploaded_files = st.file_uploader(
+            f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
+            type=["yaml", "yml"],
+            accept_multiple_files=True,
+            key="myfile",
+        )
     if uploaded_files:
         partner_semantic: list[None | DBTSemanticModel] = []
         for file in uploaded_files:

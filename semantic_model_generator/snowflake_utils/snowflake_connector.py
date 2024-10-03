@@ -327,17 +327,20 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str) -> list[str]:
+def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str, include_yml: bool = False) -> list[str]:
     """
     Fetches all yaml files that the current user has access to in the current stage
     Args:
         conn: SnowflakeConnection to run the query
         stage_name: The fully qualified name of the stage to connect to.
+        include_yml: If True, will look for .yaml and .yml. If False, just .yaml. Defaults to False.
 
     Returns: a list of yaml file names
     """
-
-    query = f"list @{stage_name} pattern='.*\\.yaml';"
+    if include_yml:
+        query = f"list @{stage_name} pattern='.*\\.yaml|.*\\.yml';"
+    else:
+        query = f"list @{stage_name} pattern='.*\\.yaml';"
     cursor = conn.cursor()
     cursor.execute(query)
     yaml_files = cursor.fetchall()

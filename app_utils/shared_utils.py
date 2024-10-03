@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from io import StringIO
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 import pandas as pd
 import streamlit as st
 from snowflake.snowpark import Session
 from PIL import Image
+from snowflake.connector import ProgrammingError
 from snowflake.connector.connection import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
@@ -31,6 +32,8 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
     fetch_warehouses,
+    fetch_stages_in_schema,
+    fetch_yaml_names_in_stage,
 )
 
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
@@ -184,6 +187,81 @@ def get_available_warehouses() -> list[str]:
     """
 
     return fetch_warehouses(get_snowflake_connection())
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_stages(schema: str) -> List[str]:
+    """
+    Fetches the available stages from the Snowflake account.
+
+    Returns:
+        List[str]: A list of available stages.
+    """
+    return fetch_stages_in_schema(get_snowflake_connection(), schema)
+
+
+def stage_selector_container() -> None | List[str]:
+    """
+    Common component that encapsulates db/schema/stage selection for the admin app.
+    When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_stages = []
+
+    # First, retrieve all databases that the user has access to.
+    stage_database = st.selectbox(
+        "Stage database",
+        options=get_available_databases(),
+        index=None,
+        key="selected_iteration_database",
+    )
+    if stage_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            available_schemas = get_available_schemas(stage_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    stage_schema = st.selectbox(
+        "Stage schema",
+        options=available_schemas,
+        index=None,
+        key="selected_iteration_schema",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    if stage_schema:
+        # When a valid schema is selected, fetch the available stages in that schema.
+        try:
+            available_stages = get_available_stages(stage_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    files = st.selectbox(
+        "Stage name",
+        options=available_stages,
+        index=None,
+        key="selected_iteration_stage",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    return files
+
+
+@st.cache_resource(show_spinner=False)
+def get_yamls_from_stage(stage: str, include_yml: bool = False) -> List[str]:
+    """
+    Fetches the YAML files from the specified stage.
+
+    Args:
+        stage (str): The name of the stage to fetch the YAML files from.
+        include_yml: If True, will look for .yaml and .yml. If False, just .yaml. Defaults to False.
+
+    Returns:
+        List[str]: A list of YAML files in the specified stage.
+    """
+    return fetch_yaml_names_in_stage(get_snowflake_connection(), stage, include_yml)
 
 def set_account_name(conn : SnowflakeConnection,
                      SNOWFLAKE_ACCOUNT: Optional[str] = None) -> None:

@@ -15,16 +15,15 @@ from journeys.joins import joins_dialog
 from app_utils.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
+    stage_selector_container,
     changed_from_last_validated_model,
     download_yaml,
-    format_snowflake_context,
-    get_available_databases,
-    get_available_schemas,
     get_snowflake_connection,
     init_session_states,
     return_home_button,
     upload_yaml,
     validate_and_upload_tmp_yaml,
+    get_yamls_from_stage
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -41,10 +40,6 @@ from semantic_model_generator.snowflake_utils.env_vars import (
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
-)
-from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    fetch_stages_in_schema,
-    fetch_yaml_names_in_stage,
 )
 from semantic_model_generator.validate_model import validate
 
@@ -548,79 +543,6 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "failed", prefix=status_container_title)
     else:
         update_container(status_container, "editing", prefix=status_container_title)
-
-
-@st.cache_resource(show_spinner=False)
-def get_available_stages(schema: str) -> List[str]:
-    """
-    Fetches the available stages from the Snowflake account.
-
-    Returns:
-        List[str]: A list of available stages.
-    """
-    return fetch_stages_in_schema(get_snowflake_connection(), schema)
-
-
-@st.cache_resource(show_spinner=False)
-def get_yamls_from_stage(stage: str) -> List[str]:
-    """
-    Fetches the YAML files from the specified stage.
-
-    Args:
-        stage (str): The name of the stage to fetch the YAML files from.
-
-    Returns:
-        List[str]: A list of YAML files in the specified stage.
-    """
-    return fetch_yaml_names_in_stage(get_snowflake_connection(), stage)
-
-
-def stage_selector_container() -> None:
-    """
-    Common component that encapsulates db/schema/stage selection for the admin app.
-    When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
-    Returns: None
-    """
-    available_schemas = []
-    available_stages = []
-
-    # First, retrieve all databases that the user has access to.
-    stage_database = st.selectbox(
-        "Stage database",
-        options=get_available_databases(),
-        index=None,
-        key="selected_iteration_database",
-    )
-    if stage_database:
-        # When a valid database is selected, fetch the available schemas in that database.
-        try:
-            available_schemas = get_available_schemas(stage_database)
-        except (ValueError, ProgrammingError):
-            st.error("Insufficient permissions to read from the selected database.")
-            st.stop()
-
-    stage_schema = st.selectbox(
-        "Stage schema",
-        options=available_schemas,
-        index=None,
-        key="selected_iteration_schema",
-        format_func=lambda x: format_snowflake_context(x, -1),
-    )
-    if stage_schema:
-        # When a valid schema is selected, fetch the available stages in that schema.
-        try:
-            available_stages = get_available_stages(stage_schema)
-        except (ValueError, ProgrammingError):
-            st.error("Insufficient permissions to read from the selected schema.")
-            st.stop()
-
-    st.selectbox(
-        "Stage name",
-        options=available_stages,
-        index=None,
-        key="selected_iteration_stage",
-        format_func=lambda x: format_snowflake_context(x, -1),
-    )
 
 
 @st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
