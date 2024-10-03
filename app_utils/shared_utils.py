@@ -1154,7 +1154,7 @@ def check_valid_session_state_values(vars: list[str]) -> bool:
     """
     empty_vars = []
     for var in vars:
-        if not st.session_state.get(var, None):
+        if var not in st.session_state:
             empty_vars.append(var)
     if empty_vars:
         st.error(f"Please enter values for {vars}.")

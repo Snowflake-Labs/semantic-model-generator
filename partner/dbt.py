@@ -32,8 +32,10 @@ DBT_SEMANTIC_INSTRUCTIONS = """
 We extract metadata from your dbt semantic yaml file(s) and merge it with a generated Cortex Analyst semantic file.
 
 **Note**: The DBT semantic layer must be sourced from tables/views in Snowflake.
+If using Streamlit in Snowflake, upload dbt semantic (yaml/yml) file(s) to Snowflake stage first.
+
 > Steps:
-> 1) Upload your dbt semantic (yaml/yml) file(s) below.
+> 1) Select your dbt semantic (yaml/yml) file(s) below from stage or upload directly if not using Streamlit in Snowflake.
 > 2) Select **🛠 Create a new semantic model** to generate a new Cortex Analyst semantic file for Snowflake tables or **✏️ Edit an existing semantic model**.
 > 3) Validate the output in the UI.
 > 4) Once you've validated the semantic file, click **Partner Semantic** to merge DBT and Cortex Analyst semantic files.

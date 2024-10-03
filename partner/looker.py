@@ -148,8 +148,10 @@ def set_looker_semantic() -> None:
         st.text_input(
             "Looker SDK Client Secret",
             key="looker_client_secret",
-            help="See [Looker Authentication with an SDK](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for API credentials generation.",
+            help="""See [Looker Authentication with an SDK](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for API credentials generation.
+            Note that the client secret must be passed through external access integration secret if using Streamlit in Snowflake setup.""",
             type="password",
+            disabled=st.session_state.get("sis", False), # Requires external access in SiS setup
         )
 
     st.divider()
@@ -240,7 +242,7 @@ def set_looker_semantic() -> None:
                 "looker_explore_name",
                 "looker_base_url",
                 "looker_client_id",
-                "looker_client_secret",
+                # "looker_client_secret",
                 "looker_target_database",
                 "looker_target_schema",
                 "looker_target_table_name",
@@ -327,10 +329,17 @@ def set_looker_config() -> looker_sdk.sdk.api40.methods.Looker40SDK:
     # Get the following values from your Users page in the Admin panel of your Looker instance > Users > Your user > Edit API keys. If you know your user id, you can visit https://your.looker.com/admin/users/<your_user_id>/edit.
     os.environ["LOOKERSDK_CLIENT_ID"] = st.session_state[
         "looker_client_id"
-    ]  # No defaults.
-    os.environ["LOOKERSDK_CLIENT_SECRET"] = st.session_state[
-        "looker_client_secret"
-    ]  # No defaults. This should be protected at all costs. Please do not leave it sitting here, even if you don't share this document.
+    ]
+    # User enters client secret in streamlit app in local run
+    # In SiS setup, it must be passed through external access integration secret
+    if st.session_state.get("sis", False):
+        import _snowflake
+        # Use the _snowflake library to access secrets
+        os.environ["LOOKERSDK_CLIENT_SECRET"] = _snowflake.get_generic_secret_string('looker_client_secret')
+    else:
+        os.environ["LOOKERSDK_CLIENT_SECRET"] = st.session_state[
+            "looker_client_secret"
+        ]
 
     sdk = looker_sdk.init40()
     return sdk
