@@ -24,6 +24,8 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deplying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
+If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VSCode Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the Files Upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+
 1. Configure Snowflake CLI
 
 Follow [instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/specify-credentials) for your preferred connection method to connect Snowflake CLI to your Snowflake account. Please [test](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/manage-connections#label-snowcli-connection-test) your connection. Depending on your connection configuration, you may need to continue passing credentials for subsequent Snowflake CLI commands.
@@ -40,7 +42,7 @@ cd sis_setup
 snow sql -f app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
 ```
 
-3. **OPTIONAL**: 
+3. **OPTIONAL**: Setup Looker Integration
 
 The Semantic Model Generator supports translating metadata from a Looker Explore. To add this functionality to the Streamlit in Snowflake app, we need to create an external access integration to allow Snowflake to reach your Looker instance. 
 
