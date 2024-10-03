@@ -62,7 +62,7 @@ snow stage copy app_utils/strictyaml.zip @streamlit_stage --database cortex_anal
 6. Create Streamlit in Snowflake application
 
 ```bash
-snow streamlit deploy --replace
+snow streamlit deploy --replace --open
 ```
 
 ## Local Setup
