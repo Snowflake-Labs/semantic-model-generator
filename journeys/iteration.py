@@ -23,7 +23,7 @@ from app_utils.shared_utils import (
     return_home_button,
     upload_yaml,
     validate_and_upload_tmp_yaml,
-    get_yamls_from_stage
+    
 )
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
