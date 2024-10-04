@@ -38,8 +38,7 @@ Before running, replace `<STREAMLIT_WAREHOUSE>` with an available warehouse to p
 **Hint**: The owner of the app will be the role specified in your Snowflake CLI connection. To use a different role, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
-cd sis_setup
-snow sql -f app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
+snow sql -f sis_setup/app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
 ```
 
 3. **OPTIONAL**: Setup Looker Integration
@@ -54,7 +53,7 @@ Run the below command to create the external access integration. Before running,
 **Hint**: Running the below, which creates external access integrations, may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
-snow sql -f looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
+snow sql -f sis_setup/looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
 ```
 
 ## Local Deployment
