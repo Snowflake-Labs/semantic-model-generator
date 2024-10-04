@@ -9,6 +9,7 @@ import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
+from streamlit_extras.stylable_container import stylable_container
 
 from journeys.joins import joins_dialog
 
@@ -451,13 +452,23 @@ def yaml_editor(yaml_str: str) -> None:
             which we will write the edition status (validated, editing
             or failed).
     """
+    css_yaml_editor = """
+    textarea{
+        font-size: 14px;
+        color: #2e2e2e;
+        font-family:Menlo;
+        background-color: #fbfbfb;
+    }
+    """
     st.session_state.confirm = st.checkbox("Preview YAML")
-    content = st.text_area(
-        label="yaml_editor",
-        label_visibility="collapsed",
-        value=yaml_str,
-        height=600,
-    )
+    # Style text_area to mirror st.code
+    with stylable_container(key="customized_text_area", css_styles=css_yaml_editor):
+        content = st.text_area(
+            label="yaml_editor",
+            label_visibility="collapsed",
+            value=yaml_str,
+            height=600,
+        )
     st.session_state.working_yml = content
     button_container = st.container()
     status_container_title = "**Edit**"
