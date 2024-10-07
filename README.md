@@ -22,7 +22,9 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 ## Streamlit in Snowflake Deployment
 
-[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
+> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake, which is in Private Preview. Please contact your account representative to enable if not already enabled. We also require streamlit 1.35.0, which is generally available.
+
+[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is required**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
 If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
 
