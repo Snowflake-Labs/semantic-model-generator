@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
+from requests import request
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
@@ -119,8 +120,11 @@ def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
         with st.spinner("Generating response..."):
             response = send_message(_conn=_conn, prompt=prompt)
             content = response["message"]["content"]
-            display_content(conn=_conn, content=content)
-    st.session_state.messages.append({"role": "assistant", "content": content})
+            request_id = response["request_id"]
+            display_content(conn=_conn, content=content, request_id=request_id)
+    st.session_state.messages.append(
+        {"role": "assistant", "content": content, "request_id": request_id}
+    )
 
 
 def show_expr_for_ref(message_index: int) -> None:
@@ -234,11 +238,11 @@ def add_verified_query(question: str, sql: str) -> None:
 def display_content(
     conn: SnowflakeConnection,
     content: List[Dict[str, Any]],
+    request_id: Optional[str],
     message_index: Optional[int] = None,
 ) -> None:
     """Displays a content item for a message. For generated SQL, allow user to add to verified queries directly or edit then add."""
     message_index = message_index or len(st.session_state.messages)
-    sql = ""
     question = ""
     for item in content:
         if item["type"] == "text":
@@ -292,6 +296,9 @@ def display_content(
                 ):
                     edit_verified_query(conn, sql, question, message_index)
 
+    if request_id:
+        st.caption(f"Request ID: {request_id}")
+
 
 def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
     messages = st.container(height=600, border=False)
@@ -325,7 +332,10 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         with messages:
             with st.chat_message(message["role"]):
                 display_content(
-                    conn=_conn, content=message["content"], message_index=message_index
+                    conn=_conn,
+                    content=message["content"],
+                    message_index=message_index,
+                    request_id=message.get("request_id"),
                 )
 
     chat_placeholder = (
