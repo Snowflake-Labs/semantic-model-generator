@@ -119,6 +119,7 @@ def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
         with st.spinner("Generating response..."):
             response = send_message(_conn=_conn, prompt=prompt)
             content = response["message"]["content"]
+            # Grab the request ID from the response and stash it in the chat message object.
             request_id = response["request_id"]
             display_content(conn=_conn, content=content, request_id=request_id)
     st.session_state.messages.append(
@@ -295,6 +296,8 @@ def display_content(
                 ):
                     edit_verified_query(conn, sql, question, message_index)
 
+    # If debug mode is enabled, we render the request ID. Note that request IDs are currently only plumbed
+    # through for assistant messages, as we obtain the request ID as part of the Analyst response.
     if request_id and st.session_state.chat_debug:
         st.caption(f"Request ID: {request_id}")
 
@@ -334,7 +337,9 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
                     conn=_conn,
                     content=message["content"],
                     message_index=message_index,
-                    request_id=message.get("request_id"),
+                    request_id=message.get(
+                        "request_id"
+                    ),  # Safe get since user messages have no request IDs
                 )
 
     chat_placeholder = (
