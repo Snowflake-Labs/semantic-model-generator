@@ -296,7 +296,7 @@ def display_content(
                 ):
                     edit_verified_query(conn, sql, question, message_index)
 
-    if request_id:
+    if request_id and st.session_state.chat_debug:
         st.caption(f"Request ID: {request_id}")
 
 
@@ -674,6 +674,25 @@ def set_up_requirements() -> None:
         st.rerun()
 
 
+@st.dialog("Chat Settings", width="small")
+def chat_settings_dialog() -> None:
+    """
+    Dialog that allows user to toggle on/off certain settings about the chat experience.
+    """
+
+    debug = st.toggle(
+        "Debug mode",
+        value=st.session_state.chat_debug,
+        help="Enable debug mode to see additional information (e.g. request ID).",
+    )
+
+    # TODO: This is where multiturn toggle will go.
+
+    if st.button("Save"):
+        st.session_state.chat_debug = debug
+        st.rerun()
+
+
 VALIDATE_HELP = """Save and validate changes to the active semantic model in this app. This is
 useful so you can then play with it in the chat panel on the right side."""
 
@@ -724,6 +743,9 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            st.markdown("**Chat**")
+            header_row = row([0.85, 0.15], vertical_align="center")
+            header_row.markdown("**Chat**")
+            if header_row.button("Settings"):
+                chat_settings_dialog()
             # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
             chat_and_edit_vqr(get_snowflake_connection())

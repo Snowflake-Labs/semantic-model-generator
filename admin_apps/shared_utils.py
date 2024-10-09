@@ -169,6 +169,10 @@ def init_session_states() -> None:
     if "last_validated_model" not in st.session_state:
         st.session_state.last_validated_model = semantic_model_pb2.SemanticModel()
 
+    # Chat display settings.
+    if "chat_debug" not in st.session_state:
+        st.session_state.chat_debug = False
+
     # initialize session states for the chat page.
     if "messages" not in st.session_state:
         # messages store all chat histories
