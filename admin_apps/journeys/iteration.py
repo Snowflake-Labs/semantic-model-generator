@@ -119,8 +119,12 @@ def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
         with st.spinner("Generating response..."):
             response = send_message(_conn=_conn, prompt=prompt)
             content = response["message"]["content"]
-            display_content(conn=_conn, content=content)
-    st.session_state.messages.append({"role": "assistant", "content": content})
+            # Grab the request ID from the response and stash it in the chat message object.
+            request_id = response["request_id"]
+            display_content(conn=_conn, content=content, request_id=request_id)
+    st.session_state.messages.append(
+        {"role": "assistant", "content": content, "request_id": request_id}
+    )
 
 
 def show_expr_for_ref(message_index: int) -> None:
@@ -234,11 +238,11 @@ def add_verified_query(question: str, sql: str) -> None:
 def display_content(
     conn: SnowflakeConnection,
     content: List[Dict[str, Any]],
+    request_id: Optional[str],
     message_index: Optional[int] = None,
 ) -> None:
     """Displays a content item for a message. For generated SQL, allow user to add to verified queries directly or edit then add."""
     message_index = message_index or len(st.session_state.messages)
-    sql = ""
     question = ""
     for item in content:
         if item["type"] == "text":
@@ -292,6 +296,11 @@ def display_content(
                 ):
                     edit_verified_query(conn, sql, question, message_index)
 
+    # If debug mode is enabled, we render the request ID. Note that request IDs are currently only plumbed
+    # through for assistant messages, as we obtain the request ID as part of the Analyst response.
+    if request_id and st.session_state.chat_debug:
+        st.caption(f"Request ID: {request_id}")
+
 
 def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
     messages = st.container(height=600, border=False)
@@ -325,7 +334,12 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         with messages:
             with st.chat_message(message["role"]):
                 display_content(
-                    conn=_conn, content=message["content"], message_index=message_index
+                    conn=_conn,
+                    content=message["content"],
+                    message_index=message_index,
+                    request_id=message.get(
+                        "request_id"
+                    ),  # Safe get since user messages have no request IDs
                 )
 
     chat_placeholder = (
@@ -664,6 +678,25 @@ def set_up_requirements() -> None:
         st.rerun()
 
 
+@st.dialog("Chat Settings", width="small")
+def chat_settings_dialog() -> None:
+    """
+    Dialog that allows user to toggle on/off certain settings about the chat experience.
+    """
+
+    debug = st.toggle(
+        "Debug mode",
+        value=st.session_state.chat_debug,
+        help="Enable debug mode to see additional information (e.g. request ID).",
+    )
+
+    # TODO: This is where multiturn toggle will go.
+
+    if st.button("Save"):
+        st.session_state.chat_debug = debug
+        st.rerun()
+
+
 VALIDATE_HELP = """Save and validate changes to the active semantic model in this app. This is
 useful so you can then play with it in the chat panel on the right side."""
 
@@ -714,6 +747,9 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            st.markdown("**Chat**")
+            header_row = row([0.85, 0.15], vertical_align="center")
+            header_row.markdown("**Chat**")
+            if header_row.button("Settings"):
+                chat_settings_dialog()
             # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
             chat_and_edit_vqr(get_snowflake_connection())
