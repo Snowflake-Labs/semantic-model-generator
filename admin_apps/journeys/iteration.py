@@ -6,7 +6,6 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
-from requests import request
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
