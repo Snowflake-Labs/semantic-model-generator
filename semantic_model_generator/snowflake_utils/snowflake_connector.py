@@ -404,9 +404,18 @@ class SnowflakeConnector:
             )
         return user
 
+    def _is_authentication_setup(self) -> bool:
+        password = env_vars.SNOWFLAKE_PASSWORD
+        private_key_file = env_vars.SNOWFLAKE_PRIVATE_KEY_FILE
+        if self._get_authenticator().lower() != "externalbrowser":
+            # If authenticator is not through an externalBrowser, we expect either a password or a private_key_file
+            if not password and not private_key_file:
+                return False
+        return True
+        
     def _get_password(self) -> Optional[str]:
         password = env_vars.SNOWFLAKE_PASSWORD
-        if not password and self._get_authenticator().lower() != "externalbrowser":  # type: ignore[union-attr]
+        if not self._is_authentication_setup():
             raise ValueError(
                 "You need to set an env var for the snowflake password. export SNOWFLAKE_PASSWORD=<your-snowflake-password>"
             )
@@ -441,6 +450,14 @@ class SnowflakeConnector:
         if not passcode_in_password:
             return False
         return passcode_in_password.lower() == "true"
+
+    def _get_private_key_file(self) -> Optional[str]:
+        private_key_file = env_vars.SNOWFLAKE_PRIVATE_KEY_FILE
+        return private_key_file
+
+    def _get_private_key_file_pwd(self) -> Optional[str]:
+        private_key_file_pwd = env_vars.SNOWFLAKE_PRIVATE_KEY_FILE_PWD
+        return private_key_file_pwd
 
     @contextmanager
     def connect(
@@ -479,6 +496,8 @@ class SnowflakeConnector:
             authenticator=self._get_authenticator(),
             passcode=self._get_mfa_passcode(),
             passcode_in_password=self._is_mfa_passcode_in_password(),
+            private_key_file=self._get_private_key_file(),
+            private_key_file_pwd=self._get_private_key_file_pwd()
         )
         if db_name:
             set_database(connection, db_name=db_name)

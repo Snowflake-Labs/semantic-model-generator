@@ -30,6 +30,8 @@ def create_connection_parameters(
     authenticator: Optional[str] = None,
     passcode: Optional[str] = None,
     passcode_in_password: Optional[bool] = None,
+    private_key_file: Optional[str] = None,
+    private_key_file_pwd: Optional[str] = None
 ) -> Dict[str, Union[str, bool]]:
     connection_parameters: Dict[str, Union[str, bool]] = dict(
         user=user, account=account
@@ -52,6 +54,10 @@ def create_connection_parameters(
         connection_parameters["passcode"] = passcode
     if passcode_in_password:
         connection_parameters["passcode_in_password"] = passcode_in_password
+    if private_key_file:
+        connection_parameters["private_key_file"] = private_key_file
+    if private_key_file_pwd:
+        connection_parameters["private_key_file_pwd"] = private_key_file_pwd
     return connection_parameters
 
 
@@ -72,6 +78,8 @@ def snowflake_connection(
     authenticator: Optional[str] = None,
     passcode: Optional[str] = None,
     passcode_in_password: Optional[bool] = None,
+    private_key_file: Optional[str] = None,
+    private_key_file_pwd: Optional[str] = None
 ) -> SnowflakeConnection:
     """
     Returns a Snowflake Connection to the specified account.
@@ -87,5 +95,7 @@ def snowflake_connection(
             authenticator=authenticator,
             passcode=passcode,
             passcode_in_password=passcode_in_password,
+            private_key_file=private_key_file,
+            private_key_file_pwd=private_key_file_pwd
         )
     )
