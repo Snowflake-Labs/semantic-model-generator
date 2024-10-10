@@ -245,8 +245,8 @@ def test_invalid_yaml_too_long_context(
 
     expected_error = (
         "Your semantic model is too large. "
-        "Passed size is 164952 characters. "
-        "We need you to remove 41032 characters in your semantic model. Please check: \n"
+        "Passed size is 165064 characters. "
+        "We need you to remove 41144 characters in your semantic model. Please check: \n"
         " (1) If you have long descriptions that can be truncated. \n"
         " (2) If you can remove some columns that are not used within your tables. \n"
         " (3) If you have extra tables you do not need."
