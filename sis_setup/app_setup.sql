@@ -27,7 +27,7 @@ PUT file://app.py @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_S
 PUT file://environment.yml @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
 PUT file://semantic_model_generator/*.py @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/semantic_model_generator/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
 PUT file://semantic_model_generator/data_processing/*.py @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/semantic_model_generator/data_processing/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
-PUT file://semantic_model_generator/protos/* @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/semantic_model_generator/protos/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
+PUT file://semantic_model_generator/protos/*.p* @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/semantic_model_generator/protos/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
 PUT file://semantic_model_generator/snowflake_utils/*.py @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/semantic_model_generator/snowflake_utils/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
 PUT file://semantic_model_generator/validate/*.py @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/semantic_model_generator/validate/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
 PUT file://images/*.png @CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator/images/ OVERWRITE = TRUE AUTO_COMPRESS = FALSE;
