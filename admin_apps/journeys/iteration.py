@@ -78,18 +78,21 @@ API_ENDPOINT = "https://{HOST}/api/v2/cortex/analyst/message"
 
 
 @st.cache_data(ttl=60, show_spinner=False)
-def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
-    """Calls the REST API and returns the response."""
+def send_message(
+    _conn: SnowflakeConnection, messages: list[dict[str, str]]
+) -> Dict[str, Any]:
+    """
+    Calls the REST API with a list of messages and returns the response.
+    Args:
+        _conn: SnowflakeConnection, used to grab the token for auth.
+        messages: list of chat messages to pass to the Analyst API.
+
+    Returns: The raw ChatMessage response from Analyst.
+    """
     request_body = {
-        "messages": [
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": prompt}],
-            },
-        ],
+        "messages": messages,
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
-
     host = st.session_state.host_name
     resp = requests.post(
         API_ENDPOINT.format(
@@ -110,20 +113,25 @@ def send_message(_conn: SnowflakeConnection, prompt: str) -> Dict[str, Any]:
 
 def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
     """Processes a message and adds the response to the chat."""
-    st.session_state.messages.append(
-        {"role": "user", "content": [{"type": "text", "text": prompt}]}
-    )
+    user_message = {"role": "user", "content": [{"type": "text", "text": prompt}]}
+    st.session_state.messages.append(user_message)
     with st.chat_message("user"):
         st.markdown(prompt)
     with st.chat_message("assistant"):
         with st.spinner("Generating response..."):
-            response = send_message(_conn=_conn, prompt=prompt)
+            # Depending on whether multiturn is enabled, we either send just the user message or the entire chat history.
+            request_messages = (
+                st.session_state.messages[1:]  # Skip the welcome message
+                if st.session_state.multiturn
+                else [user_message]
+            )
+            response = send_message(_conn=_conn, messages=request_messages)
             content = response["message"]["content"]
             # Grab the request ID from the response and stash it in the chat message object.
             request_id = response["request_id"]
             display_content(conn=_conn, content=content, request_id=request_id)
     st.session_state.messages.append(
-        {"role": "assistant", "content": content, "request_id": request_id}
+        {"role": "analyst", "content": content, "request_id": request_id}
     )
 
 
@@ -320,7 +328,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
     if "messages" not in st.session_state or len(st.session_state.messages) == 0:
         st.session_state.messages = [
             {
-                "role": "assistant",
+                "role": "analyst",
                 "content": [
                     {
                         "type": "text",
@@ -332,7 +340,10 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 
     for message_index, message in enumerate(st.session_state.messages):
         with messages:
-            with st.chat_message(message["role"]):
+            # To get the handy robot icon on assistant messages, the role needs to be "assistant" or "ai".
+            # However, the Analyst API uses "analyst" as the role, so we need to convert it at render time.
+            render_role = "assistant" if message["role"] == "analyst" else "user"
+            with st.chat_message(render_role):
                 display_content(
                     conn=_conn,
                     content=message["content"],
@@ -690,10 +701,15 @@ def chat_settings_dialog() -> None:
         help="Enable debug mode to see additional information (e.g. request ID).",
     )
 
-    # TODO: This is where multiturn toggle will go.
+    multiturn = st.toggle(
+        "Multiturn",
+        value=st.session_state.multiturn,
+        help="Enable multiturn mode to allow the chat to remember context. Note that your account must have the correct parameters enabled to use this feature.",
+    )
 
     if st.button("Save"):
         st.session_state.chat_debug = debug
+        st.session_state.multiturn = multiturn
         st.rerun()
 
 

@@ -172,6 +172,8 @@ def init_session_states() -> None:
     # Chat display settings.
     if "chat_debug" not in st.session_state:
         st.session_state.chat_debug = False
+    if "multiturn" not in st.session_state:
+        st.session_state.multiturn = False
 
     # initialize session states for the chat page.
     if "messages" not in st.session_state:
