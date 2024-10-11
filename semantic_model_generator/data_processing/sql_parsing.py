@@ -1,7 +1,5 @@
 import re
-from typing import Set, Optional, Union
-
-from typing import Dict, List
+from typing import Dict, List, Optional, Set, Union
 
 import sqlglot
 from sqlglot.dialects.dialect import NormalizationStrategy
