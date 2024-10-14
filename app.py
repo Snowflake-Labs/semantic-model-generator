@@ -19,23 +19,7 @@ from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
-    # assert_required_env_vars,
 )
-
-
-# @st.experimental_dialog(title="Setup")
-# def env_setup_popup(missing_env_vars: list[str]) -> None:
-#     """
-#     Renders a dialog box to prompt the user to set the required connection setup.
-#     Args:
-#         missing_env_vars: A list of missing environment variables.
-#     """
-#     formatted_missing_env_vars = "\n".join(f"- **{s}**" for s in missing_env_vars)
-#     st.markdown(
-#         f"""Oops! It looks like the following required environment variables are missing: \n{formatted_missing_env_vars}\n\n
-# Please follow the [setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator?tab=readme-ov-file#setup) to properly configure your environment. Restart this app after you've set the required environment variables."""
-#     )
-#     st.stop()
 
 
 @st.experimental_dialog(title="Connection Error")
@@ -43,22 +27,16 @@ def failed_connection_popup() -> None:
     """
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.
     """
-    # st.markdown(
-    #     f"""It looks like the credentials provided for `{SNOWFLAKE_USER}` could not be used to connect to the account `{SNOWFLAKE_ACCOUNT_LOCATOR}` at host `{SNOWFLAKE_HOST}`. Please verify your credentials in the environment variables and try again."""
-    # )
     st.markdown(
         f"""It looks like the credentials provided could not be used to connect to the account."""
     )
     st.stop()
 
 
-def verify_environment_setup() -> None | SnowflakeConnection:
+def verify_environment_setup() -> SnowflakeConnection:
     """
     Ensures that the correct environment variables are set before proceeding.
     """
-    # missing_env_vars = assert_required_env_vars()
-    # if missing_env_vars:
-    #     env_setup_popup(missing_env_vars)
 
     # Instantiate the Snowflake connection that gets reused throughout the app.
     try:
@@ -72,9 +50,8 @@ def verify_environment_setup() -> None | SnowflakeConnection:
 
 if __name__ == "__main__":
     from journeys import builder, iteration, partner
-    
 
-    st.session_state['sis'] = set_streamlit_location()
+    st.session_state["sis"] = set_streamlit_location()
 
     def onboarding_dialog() -> None:
         """

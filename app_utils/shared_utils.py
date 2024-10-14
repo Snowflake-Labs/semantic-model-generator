@@ -65,7 +65,7 @@ def get_connector() -> SnowflakeConnector:
     )
 
 
-def set_streamlit_location() -> None:
+def set_streamlit_location() -> bool:
     """
     Sets sis in session_state to True if the streamlit app is in SiS.
     """
@@ -74,7 +74,6 @@ def set_streamlit_location() -> None:
         sis = True
     else:
         sis = False
-    # st.session_state['sis'] = sis
     return sis
 
 
@@ -108,7 +107,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
 
         # Non-Anaconda supported packages must be added to path to import from stage
         addl_modules = [
-            "looker_sdk.zip",
+            "strictyaml.zip",
             "looker_sdk.zip",
         ]
         sys.path.extend(addl_modules)
@@ -117,7 +116,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
         # Rely on streamlit connection that is built on top of many ways to build snowflake connection
         try:
             return st.connection("snowflake").raw_connection
-        except:
+        except Exception:
             # Continue to support original implementation that relied on environment vars
             missing_env_vars = assert_required_env_vars()
             if missing_env_vars:
@@ -1038,27 +1037,6 @@ def semantic_model_exists() -> bool:
 
 def stage_exists() -> bool:
     return "snowflake_stage" in st.session_state
-
-
-# def get_environment_variables() -> dict[str, str | None]:
-#     import os
-
-#     return {
-#         key: os.getenv(key)
-#         for key in (
-#             "SNOWFLAKE_USER",
-#             "SNOWFLAKE_PASSWORD",
-#             "SNOWFLAKE_ROLE",
-#             "SNOWFLAKE_WAREHOUSE",
-#             "SNOWFLAKE_HOST",
-#             "SNOWFLAKE_ACCOUNT_LOCATOR",
-#         )
-#     }
-
-
-# def environment_variables_exist() -> bool:
-#     snowflake_env = get_environment_variables()
-#     return all([env is not None for env in snowflake_env.values()])
 
 
 def model_is_validated() -> bool:

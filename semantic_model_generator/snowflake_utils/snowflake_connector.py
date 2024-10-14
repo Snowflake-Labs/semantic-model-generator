@@ -79,7 +79,10 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
 def _get_table_comment(
-    conn: SnowflakeConnection, schema_name: str, table_name: str, columns_df: pd.DataFrame
+    conn: SnowflakeConnection,
+    schema_name: str,
+    table_name: str,
+    columns_df: pd.DataFrame,
 ) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
         return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
@@ -211,7 +214,9 @@ def _get_column_representation(
     return column
 
 
-def _fetch_valid_tables_and_views(conn: SnowflakeConnection, db_name: str,) -> pd.DataFrame:
+def _fetch_valid_tables_and_views(
+    conn: SnowflakeConnection, db_name: str
+) -> pd.DataFrame:
     def _get_df(query: str) -> pd.DataFrame:
         cursor = conn.cursor().execute(query)
         assert cursor is not None, "cursor should not be none here."
@@ -327,7 +332,9 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str, include_yml: bool = False) -> list[str]:
+def fetch_yaml_names_in_stage(
+    conn: SnowflakeConnection, stage_name: str, include_yml: bool = False
+) -> list[str]:
     """
     Fetches all yaml files that the current user has access to in the current stage
     Args:
@@ -373,7 +380,9 @@ order by 1, 2, c.ordinal_position"""
     assert cursor_execute, "cursor_execute should not be None here"
     schemas_tables_columns_df = cursor_execute.fetch_pandas_all()
 
-    valid_tables_and_views_df = _fetch_valid_tables_and_views(conn=conn, db_name=db_name)
+    valid_tables_and_views_df = _fetch_valid_tables_and_views(
+        conn=conn, db_name=db_name
+    )
 
     valid_schemas_tables_columns_df = valid_tables_and_views_df.merge(
         schemas_tables_columns_df, how="inner", on=(_TABLE_SCHEMA_COL, _TABLE_NAME_COL)

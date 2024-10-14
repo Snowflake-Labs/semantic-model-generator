@@ -6,7 +6,7 @@ import yaml
 from snowflake.connector import ProgrammingError
 
 from app_utils.shared_utils import (
-    get_snowflake_connection, 
+    get_snowflake_connection,
     set_sit_query_tag,
     stage_selector_container,
     get_yamls_from_stage,
@@ -49,7 +49,7 @@ def upload_dbt_semantic() -> None:
     Returns: None
     """
     uploaded_files = []
-    if st.session_state['sis']:
+    if st.session_state["sis"]:
         stage_selector_container()
         # Based on the currently selected stage, show a dropdown of YAML files for the user to pick from.
         available_files = []
@@ -59,10 +59,10 @@ def upload_dbt_semantic() -> None:
         ):
             # When a valid stage is selected, fetch the available YAML files in that stage.
             st.session_state["snowflake_stage"] = SnowflakeStage(
-            stage_database=st.session_state["selected_iteration_database"],
-            stage_schema=st.session_state["selected_iteration_schema"],
-            stage_name=st.session_state["selected_iteration_stage"],
-        )
+                stage_database=st.session_state["selected_iteration_database"],
+                stage_schema=st.session_state["selected_iteration_schema"],
+                stage_name=st.session_state["selected_iteration_stage"],
+            )
             try:
                 available_files = get_yamls_from_stage(
                     st.session_state["selected_iteration_stage"],
@@ -78,11 +78,11 @@ def upload_dbt_semantic() -> None:
                 file_content = download_yaml(staged_file)
                 uploaded_files.append(file_content)
     else:
-        uploaded_files = st.file_uploader(
+        uploaded_files = st.file_uploader(  # type: ignore
             f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
             type=["yaml", "yml"],
             accept_multiple_files=True,
-            key="myfile",
+            key="dbt_files",
         )
     if uploaded_files:
         partner_semantic: list[None | DBTSemanticModel] = []

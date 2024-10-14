@@ -191,11 +191,23 @@ def edit_verified_query(
     with st.container(border=False):
         st.caption("**SQL**")
         with st.container(border=True):
-            user_updated_sql = st.text_area(
-                label="sql_editor",
-                label_visibility="collapsed",
-                value=sql_without_cte,
-            )
+            css_yaml_editor = """
+                textarea{
+                    font-size: 14px;
+                    color: #2e2e2e;
+                    font-family:Menlo;
+                    background-color: #fbfbfb;
+                }
+                """
+            # Style text_area to mirror st.code
+            with stylable_container(
+                key="customized_text_area", css_styles=css_yaml_editor
+            ):
+                user_updated_sql = st.text_area(
+                    label="sql_editor",
+                    label_visibility="collapsed",
+                    value=sql_without_cte,
+                )
             run = st.button("Run", use_container_width=True)
 
             if run:
@@ -502,7 +514,6 @@ def yaml_editor(yaml_str: str) -> None:
             height=600,
         )
     st.session_state.working_yml = content
-    button_container = st.container()
     status_container_title = "**Edit**"
     status_container = st.empty()
 
@@ -522,7 +533,6 @@ def yaml_editor(yaml_str: str) -> None:
             update_container(status_container, "failed", prefix=status_container_title)
             exception_as_dialog(e)
 
-    # (one, two, three, four, five) = st.columns(5)
     button_row = row(5)
     if button_row.button("Validate", use_container_width=True, help=VALIDATE_HELP):
         # Validate new content
