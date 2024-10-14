@@ -86,11 +86,13 @@ To find your Account locator, please execute the following sql command in your a
 SELECT CURRENT_ACCOUNT_LOCATOR();
 ```
 
-To find the `SNOWFLAKE_HOST` for your
-account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url).
+B. To find the `SNOWFLAKE_HOST` for your
+account, [follow these instructions](https://docs.snowflake.com/en/user-guide/organizations-connect#connecting-with-a-url). The easiest way to find your account URL is to click the `Copy account URL` button from the Account panel in Snowsight: 
 
-* Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility
-  on API.
+![CleanShot 2024-10-09 at 14 25 13](https://github.com/user-attachments/assets/b1715c57-9571-4c65-92fb-e5d43afa871b)
+
+However, if you have trouble authenticating with this URL, you can try building the URL manually:
+* Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility on API.
 * It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit
   the `https://` prefix.
 
