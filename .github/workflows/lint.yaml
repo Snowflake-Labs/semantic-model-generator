@@ -2,6 +2,7 @@ name: Semantic Model Format & Lint
 
 on:
   pull_request:
+    - "*"
 
 jobs:
   build:
