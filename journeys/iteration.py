@@ -651,7 +651,7 @@ def set_up_requirements() -> None:
         st.rerun()
 
 
-@st.dialog("Chat Settings", width="small")
+@st.experimental_dialog("Chat Settings", width="small")
 def chat_settings_dialog() -> None:
     """
     Dialog that allows user to toggle on/off certain settings about the chat experience.
