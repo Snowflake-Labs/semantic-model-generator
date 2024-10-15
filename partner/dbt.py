@@ -57,12 +57,6 @@ def upload_dbt_semantic() -> None:
             "selected_iteration_stage" in st.session_state
             and st.session_state["selected_iteration_stage"]
         ):
-            # When a valid stage is selected, fetch the available YAML files in that stage.
-            st.session_state["snowflake_stage"] = SnowflakeStage(
-                stage_database=st.session_state["selected_iteration_database"],
-                stage_schema=st.session_state["selected_iteration_schema"],
-                stage_name=st.session_state["selected_iteration_stage"],
-            )
             try:
                 available_files = get_yamls_from_stage(
                     st.session_state["selected_iteration_stage"],
@@ -75,7 +69,8 @@ def upload_dbt_semantic() -> None:
         stage_files = st.multiselect("Staged files", options=available_files)
         if stage_files:
             for staged_file in stage_files:
-                file_content = download_yaml(staged_file)
+                file_content = download_yaml(staged_file,
+                                             st.session_state["selected_iteration_stage"])
                 uploaded_files.append(file_content)
     else:
         uploaded_files = st.file_uploader(  # type: ignore

@@ -1045,7 +1045,7 @@ def model_is_validated() -> bool:
     return False
 
 
-def download_yaml(file_name: str) -> str:
+def download_yaml(file_name: str, stage_name: str) -> str:
     """util to download a semantic YAML from a stage."""
     import os
     import tempfile
@@ -1053,7 +1053,7 @@ def download_yaml(file_name: str) -> str:
     with tempfile.TemporaryDirectory() as temp_dir:
         # Downloads the YAML to {temp_dir}/{file_name}.
         st.session_state.session.file.get(
-            f"@{st.session_state.snowflake_stage.stage_name}/{file_name}", temp_dir
+            f"@{stage_name}/{file_name}", temp_dir
         )
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")

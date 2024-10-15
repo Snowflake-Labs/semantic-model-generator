@@ -703,7 +703,7 @@ def show() -> None:
         return_home_button()
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
-            yaml = download_yaml(st.session_state.file_name)
+            yaml = download_yaml(st.session_state.file_name, st.session_state.snowflake_stage.stage_name)
             st.session_state["yaml"] = yaml
             st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
             if "last_saved_yaml" not in st.session_state:
