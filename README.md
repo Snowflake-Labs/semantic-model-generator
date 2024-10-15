@@ -34,13 +34,19 @@ Follow [instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cl
 
 2. Deploy app in Streamlit in Snowflake
 
-Run the below command(s) from the project root directory to create all necessary objects in Snowflake. 
+Run the below command from the project root directory to create all necessary objects in Snowflake. 
 Before running, replace `<STREAMLIT_WAREHOUSE>` with an available warehouse to power the app. 
 
 **Hint**: The owner of the app will be the role specified in your Snowflake CLI connection. To use a different role, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
 snow sql -f sis_setup/app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
+```
+
+The app, titled Semantic Model Generator can be opened directly in Snowsight. Alternatively, you may run the below command in your terminal to open it.
+
+```bash
+snow streamlit get-url SEMANTIC_MODEL_GENERATOR --open --database cortex_analyst_semantics --schema semantic_model_generator
 ```
 
 3. **OPTIONAL**: Setup Looker Integration
