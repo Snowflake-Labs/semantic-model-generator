@@ -54,7 +54,7 @@ snow streamlit get-url SEMANTIC_MODEL_GENERATOR --open --database cortex_analyst
 The Semantic Model Generator supports translating metadata from a Looker Explore. To add this functionality to the Streamlit in Snowflake app, we need to create an external access integration to allow Snowflake to reach your Looker instance. 
 
 Run the below command to create the external access integration. Before running, replace the following parameters:
-- `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url)
+- `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url). Pass the domain excluding https:// such as snowflakedemo.looker.com.
 - `<CLIENT_SECRET>` with your [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
 - `<APP_ROLE>` with the owning role used in step #2 above
 
