@@ -13,7 +13,9 @@ from semantic_model_generator.validate_model import validate_from_local_path
 @pytest.fixture
 def mock_snowflake_connection():
     """Fixture to mock the snowflake_connection function."""
-    with patch("semantic_model_generator.validate_model.SnowflakeConnector") as mock:
+    with patch(
+        "semantic_model_generator.snowflake_utils.snowflake_connector.snowflake_connection"
+    ) as mock:
         mock.return_value = MagicMock()
         yield mock
 
@@ -112,15 +114,12 @@ def temp_invalid_yaml_duplicate_verified_queries():
 def test_valid_yaml_flow_style(
     mock_logger, temp_valid_yaml_file_flow_style, mock_snowflake_connection
 ):
-    account_name = "snowflake test"
-    validate_from_local_path(temp_valid_yaml_file_flow_style, account_name)
+    validate_from_local_path(temp_valid_yaml_file_flow_style, mock_snowflake_connection)
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection):
-    account_name = "snowflake test"
-
-    validate_from_local_path(temp_valid_yaml_file, account_name)
+    validate_from_local_path(temp_valid_yaml_file, mock_snowflake_connection)
 
     expected_log_call_1 = mock.call.info("Successfully validated!")
     expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
@@ -150,9 +149,9 @@ def test_valid_yaml(mock_logger, temp_valid_yaml_file, mock_snowflake_connection
 def test_valid_yaml_with_long_vqr_context(
     mock_logger, temp_valid_yaml_file_long_vqr_context, mock_snowflake_connection
 ):
-    account_name = "snowflake test"
-
-    validate_from_local_path(temp_valid_yaml_file_long_vqr_context, account_name)
+    validate_from_local_path(
+        temp_valid_yaml_file_long_vqr_context, mock_snowflake_connection
+    )
 
     expected_log_call_1 = mock.call.info("Successfully validated!")
     expected_log_call_2 = mock.call.info("Checking logical table: ALIAS")
@@ -179,10 +178,13 @@ def test_valid_yaml_with_long_vqr_context(
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
-def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file):
-    account_name = "snowflake test"
+def test_invalid_yaml_formatting(
+    mock_logger, temp_invalid_yaml_formatting_file, mock_snowflake_connection
+):
     with pytest.raises(DuplicateKeysDisallowed):
-        validate_from_local_path(temp_invalid_yaml_formatting_file, account_name)
+        validate_from_local_path(
+            temp_invalid_yaml_formatting_file, mock_snowflake_connection
+        )
 
     expected_log_call = mock.call.info("Successfully validated!")
     assert (
@@ -191,12 +193,15 @@ def test_invalid_yaml_formatting(mock_logger, temp_invalid_yaml_formatting_file)
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
-def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
-    account_name = "snowflake test"
+def test_invalid_yaml_uppercase(
+    mock_logger, temp_invalid_yaml_uppercase_file, mock_snowflake_connection
+):
     with pytest.raises(
         YAMLValidationError, match=".*when expecting one of: aggregation_type_unknown.*"
     ):
-        validate_from_local_path(temp_invalid_yaml_uppercase_file, account_name)
+        validate_from_local_path(
+            temp_invalid_yaml_uppercase_file, mock_snowflake_connection
+        )
 
     expected_log_call = mock.call.info("Successfully validated!")
     assert (
@@ -208,9 +213,10 @@ def test_invalid_yaml_uppercase(mock_logger, temp_invalid_yaml_uppercase_file):
 def test_invalid_yaml_missing_quote(
     mock_logger, temp_invalid_yaml_unmatched_quote_file, mock_snowflake_connection
 ):
-    account_name = "snowflake test"
     with pytest.raises(YAMLValidationError) as exc_info:
-        validate_from_local_path(temp_invalid_yaml_unmatched_quote_file, account_name)
+        validate_from_local_path(
+            temp_invalid_yaml_unmatched_quote_file, mock_snowflake_connection
+        )
 
     expected_error_fragment = "name can only contain letters, underscores, decimal digits (0-9), and dollar signs ($)."
     assert expected_error_fragment in str(exc_info.value), "Unexpected error message"
@@ -226,9 +232,10 @@ def test_invalid_yaml_missing_quote(
 def test_invalid_yaml_incorrect_datatype(
     mock_logger, temp_invalid_yaml_incorrect_dtype, mock_snowflake_connection
 ):
-    account_name = "snowflake test"
     with pytest.raises(ValueError) as exc_info:
-        validate_from_local_path(temp_invalid_yaml_incorrect_dtype, account_name)
+        validate_from_local_path(
+            temp_invalid_yaml_incorrect_dtype, mock_snowflake_connection
+        )
 
     expected_error = "Unable to validate your semantic model. Error = We do not support object datatypes in the semantic model. Col ZIP_CODE has data type OBJECT. Please remove this column from your semantic model or flatten it to non-object type."
 
@@ -257,23 +264,21 @@ def test_invalid_yaml_too_long_context(
 
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_valid_yaml_many_sample_values(mock_logger, mock_snowflake_connection):
-    account_name = "snowflake test"
     yaml = proto_to_yaml(validate_yamls._VALID_YAML_MANY_SAMPLE_VALUES)
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as tmp:
         tmp.write(yaml)
         tmp.flush()
-        assert validate_from_local_path(tmp.name, account_name) is None
+        assert validate_from_local_path(tmp.name, mock_snowflake_connection) is None
 
 
 @mock.patch("semantic_model_generator.validate_model.logger")
 def test_invalid_yaml_duplicate_verified_queries(
     mock_logger, temp_invalid_yaml_duplicate_verified_queries, mock_snowflake_connection
 ):
-    account_name = "snowflake test"
     with pytest.raises(
         YAMLValidationError,
         match=r"Duplicate verified query found\.\n  in \"semantic model\", line \d+, column \d+:\n    verified_queries:\n    \^ \(line: \d+\)\ndaily cumulative expenses in 2023 dec\n  in \"semantic model\", line \d+, column \d+:\n      verified_by: renee\n    \^ \(line: \d+\)",
     ):
         validate_from_local_path(
-            temp_invalid_yaml_duplicate_verified_queries, account_name
+            temp_invalid_yaml_duplicate_verified_queries, mock_snowflake_connection
         )

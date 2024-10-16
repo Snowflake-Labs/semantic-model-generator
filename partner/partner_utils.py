@@ -8,9 +8,9 @@ import pandas as pd
 import streamlit as st
 import yaml
 
-from admin_apps.partner.cortex import CortexSemanticTable
-from admin_apps.partner.dbt import DBTSemanticModel, upload_dbt_semantic
-from admin_apps.shared_utils import (
+from partner.cortex import CortexSemanticTable
+from partner.dbt import DBTSemanticModel, upload_dbt_semantic
+from app_utils.shared_utils import (
     get_snowflake_connection,
     render_image,
     set_sit_query_tag,
@@ -32,19 +32,19 @@ def set_partner_instructions() -> None:
 
     if st.session_state.get("partner_tool", None):
         if st.session_state["partner_tool"] == PartnerTool.DBT_SQL_MODEL.value:
-            from admin_apps.partner.dbt import DBT_IMAGE, DBT_MODEL_INSTRUCTIONS
+            from partner.dbt import DBT_IMAGE, DBT_MODEL_INSTRUCTIONS
 
             instructions = DBT_MODEL_INSTRUCTIONS
             image = DBT_IMAGE
             image_size = (72, 32)
         elif st.session_state["partner_tool"] == PartnerTool.DBT_SEMANTIC_MODEL.value:
-            from admin_apps.partner.dbt import DBT_IMAGE, DBT_SEMANTIC_INSTRUCTIONS
+            from partner.dbt import DBT_IMAGE, DBT_SEMANTIC_INSTRUCTIONS
 
             instructions = DBT_SEMANTIC_INSTRUCTIONS
             image = DBT_IMAGE
             image_size = (72, 32)
         elif st.session_state["partner_tool"] == PartnerTool.LOOKER_EXPLORE.value:
-            from admin_apps.partner.looker import LOOKER_IMAGE, LOOKER_INSTRUCTIONS
+            from partner.looker import LOOKER_IMAGE, LOOKER_INSTRUCTIONS
 
             instructions = LOOKER_INSTRUCTIONS
             image = LOOKER_IMAGE
@@ -87,7 +87,7 @@ def configure_partner_semantic() -> None:
     if st.session_state["partner_tool"] == PartnerTool.DBT_SEMANTIC_MODEL.value:
         upload_dbt_semantic()
     if st.session_state["partner_tool"] == PartnerTool.LOOKER_EXPLORE.value:
-        from admin_apps.partner.looker import set_looker_semantic
+        from partner.looker import set_looker_semantic
 
         set_looker_semantic()
     if st.session_state["partner_tool"] == PartnerTool.DBT_SQL_MODEL.value:
@@ -236,7 +236,7 @@ def compare_data_types(
         return "TEXT"
 
 
-@st.dialog("Integrate partner tool semantic specs", width="large")
+@st.experimental_dialog("Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
     """
     Runs UI module for comparing Cortex and Partner fields for integration.
@@ -274,7 +274,7 @@ def integrate_partner_semantics() -> None:
             st.session_state.get("selected_partner", None)
             == PartnerTool.LOOKER_EXPLORE.value
         ):
-            from admin_apps.partner.looker import LookerSemanticTable
+            from partner.looker import LookerSemanticTable
 
             LookerSemanticTable.create_cortex_table_list()
         elif (
@@ -307,7 +307,7 @@ def integrate_partner_semantics() -> None:
             help=COMPARE_SEMANTICS_HELP,
         )
         orphan_label, orphan_col1, orphan_col2 = st.columns(
-            3, vertical_alignment="center", gap="small"
+            3, gap="small"
         )
         with orphan_label:
             st.write("Retain unmatched fields:")
@@ -330,7 +330,7 @@ def integrate_partner_semantics() -> None:
                 st.session_state.get("selected_partner", None)
                 == PartnerTool.LOOKER_EXPLORE.value
             ):
-                from admin_apps.partner.looker import LookerSemanticTable
+                from partner.looker import LookerSemanticTable
 
                 partner_fields_df = LookerSemanticTable.retrieve_df_by_name(
                     semantic_partner_tbl

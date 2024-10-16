@@ -27,7 +27,7 @@ setup: check-deps shell ## Install dependencies into your poetry environment.
 
 # app
 run_admin_app:
-	python -m streamlit run admin_apps/app.py
+	python -m streamlit run app.py
 
 # Installs dependencies for the admin app.
 setup_admin_app:

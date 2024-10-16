@@ -1,68 +1,57 @@
 import streamlit as st
 from snowflake.connector import DatabaseError
+from snowflake.connector.connection import SnowflakeConnection
 
 # set_page_config must be run as the first Streamlit command on the page, before any other streamlit imports.
 st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model Generator")
 
-from admin_apps.shared_utils import (  # noqa: E402
+from app_utils.shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
     set_sit_query_tag,
+    set_account_name,
+    set_host_name,
+    set_user_name,
+    set_streamlit_location,
+    set_snowpark_session,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
-    assert_required_env_vars,
 )
 
 
-@st.dialog(title="Setup")
-def env_setup_popup(missing_env_vars: list[str]) -> None:
-    """
-    Renders a dialog box to prompt the user to set the required environment variables.
-    Args:
-        missing_env_vars: A list of missing environment variables.
-    """
-    formatted_missing_env_vars = "\n".join(f"- **{s}**" for s in missing_env_vars)
-    st.markdown(
-        f"""Oops! It looks like the following required environment variables are missing: \n{formatted_missing_env_vars}\n\n
-Please follow the [setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator?tab=readme-ov-file#setup) to properly configure your environment. Restart this app after you've set the required environment variables."""
-    )
-    st.stop()
-
-
-@st.dialog(title="Connection Error")
+@st.experimental_dialog(title="Connection Error")
 def failed_connection_popup() -> None:
     """
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.
     """
     st.markdown(
-        f"""It looks like the credentials provided for `{SNOWFLAKE_USER}` could not be used to connect to the account `{SNOWFLAKE_ACCOUNT_LOCATOR}` at host `{SNOWFLAKE_HOST}`. Please verify your credentials in the environment variables and try again."""
+        f"""It looks like the credentials provided could not be used to connect to the account."""
     )
     st.stop()
 
 
-def verify_environment_setup() -> None:
+def verify_environment_setup() -> SnowflakeConnection:
     """
     Ensures that the correct environment variables are set before proceeding.
     """
-    missing_env_vars = assert_required_env_vars()
-    if missing_env_vars:
-        env_setup_popup(missing_env_vars)
 
     # Instantiate the Snowflake connection that gets reused throughout the app.
     try:
         with st.spinner(
             "Validating your connection to Snowflake. If you are using MFA, please check your authenticator app for a push notification."
         ):
-            get_snowflake_connection()
+            return get_snowflake_connection()
     except DatabaseError:
         failed_connection_popup()
 
 
 if __name__ == "__main__":
-    from admin_apps.journeys import builder, iteration, partner
+    from journeys import builder, iteration, partner
+
+    st.session_state["sis"] = set_streamlit_location()
 
     def onboarding_dialog() -> None:
         """
@@ -70,11 +59,6 @@ if __name__ == "__main__":
         """
 
         # Direct to specific page based instead of default onboarding if user comes from successful partner setup
-        if (
-            st.session_state.get("partner_setup", False)
-            and st.session_state.get("partner_tool", None) == "looker"
-        ):
-            builder.show()
         st.markdown(
             """
                 <div style="text-align: center;">
@@ -115,12 +99,13 @@ if __name__ == "__main__":
                 )
                 partner.show()
 
-    verify_environment_setup()
+    conn = verify_environment_setup()
+    set_snowpark_session(conn)
 
     # Populating common state between builder and iteration apps.
-    st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
-    st.session_state["host_name"] = SNOWFLAKE_HOST
-    st.session_state["user_name"] = SNOWFLAKE_USER
+    set_account_name(conn, SNOWFLAKE_ACCOUNT_LOCATOR)
+    set_host_name(conn, SNOWFLAKE_HOST)
+    set_user_name(conn, SNOWFLAKE_USER)
 
     # When the app first loads, show the onboarding screen.
     if "page" not in st.session_state:

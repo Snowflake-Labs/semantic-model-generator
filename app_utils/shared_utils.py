@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from io import StringIO
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 import pandas as pd
 import streamlit as st
+from snowflake.snowpark import Session
 from PIL import Image
-from snowflake.connector import SnowflakeConnection
+from snowflake.connector import ProgrammingError
+from snowflake.connector.connection import SnowflakeConnection
 
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
@@ -30,12 +32,18 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_schemas_in_database,
     fetch_tables_views_in_schema,
     fetch_warehouses,
-    set_database,
-    set_schema,
+    fetch_stages_in_schema,
+    fetch_yaml_names_in_stage,
+)
+
+from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
+    SNOWFLAKE_ACCOUNT_LOCATOR,
+    SNOWFLAKE_HOST,
+    SNOWFLAKE_USER,
+    assert_required_env_vars,
 )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
-_TMP_FILE_NAME = f"admin_app_temp_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # Add a logo on the top-left corner of the app
 LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snowflake_Logo.svg/2560px-Snowflake_Logo.svg.png"
@@ -57,14 +65,84 @@ def get_connector() -> SnowflakeConnector:
     )
 
 
+def set_streamlit_location() -> bool:
+    """
+    Sets sis in session_state to True if the streamlit app is in SiS.
+    """
+    HOME = os.getenv("HOME", None)
+    if HOME == "/home/udf":
+        sis = True
+    else:
+        sis = False
+    return sis
+
+
+@st.experimental_dialog(title="Setup")
+def env_setup_popup(missing_env_vars: list[str]) -> None:
+    """
+    Renders a dialog box to prompt the user to set the required connection setup.
+    Args:
+        missing_env_vars: A list of missing environment variables.
+    """
+    formatted_missing_env_vars = "\n".join(f"- **{s}**" for s in missing_env_vars)
+    st.markdown(
+        f"""Oops! It looks like the following required environment variables are missing: \n{formatted_missing_env_vars}\n\n
+Please follow the [setup instructions](https://github.com/Snowflake-Labs/semantic-model-generator?tab=readme-ov-file#setup) to properly configure your environment. Restart this app after you've set the required environment variables."""
+    )
+    st.stop()
+
+
 @st.cache_resource(show_spinner=False)
 def get_snowflake_connection() -> SnowflakeConnection:
     """
-    Opens a general connection to Snowflake using the provided SnowflakeConnector
+    Opens a general python connector connection to Snowflake.
     Marked with st.cache_resource in order to reuse this connection across the app.
     Returns: SnowflakeConnection
     """
-    return get_connector().open_connection(db_name="")
+
+    if st.session_state["sis"]:
+        # Import SiS-required modules
+        import sys
+        from snowflake.snowpark.context import get_active_session
+
+        # Non-Anaconda supported packages must be added to path to import from stage
+        addl_modules = [
+            "strictyaml.zip",
+            "looker_sdk.zip",
+        ]
+        sys.path.extend(addl_modules)
+        return get_active_session().connection
+    else:
+        # Rely on streamlit connection that is built on top of many ways to build snowflake connection
+        try:
+            return st.connection("snowflake").raw_connection
+        except Exception:
+            # Continue to support original implementation that relied on environment vars
+            missing_env_vars = assert_required_env_vars()
+            if missing_env_vars:
+                env_setup_popup(missing_env_vars)
+            else:
+                return get_connector().open_connection(db_name="")
+
+
+@st.cache_resource(show_spinner=False)
+def set_snowpark_session(_conn: Optional[SnowflakeConnection] = None) -> None:
+    """
+    Creates a snowpark for python session.
+    Marked with st.cache_resource in order to reuse this connection across the app.
+    If the app is running in SiS, it will use the active session.
+    If the app is running locally with a python connector connection is available, it will create a new session.
+    Snowpark session necessary for upload/downloads in SiS.
+    Returns: Snowpark session
+    """
+
+    if st.session_state["sis"]:
+        from snowflake.snowpark.context import get_active_session
+
+        session = get_active_session()
+    else:
+        session = Session.builder.configs({"connection": _conn}).create()
+    st.session_state["session"] = session
 
 
 @st.cache_resource(show_spinner=False)
@@ -109,6 +187,131 @@ def get_available_warehouses() -> list[str]:
     """
 
     return fetch_warehouses(get_snowflake_connection())
+
+
+@st.cache_resource(show_spinner=False)
+def get_available_stages(schema: str) -> List[str]:
+    """
+    Fetches the available stages from the Snowflake account.
+
+    Returns:
+        List[str]: A list of available stages.
+    """
+    return fetch_stages_in_schema(get_snowflake_connection(), schema)
+
+
+def stage_selector_container() -> None | List[str]:
+    """
+    Common component that encapsulates db/schema/stage selection for the admin app.
+    When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_stages = []
+
+    # First, retrieve all databases that the user has access to.
+    stage_database = st.selectbox(
+        "Stage database",
+        options=get_available_databases(),
+        index=None,
+        key="selected_iteration_database",
+    )
+    if stage_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            available_schemas = get_available_schemas(stage_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    stage_schema = st.selectbox(
+        "Stage schema",
+        options=available_schemas,
+        index=None,
+        key="selected_iteration_schema",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    if stage_schema:
+        # When a valid schema is selected, fetch the available stages in that schema.
+        try:
+            available_stages = get_available_stages(stage_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    files = st.selectbox(
+        "Stage name",
+        options=available_stages,
+        index=None,
+        key="selected_iteration_stage",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    return files
+
+
+@st.cache_resource(show_spinner=False)
+def get_yamls_from_stage(stage: str, include_yml: bool = False) -> List[str]:
+    """
+    Fetches the YAML files from the specified stage.
+
+    Args:
+        stage (str): The name of the stage to fetch the YAML files from.
+        include_yml: If True, will look for .yaml and .yml. If False, just .yaml. Defaults to False.
+
+    Returns:
+        List[str]: A list of YAML files in the specified stage.
+    """
+    return fetch_yaml_names_in_stage(get_snowflake_connection(), stage, include_yml)
+
+
+def set_account_name(
+    conn: SnowflakeConnection, SNOWFLAKE_ACCOUNT: Optional[str] = None
+) -> None:
+    """
+    Sets account_name in st.session_state.
+    Used to consolidate from various connection methods.
+    """
+    # SNOWFLAKE_ACCOUNT may be specified from user's environment variables
+    # This will not be the case for connections.toml so need to set it ourselves
+    if not SNOWFLAKE_ACCOUNT:
+        SNOWFLAKE_ACCOUNT = (
+            conn.cursor().execute("SELECT CURRENT_ACCOUNT()").fetchone()[0]
+        )
+    st.session_state["account_name"] = SNOWFLAKE_ACCOUNT
+
+
+def set_host_name(
+    conn: SnowflakeConnection, SNOWFLAKE_HOST: Optional[str] = None
+) -> None:
+    """
+    Sets host_name in st.session_state.
+    Used to consolidate from various connection methods.
+    Value only necessary for open-source implementation.
+    """
+    if st.session_state["sis"]:
+        st.session_state["host_name"] = ""
+    else:
+        # SNOWFLAKE_HOST may be specified from user's environment variables
+        # This will not be the case for connections.toml so need to set it ourselves
+        if not SNOWFLAKE_HOST:
+            SNOWFLAKE_HOST = conn.host
+        st.session_state["host_name"] = SNOWFLAKE_HOST
+
+
+def set_user_name(
+    conn: SnowflakeConnection, SNOWFLAKE_USER: Optional[str] = None
+) -> None:
+    """
+    Sets user_name in st.session_state.
+    Used to consolidate from various connection methods.
+    """
+    if st.session_state["sis"]:
+        st.session_state["user_name"] = st.experimental_user.user_name
+    # SNOWFLAKE_USER may be specified from user's environment variables
+    # This will not be the case for connections.toml so need to set it ourselves
+    if not SNOWFLAKE_USER:
+        SNOWFLAKE_USER = conn.cursor().execute("SELECT CURRENT_USER()").fetchone()[0]
+    st.session_state["user_name"] = SNOWFLAKE_USER
 
 
 class GeneratorAppScreen(str, Enum):
@@ -189,7 +392,7 @@ def init_session_states() -> None:
         st.session_state.confirmed_edits = False
 
 
-@st.dialog("Edit Dimension")  # type: ignore[misc]
+@st.experimental_dialog("Edit Dimension")  # type: ignore[misc]
 def edit_dimension(table_name: str, dim: semantic_model_pb2.Dimension) -> None:
     """
     Renders a dialog box to edit an existing dimension.
@@ -239,7 +442,7 @@ def edit_dimension(table_name: str, dim: semantic_model_pb2.Dimension) -> None:
         st.rerun()
 
 
-@st.dialog("Add Dimension")  # type: ignore[misc]
+@st.experimental_dialog("Add Dimension")  # type: ignore[misc]
 def add_dimension(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new dimension.
@@ -278,7 +481,7 @@ def add_dimension(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.dialog("Edit Measure")  # type: ignore[misc]
+@st.experimental_dialog("Edit Measure")  # type: ignore[misc]
 def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
     """
     Renders a dialog box to edit an existing measure.
@@ -351,7 +554,7 @@ def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
         st.rerun()
 
 
-@st.dialog("Add Measure")  # type: ignore[misc]
+@st.experimental_dialog("Add Measure")  # type: ignore[misc]
 def add_measure(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new measure.
@@ -411,7 +614,7 @@ def add_measure(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.dialog("Edit Time Dimension")  # type: ignore[misc]
+@st.experimental_dialog("Edit Time Dimension")  # type: ignore[misc]
 def edit_time_dimension(
     table_name: str, tdim: semantic_model_pb2.TimeDimension
 ) -> None:
@@ -456,7 +659,7 @@ def edit_time_dimension(
         st.rerun()
 
 
-@st.dialog("Add Time Dimension")  # type: ignore[misc]
+@st.experimental_dialog("Add Time Dimension")  # type: ignore[misc]
 def add_time_dimension(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new time dimension.
@@ -654,7 +857,7 @@ def display_table(table_name: str) -> None:
         add_time_dimension(table)
 
 
-@st.dialog("Add Table")  # type: ignore[misc]
+@st.experimental_dialog("Add Table")  # type: ignore[misc]
 def add_new_table() -> None:
     """
     Renders a dialog box to add a new logical table.
@@ -686,7 +889,6 @@ def add_new_table() -> None:
                     base_tables=[
                         f"{table.base_table.database}.{table.base_table.schema}.{table.base_table.table}"
                     ],
-                    snowflake_account=SNOWFLAKE_ACCOUNT,
                     semantic_model_name="foo",  # A placeholder name that's not used anywhere.
                     conn=get_snowflake_connection(),
                 )
@@ -723,7 +925,7 @@ def display_semantic_model() -> None:
             placeholder="The model describes the data and metrics available for Foocorp",
         )
 
-        left, right = st.columns((1, 4), vertical_alignment="center")
+        left, right = st.columns((1, 4))
         if left.form_submit_button("Create", use_container_width=True):
             st.session_state.semantic_model.name = name
             st.session_state.semantic_model.description = description
@@ -772,7 +974,7 @@ def import_yaml() -> None:
             st.rerun()
 
 
-@st.dialog("Model YAML", width="large")  # type: ignore
+@st.experimental_dialog("Model YAML", width="large")  # type: ignore
 def show_yaml_in_dialog() -> None:
     yaml = proto_to_yaml(st.session_state.semantic_model)
     st.code(
@@ -782,7 +984,7 @@ def show_yaml_in_dialog() -> None:
     )
 
 
-def upload_yaml(file_name: str, conn: SnowflakeConnection) -> None:
+def upload_yaml(file_name: str) -> None:
     """util to upload the semantic model."""
     import os
     import tempfile
@@ -795,18 +997,12 @@ def upload_yaml(file_name: str, conn: SnowflakeConnection) -> None:
         with open(tmp_file_path, "w") as temp_file:
             temp_file.write(yaml)
 
-        set_database(conn, st.session_state.snowflake_stage.stage_database)
-        set_schema(conn, st.session_state.snowflake_stage.stage_schema)
-        upload_sql = f"PUT file://{tmp_file_path} @{st.session_state.snowflake_stage.stage_name} AUTO_COMPRESS=FALSE OVERWRITE=TRUE"
-        conn.cursor().execute(upload_sql)
-
-        if file_name != _TMP_FILE_NAME:
-            # If the user did official uploading, delete the saved temp file from stage.
-            try:
-                delete_tmp_sql = f"REMOVE @{st.session_state.snowflake_stage.stage_name}/{_TMP_FILE_NAME}.yaml"
-                conn.cursor().execute(delete_tmp_sql)
-            except Exception:
-                pass
+        st.session_state.session.file.put(
+            tmp_file_path,
+            f"@{st.session_state.snowflake_stage.stage_name}",
+            auto_compress=False,
+            overwrite=True,
+        )
 
 
 def validate_and_upload_tmp_yaml(conn: SnowflakeConnection) -> None:
@@ -843,44 +1039,22 @@ def stage_exists() -> bool:
     return "snowflake_stage" in st.session_state
 
 
-def get_environment_variables() -> dict[str, str | None]:
-    import os
-
-    return {
-        key: os.getenv(key)
-        for key in (
-            "SNOWFLAKE_USER",
-            "SNOWFLAKE_PASSWORD",
-            "SNOWFLAKE_ROLE",
-            "SNOWFLAKE_WAREHOUSE",
-            "SNOWFLAKE_HOST",
-            "SNOWFLAKE_ACCOUNT_LOCATOR",
-        )
-    }
-
-
-def environment_variables_exist() -> bool:
-    snowflake_env = get_environment_variables()
-    return all([env is not None for env in snowflake_env.values()])
-
-
 def model_is_validated() -> bool:
     if semantic_model_exists():
         return st.session_state.validated  # type: ignore
     return False
 
 
-def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
+def download_yaml(file_name: str, stage_name: str) -> str:
     """util to download a semantic YAML from a stage."""
     import os
     import tempfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        set_database(conn, st.session_state.snowflake_stage.stage_database)
-        set_schema(conn, st.session_state.snowflake_stage.stage_schema)
         # Downloads the YAML to {temp_dir}/{file_name}.
-        download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
-        conn.cursor().execute(download_yaml_sql)
+        st.session_state.session.file.get(
+            f"@{stage_name}/{file_name}", temp_dir
+        )
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")
         with open(tmp_file_path, "r") as temp_file:
@@ -913,14 +1087,16 @@ def set_sit_query_tag(
 ) -> None:
     """
     Sets query tag on a single zero-compute ping for tracking.
+    Only used if the app is running in the OSS environment.
+
     Returns: None
     """
+    if not st.session_state["sis"]:
+        query_tag = get_sit_query_tag(vendor, action)
 
-    query_tag = get_sit_query_tag(vendor, action)
-
-    conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
-    conn.cursor().execute("SELECT 'SKIMANTICS';")
-    conn.cursor().execute("alter session set query_tag=''")
+        conn.cursor().execute(f"alter session set query_tag='{query_tag}'")
+        conn.cursor().execute("SELECT 'SKIMANTICS';")
+        conn.cursor().execute("alter session set query_tag=''")
 
 
 def set_table_comment(
@@ -972,7 +1148,7 @@ def check_valid_session_state_values(vars: list[str]) -> bool:
     """
     empty_vars = []
     for var in vars:
-        if not st.session_state.get(var, None):
+        if var not in st.session_state:
             empty_vars.append(var)
     if empty_vars:
         st.error(f"Please enter values for {vars}.")
@@ -1047,14 +1223,13 @@ def run_generate_model_str_from_snowflake(
     """
 
     if not model_name:
-        st.error("Please provide a name for your semantic model.")
+        raise ValueError("Please provide a name for your semantic model.")
     elif not base_tables:
-        st.error("Please select at least one table to proceed.")
+        raise ValueError("Please select at least one table to proceed.")
     else:
         with st.spinner("Generating model. This may take a minute or two..."):
             yaml_str = generate_model_str_from_snowflake(
                 base_tables=base_tables,
-                snowflake_account=st.session_state["account_name"],
                 semantic_model_name=model_name,
                 n_sample_values=sample_values,  # type: ignore
                 conn=get_snowflake_connection(),

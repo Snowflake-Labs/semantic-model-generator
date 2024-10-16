@@ -3,11 +3,19 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 import yaml
+from snowflake.connector import ProgrammingError
 
-from admin_apps.shared_utils import get_snowflake_connection, set_sit_query_tag
+from app_utils.shared_utils import (
+    get_snowflake_connection,
+    set_sit_query_tag,
+    stage_selector_container,
+    get_yamls_from_stage,
+    download_yaml,
+    SnowflakeStage,
+)
 
 # Partner semantic support instructions
-DBT_IMAGE = "admin_apps/images/dbt-signature_tm_black.png"
+DBT_IMAGE = "images/dbt-signature_tm_black.png"
 DBT_MODEL_INSTRUCTIONS = """
 ### [SQL Model](https://docs.getdbt.com/docs/build/sql-models)
 
@@ -24,8 +32,10 @@ DBT_SEMANTIC_INSTRUCTIONS = """
 We extract metadata from your dbt semantic yaml file(s) and merge it with a generated Cortex Analyst semantic file.
 
 **Note**: The DBT semantic layer must be sourced from tables/views in Snowflake.
+If using Streamlit in Snowflake, upload dbt semantic (yaml/yml) file(s) to Snowflake stage first.
+
 > Steps:
-> 1) Upload your dbt semantic (yaml/yml) file(s) below.
+> 1) Select your dbt semantic (yaml/yml) file(s) below from stage or upload directly if not using Streamlit in Snowflake.
 > 2) Select **🛠 Create a new semantic model** to generate a new Cortex Analyst semantic file for Snowflake tables or **✏️ Edit an existing semantic model**.
 > 3) Validate the output in the UI.
 > 4) Once you've validated the semantic file, click **Partner Semantic** to merge DBT and Cortex Analyst semantic files.
@@ -38,13 +48,37 @@ def upload_dbt_semantic() -> None:
 
     Returns: None
     """
+    uploaded_files = []
+    if st.session_state["sis"]:
+        stage_selector_container()
+        # Based on the currently selected stage, show a dropdown of YAML files for the user to pick from.
+        available_files = []
+        if (
+            "selected_iteration_stage" in st.session_state
+            and st.session_state["selected_iteration_stage"]
+        ):
+            try:
+                available_files = get_yamls_from_stage(
+                    st.session_state["selected_iteration_stage"],
+                    include_yml=True,
+                )
+            except (ValueError, ProgrammingError):
+                st.error("Insufficient permissions to read from the selected stage.")
+                st.stop()
 
-    uploaded_files = st.file_uploader(
-        f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
-        type=["yaml", "yml"],
-        accept_multiple_files=True,
-        key="myfile",
-    )
+        stage_files = st.multiselect("Staged files", options=available_files)
+        if stage_files:
+            for staged_file in stage_files:
+                file_content = download_yaml(staged_file,
+                                             st.session_state["selected_iteration_stage"])
+                uploaded_files.append(file_content)
+    else:
+        uploaded_files = st.file_uploader(  # type: ignore
+            f'Upload {st.session_state["partner_tool"]} semantic yaml file(s)',
+            type=["yaml", "yml"],
+            accept_multiple_files=True,
+            key="dbt_files",
+        )
     if uploaded_files:
         partner_semantic: list[None | DBTSemanticModel] = []
         for file in uploaded_files:
