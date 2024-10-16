@@ -272,12 +272,16 @@ def set_looker_semantic() -> None:
             if st.session_state[
                 "looker_field_metadata"
             ]:  # Create view only if full rendering is successful
-                run_generate_model_str_from_snowflake(
-                    model_name,
-                    sample_values,
-                    [full_tablename],
-                    allow_joins=experimental_features,
-                )
+                try:
+                    run_generate_model_str_from_snowflake(
+                        model_name,
+                        sample_values,
+                        [full_tablename],
+                        allow_joins=experimental_features,
+                    )
+                except ValueError as e:
+                    st.error(e)
+                    st.stop()
                 st.session_state["partner_setup"] = True
 
                 # Tag looker setup with SIT query tag

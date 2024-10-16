@@ -1223,9 +1223,9 @@ def run_generate_model_str_from_snowflake(
     """
 
     if not model_name:
-        st.error("Please provide a name for your semantic model.")
+        raise ValueError("Please provide a name for your semantic model.")
     elif not base_tables:
-        st.error("Please select at least one table to proceed.")
+        raise ValueError("Please select at least one table to proceed.")
     else:
         with st.spinner("Generating model. This may take a minute or two..."):
             yaml_str = generate_model_str_from_snowflake(

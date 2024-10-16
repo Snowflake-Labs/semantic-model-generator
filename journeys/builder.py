@@ -125,14 +125,17 @@ def table_selector_dialog() -> None:
 
     submit = st.button("Submit", use_container_width=True, type="primary")
     if submit:
-        run_generate_model_str_from_snowflake(
-            model_name,
-            sample_values,
-            st.session_state["selected_tables"],
-            allow_joins=experimental_features,
-        )
-        st.session_state["page"] = GeneratorAppScreen.ITERATION
-        st.rerun()
+        try:
+            run_generate_model_str_from_snowflake(
+                model_name,
+                sample_values,
+                st.session_state["selected_tables"],
+                allow_joins=experimental_features,
+            )
+            st.session_state["page"] = GeneratorAppScreen.ITERATION
+            st.rerun()
+        except ValueError as e:
+            st.error(e)
 
 
 def show() -> None:
