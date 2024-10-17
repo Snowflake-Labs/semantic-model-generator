@@ -59,7 +59,7 @@ def _get_placeholder_joins() -> List[semantic_model_pb2.Relationship]:
 
 
 def _raw_table_to_semantic_context_table(
-    database: str, schema: str, raw_table: data_types.Table
+    database: str, schema: str, raw_table: data_types.Table, allow_joins: bool = False
 ) -> semantic_model_pb2.Table:
     """
     Converts a raw table representation to a semantic model table in protobuf format.
@@ -68,6 +68,7 @@ def _raw_table_to_semantic_context_table(
         database (str): The name of the database containing the table.
         schema (str): The name of the schema containing the table.
         raw_table (data_types.Table): The raw table object to be transformed.
+        allow_joins (bool): Whether joins are enabled in the semantic model.
 
     Returns:
         semantic_model_pb2.Table: A protobuf representation of the semantic table.
@@ -146,6 +147,18 @@ def _raw_table_to_semantic_context_table(
             f"No valid columns found for table {raw_table.name}. Please verify that this table contains column's datatypes not in {OBJECT_DATATYPES}."
         )
 
+    primary_key = None
+    if allow_joins:
+        # Populate the primary key field if we were able to retrieve one during raw table construction.
+        # If not, leave a placeholder for the user to fill out.
+        primary_key = semantic_model_pb2.PrimaryKey(
+            columns=(
+                raw_table.primary_key
+                if raw_table.primary_key
+                else [_PLACEHOLDER_COMMENT]
+            )
+        )
+
     return semantic_model_pb2.Table(
         name=raw_table.name,
         base_table=semantic_model_pb2.FullyQualifiedTable(
@@ -157,6 +170,7 @@ def _raw_table_to_semantic_context_table(
         dimensions=dimensions,
         time_dimensions=time_dimensions,
         measures=measures,
+        primary_key=primary_key,
     )
 
 
@@ -222,11 +236,13 @@ def raw_schema_to_semantic_context(
             ndv_per_column=n_sample_values,  # number of sample values to pull per column.
             columns_df=valid_columns_df_this_table,
             max_workers=1,
+            allow_joins=allow_joins,
         )
         table_object = _raw_table_to_semantic_context_table(
             database=fqn_table.database,
             schema=fqn_table.schema_name,
             raw_table=raw_table,
+            allow_joins=allow_joins,
         )
         table_objects.append(table_object)
     # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.

@@ -126,6 +126,18 @@ Please provide a business description for the column. Only return the descriptio
             return ""
 
 
+def _get_table_primary_keys(
+    conn: SnowflakeConnection, schema_name: str, table_name: str
+) -> list[str] | None:
+    query = f"show primary keys in table {schema_name}.{table_name};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    primary_keys = cursor.fetchall()
+    if primary_keys:
+        return [pk[3] for pk in primary_keys]
+    return None
+
+
 def get_table_representation(
     conn: SnowflakeConnection,
     schema_name: str,
@@ -134,6 +146,7 @@ def get_table_representation(
     ndv_per_column: int,
     columns_df: pd.DataFrame,
     max_workers: int,
+    allow_joins: bool = False,
 ) -> Table:
     table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
 
@@ -159,11 +172,16 @@ def get_table_representation(
             index_and_column.append((col_index, column))
         columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
 
+    primary_keys = (
+        _get_table_primary_keys(conn, schema_name, table_name) if allow_joins else None
+    )
+
     return Table(
         id_=table_index,
         name=table_name,
         comment=table_comment,
         columns=columns,
+        primary_keys=primary_keys,
     )
 
 

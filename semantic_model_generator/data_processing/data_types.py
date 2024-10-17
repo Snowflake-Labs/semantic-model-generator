@@ -37,6 +37,7 @@ class Table:
     id_: int
     name: str
     columns: List[Column]
+    primary_key: Optional[list[str]] = None
     comment: Optional[str] = (
         None  # comment field's to save the table comment user specified on the table
     )
