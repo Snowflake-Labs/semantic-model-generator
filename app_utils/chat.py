@@ -39,17 +39,20 @@ def send_message(
             {},
             30000,
         )
-        if resp.status_code < 400:
+        if resp["status"] < 400:
             json_resp: Dict[str, Any] = json.loads(resp["content"])
             return json_resp
         else:
-            # Remove the link to the github repo from the error message
-            error_msg = re.sub(
-                r"\s*Please use https://github\.com/Snowflake-Labs/semantic-model-generator.*",
-                "",
-                resp["content"],
-            )
-            raise ValueError(error_msg)
+            err_body = json.loads(resp["content"])
+            if "message" in err_body:
+                # Certain errors have a message payload with a link to the github repo, which we should remove.
+                error_msg = re.sub(
+                    r"\s*Please use https://github\.com/Snowflake-Labs/semantic-model-generator.*",
+                    "",
+                    err_body["message"],
+                )
+                raise ValueError(error_msg)
+            raise ValueError(err_body)
 
     else:
         host = st.session_state.host_name
@@ -68,10 +71,12 @@ def send_message(
             return json_resp
         else:
             err_body = json.loads(resp.text)
-            # Remove the link to the github repo from the error message
-            error_msg = re.sub(
-                r"\s*Please use https://github\.com/Snowflake-Labs/semantic-model-generator.*",
-                "",
-                err_body["message"],
-            )
-            raise ValueError(error_msg)
+            if "message" in err_body:
+                # Certain errors have a message payload with a link to the github repo, which we should remove.
+                error_msg = re.sub(
+                    r"\s*Please use https://github\.com/Snowflake-Labs/semantic-model-generator.*",
+                    "",
+                    err_body["message"],
+                )
+                raise ValueError(error_msg)
+            raise ValueError(err_body)
