@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 import sqlglot
 import streamlit as st
+from loguru import logger
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
@@ -93,11 +94,10 @@ def send_message(
         "messages": messages,
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
-    host = st.session_state.host_name
+    api_endpoint = API_ENDPOINT.format(HOST=st.session_state.host_name)
+    logger.debug(f"Sending request to Analyst API at {api_endpoint}: {request_body}")
     resp = requests.post(
-        API_ENDPOINT.format(
-            HOST=host,
-        ),
+        api_endpoint,
         json=request_body,
         headers={
             "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
@@ -106,6 +106,7 @@ def send_message(
     )
     if resp.status_code < 400:
         json_resp: Dict[str, Any] = resp.json()
+        logger.debug(f"Received response from Analyst API: {json_resp}")
         return json_resp
     else:
         raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")

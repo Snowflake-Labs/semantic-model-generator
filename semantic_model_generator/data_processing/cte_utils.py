@@ -142,6 +142,7 @@ def _generate_cte_for(
         cte += ",\n".join(expr_columns) + "\n"
         cte += f"FROM {fully_qualified_table_name(table.base_table)}"
         cte += ")"
+
         return cte
 
 
@@ -266,7 +267,10 @@ def generate_select(
             non_agg_cte
             + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
         )
-        sqls_to_return.append(_convert_to_snowflake_sql(non_agg_sql))
+        # sqls_to_return.append(_convert_to_snowflake_sql(non_agg_sql))
+        sqls_to_return.append(
+            non_agg_sql
+        )  # do not convert to snowflake sql for now, as sqlglot make mistakes sometimes, e.g. with TO_DATE()
 
     # Generate select query for columns with aggregation exprs.
     agg_cols = [
@@ -280,7 +284,10 @@ def generate_select(
             agg_cte
             + f"SELECT * FROM {logical_table_name(table_in_column_format)} LIMIT {limit}"
         )
-        sqls_to_return.append(_convert_to_snowflake_sql(agg_sql))
+        # sqls_to_return.append(_convert_to_snowflake_sql(agg_sql))
+        sqls_to_return.append(
+            agg_sql
+        )  # do not convert to snowflake sql for now, as sqlglot make mistakes sometimes, e.g. with TO_DATE()
     return sqls_to_return
 
 
