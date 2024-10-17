@@ -3,7 +3,6 @@ import time
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-import requests
 import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
@@ -11,6 +10,7 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
 from streamlit_extras.stylable_container import stylable_container
 
+from app_utils.chat import send_message
 from app_utils.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
@@ -36,11 +36,6 @@ from semantic_model_generator.data_processing.proto_utils import (
     yaml_to_semantic_model,
 )
 from semantic_model_generator.protos import semantic_model_pb2
-from semantic_model_generator.snowflake_utils.env_vars import (
-    SNOWFLAKE_ACCOUNT_LOCATOR,
-    SNOWFLAKE_HOST,
-    SNOWFLAKE_USER,
-)
 from semantic_model_generator.validate_model import validate
 
 
@@ -67,64 +62,6 @@ def pretty_print_sql(sql: str) -> str:
     return formatted_sql
 
 
-API_ENDPOINT = "https://{HOST}/api/v2/cortex/analyst/message"
-
-
-@st.cache_data(ttl=60, show_spinner=False)
-def send_message(
-    _conn: SnowflakeConnection, messages: list[dict[str, str]]
-) -> Dict[str, Any]:
-    """
-    Calls the REST API with a list of messages and returns the response.
-    Args:
-        _conn: SnowflakeConnection, used to grab the token for auth.
-        messages: list of chat messages to pass to the Analyst API.
-
-    Returns: The raw ChatMessage response from Analyst.
-    """
-    request_body = {
-        "messages": messages,
-        "semantic_model": proto_to_yaml(st.session_state.semantic_model),
-    }
-
-    if st.session_state["sis"]:
-        import _snowflake
-
-        resp = _snowflake.send_snow_api_request(  # type: ignore
-            "POST",
-            f"/api/v2/cortex/analyst/message",
-            {},
-            {},
-            request_body,
-            {},
-            30000,
-        )
-        if resp["status"] < 400:
-            json_resp: Dict[str, Any] = json.loads(resp["content"])
-            return json_resp
-        else:
-            raise Exception(f"Failed request with status {resp['status']}: {resp}")
-    else:
-        host = st.session_state.host_name
-        resp = requests.post(
-            API_ENDPOINT.format(
-                HOST=host,
-            ),
-            json=request_body,
-            headers={
-                "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
-                "Content-Type": "application/json",
-            },
-        )
-        if resp.status_code < 400:
-            json_resp: Dict[str, Any] = resp.json()
-            return json_resp
-        else:
-            raise Exception(
-                f"Failed request with status {resp.status_code}: {resp.text}"
-            )
-
-
 def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
     """Processes a message and adds the response to the chat."""
     user_message = {"role": "user", "content": [{"type": "text", "text": prompt}]}
@@ -139,14 +76,21 @@ def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
                 if st.session_state.multiturn
                 else [user_message]
             )
-            response = send_message(_conn=_conn, messages=request_messages)
-            content = response["message"]["content"]
-            # Grab the request ID from the response and stash it in the chat message object.
-            request_id = response["request_id"]
-            display_content(conn=_conn, content=content, request_id=request_id)
-    st.session_state.messages.append(
-        {"role": "analyst", "content": content, "request_id": request_id}
-    )
+            try:
+                response = send_message(
+                    _conn=_conn,
+                    semantic_model=proto_to_yaml(st.session_state.semantic_model),
+                    messages=request_messages,
+                )
+                content = response["message"]["content"]
+                # Grab the request ID from the response and stash it in the chat message object.
+                request_id = response["request_id"]
+                display_content(conn=_conn, content=content, request_id=request_id)
+                st.session_state.messages.append(
+                    {"role": "analyst", "content": content, "request_id": request_id}
+                )
+            except ValueError as e:
+                st.error(e)
 
 
 def show_expr_for_ref(message_index: int) -> None:
@@ -703,7 +647,9 @@ def show() -> None:
         return_home_button()
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
-            yaml = download_yaml(st.session_state.file_name, st.session_state.snowflake_stage.stage_name)
+            yaml = download_yaml(
+                st.session_state.file_name, st.session_state.snowflake_stage.stage_name
+            )
             st.session_state["yaml"] = yaml
             st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
             if "last_saved_yaml" not in st.session_state:
