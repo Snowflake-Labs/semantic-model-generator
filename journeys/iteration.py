@@ -9,23 +9,22 @@ import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
-from streamlit_monaco import st_monaco
+from streamlit_extras.stylable_container import stylable_container
 
-from admin_apps.journeys.joins import joins_dialog
-from admin_apps.shared_utils import (
+from app_utils.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
     changed_from_last_validated_model,
     download_yaml,
-    format_snowflake_context,
-    get_available_databases,
-    get_available_schemas,
     get_snowflake_connection,
+    get_yamls_from_stage,
     init_session_states,
     return_home_button,
+    stage_selector_container,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
+from journeys.joins import joins_dialog
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
     expand_all_logical_tables_as_ctes,
@@ -41,12 +40,6 @@ from semantic_model_generator.snowflake_utils.env_vars import (
     SNOWFLAKE_ACCOUNT_LOCATOR,
     SNOWFLAKE_HOST,
     SNOWFLAKE_USER,
-)
-from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    fetch_stages_in_schema,
-    fetch_yaml_names_in_stage,
-    set_database,
-    set_schema,
 )
 from semantic_model_generator.validate_model import validate
 
@@ -93,22 +86,43 @@ def send_message(
         "messages": messages,
         "semantic_model": proto_to_yaml(st.session_state.semantic_model),
     }
-    host = st.session_state.host_name
-    resp = requests.post(
-        API_ENDPOINT.format(
-            HOST=host,
-        ),
-        json=request_body,
-        headers={
-            "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
-            "Content-Type": "application/json",
-        },
-    )
-    if resp.status_code < 400:
-        json_resp: Dict[str, Any] = resp.json()
-        return json_resp
+
+    if st.session_state["sis"]:
+        import _snowflake
+
+        resp = _snowflake.send_snow_api_request(  # type: ignore
+            "POST",
+            f"/api/v2/cortex/analyst/message",
+            {},
+            {},
+            request_body,
+            {},
+            30000,
+        )
+        if resp["status"] < 400:
+            json_resp: Dict[str, Any] = json.loads(resp["content"])
+            return json_resp
+        else:
+            raise Exception(f"Failed request with status {resp['status']}: {resp}")
     else:
-        raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")
+        host = st.session_state.host_name
+        resp = requests.post(
+            API_ENDPOINT.format(
+                HOST=host,
+            ),
+            json=request_body,
+            headers={
+                "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
+                "Content-Type": "application/json",
+            },
+        )
+        if resp.status_code < 400:
+            json_resp: Dict[str, Any] = resp.json()
+            return json_resp
+        else:
+            raise Exception(
+                f"Failed request with status {resp.status_code}: {resp.text}"
+            )
 
 
 def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
@@ -148,10 +162,11 @@ def show_expr_for_ref(message_index: int) -> None:
         col_df = pd.DataFrame(
             {"Column Name": k, "Column Expression": v} for k, v in col_dict.items()
         )
-        st.dataframe(col_df, hide_index=True, use_container_width=True, height=250)
+        # Workaround for column_width bug in dataframe object within nested dialog
+        st.table(col_df.set_index(col_df.columns[1]))
 
 
-@st.dialog("Edit", width="large")
+@st.experimental_dialog("Edit", width="large")
 def edit_verified_query(
     conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
@@ -176,9 +191,23 @@ def edit_verified_query(
     with st.container(border=False):
         st.caption("**SQL**")
         with st.container(border=True):
-            user_updated_sql = st_monaco(
-                value=sql_without_cte, language="sql", height=200
-            )
+            css_yaml_editor = """
+                textarea{
+                    font-size: 14px;
+                    color: #2e2e2e;
+                    font-family:Menlo;
+                    background-color: #fbfbfb;
+                }
+                """
+            # Style text_area to mirror st.code
+            with stylable_container(
+                key="customized_text_area", css_styles=css_yaml_editor
+            ):
+                user_updated_sql = st.text_area(
+                    label="sql_editor",
+                    label_visibility="collapsed",
+                    value=sql_without_cte,
+                )
             run = st.button("Run", use_container_width=True)
 
             if run:
@@ -188,13 +217,6 @@ def edit_verified_query(
                     )
 
                     connection = get_snowflake_connection()
-                    if "snowflake_stage" in st.session_state:
-                        set_database(
-                            connection, st.session_state.snowflake_stage.stage_database
-                        )
-                        set_schema(
-                            connection, st.session_state.snowflake_stage.stage_schema
-                        )
                     st.session_state["successful_sql"] = False
                     df = pd.read_sql(sql_to_execute, connection)
                     st.code(user_updated_sql)
@@ -370,7 +392,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
-@st.dialog("Upload", width="small")
+@st.experimental_dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
@@ -383,7 +405,7 @@ def upload_dialog(content: str) -> None:
         with st.spinner(
             f"Uploading @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml..."
         ):
-            upload_yaml(file_name, conn=get_snowflake_connection())
+            upload_yaml(file_name)
         st.success(
             f"Uploaded @{st.session_state.snowflake_stage.stage_name}/{file_name}.yaml!"
         )
@@ -456,7 +478,7 @@ def update_container(
     container.markdown(content)
 
 
-@st.dialog("Error", width="small")
+@st.experimental_dialog("Error", width="small")
 def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
@@ -474,14 +496,24 @@ def yaml_editor(yaml_str: str) -> None:
             which we will write the edition status (validated, editing
             or failed).
     """
-
-    content = st_monaco(
-        value=yaml_str,
-        height="600px",
-        language="yaml",
-    )
-
-    button_container = row(5, vertical_align="center")
+    css_yaml_editor = """
+    textarea{
+        font-size: 14px;
+        color: #2e2e2e;
+        font-family:Menlo;
+        background-color: #fbfbfb;
+    }
+    """
+    st.session_state.confirm = st.checkbox("Preview YAML")
+    # Style text_area to mirror st.code
+    with stylable_container(key="customized_text_area", css_styles=css_yaml_editor):
+        content = st.text_area(
+            label="yaml_editor",
+            label_visibility="collapsed",
+            value=yaml_str,
+            height=600,
+        )
+    st.session_state.working_yml = content
     status_container_title = "**Edit**"
     status_container = st.empty()
 
@@ -490,7 +522,6 @@ def yaml_editor(yaml_str: str) -> None:
         try:
             validate(
                 content,
-                snowflake_account=st.session_state.account_name,
                 conn=get_snowflake_connection(),
             )
             st.session_state["validated"] = True
@@ -502,9 +533,9 @@ def yaml_editor(yaml_str: str) -> None:
             update_container(status_container, "failed", prefix=status_container_title)
             exception_as_dialog(e)
 
-    if button_container.button(
-        "Validate", use_container_width=True, help=VALIDATE_HELP
-    ):
+    button_row = row(5)
+    if button_row.button("Validate", use_container_width=True, help=VALIDATE_HELP):
+        # Validate new content
         validate_and_update_session_state()
 
         # Rerun the app if validation was successful.
@@ -516,25 +547,25 @@ def yaml_editor(yaml_str: str) -> None:
             st.rerun()
 
     if content:
-        button_container.download_button(
+        button_row.download_button(
             label="Download",
             data=content,
             file_name="semantic_model.yaml",
             mime="text/yaml",
             use_container_width=True,
-            help=DOWNLOAD_HELP,
+            help=UPLOAD_HELP,
         )
 
-    if button_container.button(
+    if button_row.button(
         "Upload",
         use_container_width=True,
         help=UPLOAD_HELP,
     ):
         upload_dialog(content)
     if st.session_state.get("partner_setup", False):
-        from admin_apps.partner.partner_utils import integrate_partner_semantics
+        from partner.partner_utils import integrate_partner_semantics
 
-        if button_container.button(
+        if button_row.button(
             "Integrate Partner",
             use_container_width=True,
             help=PARTNER_SEMANTIC_HELP,
@@ -543,12 +574,21 @@ def yaml_editor(yaml_str: str) -> None:
             integrate_partner_semantics()
 
     if st.session_state.experimental_features:
-        if button_container.button(
+        # Preserve a session state variable that maintains whether the join dialog is open.
+        # This is necessary because the join dialog calls `st.rerun()` from within, which closes the modal
+        # unless its state is being tracked.
+        if "join_dialog_open" not in st.session_state:
+            st.session_state["join_dialog_open"] = False
+
+        if button_row.button(
             "Join Editor",
             use_container_width=True,
         ):
             with st.spinner("Validating your model..."):
                 validate_and_update_session_state()
+            st.session_state["join_dialog_open"] = True
+
+        if st.session_state["join_dialog_open"]:
             joins_dialog()
 
     # Render the validation state (success=True, failed=False, editing=None) in the editor.
@@ -560,82 +600,7 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "editing", prefix=status_container_title)
 
 
-@st.cache_resource(show_spinner=False)
-def get_available_stages(schema: str) -> List[str]:
-    """
-    Fetches the available stages from the Snowflake account.
-
-    Returns:
-        List[str]: A list of available stages.
-    """
-    return fetch_stages_in_schema(get_snowflake_connection(), schema)
-
-
-@st.cache_resource(show_spinner=False)
-def get_yamls_from_stage(stage: str) -> List[str]:
-    """
-    Fetches the YAML files from the specified stage.
-
-    Args:
-        stage (str): The name of the stage to fetch the YAML files from.
-
-    Returns:
-        List[str]: A list of YAML files in the specified stage.
-    """
-    return fetch_yaml_names_in_stage(get_snowflake_connection(), stage)
-
-
-def stage_selector_container() -> None:
-    """
-    Common component that encapsulates db/schema/stage selection for the admin app.
-    When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
-    Returns: None
-    """
-    available_schemas = []
-    available_stages = []
-
-    # First, retrieve all databases that the user has access to.
-    stage_database = st.selectbox(
-        "Stage database",
-        options=get_available_databases(),
-        index=None,
-        key="selected_iteration_database",
-    )
-    if stage_database:
-        # When a valid database is selected, fetch the available schemas in that database.
-        try:
-            set_database(get_snowflake_connection(), stage_database)
-            available_schemas = get_available_schemas(stage_database)
-        except (ValueError, ProgrammingError):
-            st.error("Insufficient permissions to read from the selected database.")
-            st.stop()
-
-    stage_schema = st.selectbox(
-        "Stage schema",
-        options=available_schemas,
-        index=None,
-        key="selected_iteration_schema",
-        format_func=lambda x: format_snowflake_context(x, -1),
-    )
-    if stage_schema:
-        # When a valid schema is selected, fetch the available stages in that schema.
-        try:
-            set_schema(get_snowflake_connection(), stage_schema)
-            available_stages = get_available_stages(stage_schema)
-        except (ValueError, ProgrammingError):
-            st.error("Insufficient permissions to read from the selected schema.")
-            st.stop()
-
-    st.selectbox(
-        "Stage name",
-        options=available_stages,
-        index=None,
-        key="selected_iteration_stage",
-        format_func=lambda x: format_snowflake_context(x, -1),
-    )
-
-
-@st.dialog("Welcome to the Iteration app! 💬", width="large")
+@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
@@ -680,16 +645,13 @@ def set_up_requirements() -> None:
             stage_schema=st.session_state["selected_iteration_schema"],
             stage_name=st.session_state["selected_iteration_stage"],
         )
-        st.session_state["account_name"] = SNOWFLAKE_ACCOUNT_LOCATOR
-        st.session_state["host_name"] = SNOWFLAKE_HOST
-        st.session_state["user_name"] = SNOWFLAKE_USER
         st.session_state["file_name"] = file_name
         st.session_state["page"] = GeneratorAppScreen.ITERATION
         st.session_state["experimental_features"] = experimental_features
         st.rerun()
 
 
-@st.dialog("Chat Settings", width="small")
+@st.experimental_dialog("Chat Settings", width="small")
 def chat_settings_dialog() -> None:
     """
     Dialog that allows user to toggle on/off certain settings about the chat experience.
@@ -741,7 +703,7 @@ def show() -> None:
         return_home_button()
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
-            yaml = download_yaml(st.session_state.file_name, get_snowflake_connection())
+            yaml = download_yaml(st.session_state.file_name, st.session_state.snowflake_stage.stage_name)
             st.session_state["yaml"] = yaml
             st.session_state["semantic_model"] = yaml_to_semantic_model(yaml)
             if "last_saved_yaml" not in st.session_state:
@@ -763,9 +725,14 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            header_row = row([0.85, 0.15], vertical_align="center")
-            header_row.markdown("**Chat**")
-            if header_row.button("Settings"):
-                chat_settings_dialog()
-            # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
-            chat_and_edit_vqr(get_snowflake_connection())
+            if st.session_state.confirm:
+                st.code(
+                    st.session_state.working_yml, language="yaml", line_numbers=True
+                )
+            else:
+                header_row = row([0.85, 0.15], vertical_align="center")
+                header_row.markdown("**Chat**")
+                if header_row.button("Settings"):
+                    chat_settings_dialog()
+                # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
+                chat_and_edit_vqr(get_snowflake_connection())

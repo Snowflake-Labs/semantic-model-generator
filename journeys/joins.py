@@ -137,7 +137,7 @@ def relationship_builder(
 
             if st.button("Delete join key", key=f"delete_join_key_{key}_{col_idx}"):
                 relationship.relationship_columns.pop(col_idx)
-                st.rerun(scope="fragment")
+                st.rerun()
 
             st.divider()
 
@@ -154,7 +154,7 @@ def relationship_builder(
                     right_column="",
                 )
             )
-            st.rerun(scope="fragment")
+            st.rerun()
 
         if join_editor_row.button(
             "🗑️ Delete join path",
@@ -162,10 +162,10 @@ def relationship_builder(
             use_container_width=True,
         ):
             st.session_state.builder_joins.pop(key)
-            st.rerun(scope="fragment")
+            st.rerun()
 
 
-@st.dialog("Join Builder", width="large")
+@st.experimental_dialog("Join Builder", width="large")
 def joins_dialog() -> None:
 
     if "builder_joins" not in st.session_state:
@@ -188,7 +188,7 @@ def joins_dialog() -> None:
                 relationship_columns=[],
             )
         )
-        st.rerun(scope="fragment")
+        st.rerun()
 
     # If the user clicks "Save", save the relationships list to the session state
     if st.button("Save to semantic model", use_container_width=True, type="primary"):
@@ -215,4 +215,5 @@ def joins_dialog() -> None:
             st.session_state.builder_joins
         )
         st.session_state.validated = None
+        st.session_state["join_dialog_open"] = False
         st.rerun()

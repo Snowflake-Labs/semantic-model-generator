@@ -79,7 +79,10 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
 def _get_table_comment(
-    conn: SnowflakeConnection, table_name: str, columns_df: pd.DataFrame
+    conn: SnowflakeConnection,
+    schema_name: str,
+    table_name: str,
+    columns_df: pd.DataFrame,
 ) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
         return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
@@ -88,7 +91,7 @@ def _get_table_comment(
         try:
             tbl_ddl = (
                 conn.cursor()  # type: ignore[union-attr]
-                .execute(f"select get_ddl('table', '{table_name}');")
+                .execute(f"select get_ddl('table', '{schema_name}.{table_name}');")
                 .fetchall()[0][0]
                 .replace("'", "\\'")
             )
@@ -132,7 +135,7 @@ def get_table_representation(
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    table_comment = _get_table_comment(conn, table_name, columns_df)
+    table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
@@ -181,7 +184,7 @@ def _get_column_representation(
             cursor = conn.cursor(DictCursor)
             assert cursor is not None, "Cursor is unexpectedly None"
             cursor_execute = cursor.execute(
-                f'select distinct "{column_name}" from "{schema_name}"."{table_name}" limit {ndv}'
+                f'select distinct "{column_name}" from {schema_name}.{table_name} limit {ndv}'
             )
             assert cursor_execute is not None, "cursor_execute should not be none "
             res = cursor_execute.fetchall()
@@ -212,7 +215,9 @@ def _get_column_representation(
     return column
 
 
-def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
+def _fetch_valid_tables_and_views(
+    conn: SnowflakeConnection, db_name: str
+) -> pd.DataFrame:
     def _get_df(query: str) -> pd.DataFrame:
         cursor = conn.cursor().execute(query)
         assert cursor is not None, "cursor should not be none here."
@@ -228,8 +233,8 @@ def _fetch_valid_tables_and_views(conn: SnowflakeConnection) -> pd.DataFrame:
             )
         )
 
-    tables = _get_df("show tables in database")
-    views = _get_df("show views in database")
+    tables = _get_df(f"show tables in database {db_name}")
+    views = _get_df(f"show views in database {db_name}")
     return pd.concat([tables, views], axis=0)
 
 
@@ -328,17 +333,22 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str) -> list[str]:
+def fetch_yaml_names_in_stage(
+    conn: SnowflakeConnection, stage_name: str, include_yml: bool = False
+) -> list[str]:
     """
     Fetches all yaml files that the current user has access to in the current stage
     Args:
         conn: SnowflakeConnection to run the query
         stage_name: The fully qualified name of the stage to connect to.
+        include_yml: If True, will look for .yaml and .yml. If False, just .yaml. Defaults to False.
 
     Returns: a list of yaml file names
     """
-
-    query = f"list @{stage_name} pattern='.*\\.yaml';"
+    if include_yml:
+        query = f"list @{stage_name} pattern='.*\\.yaml|.*\\.yml';"
+    else:
+        query = f"list @{stage_name} pattern='.*\\.yaml';"
     cursor = conn.cursor()
     cursor.execute(query)
     yaml_files = cursor.fetchall()
@@ -349,6 +359,7 @@ def fetch_yaml_names_in_stage(conn: SnowflakeConnection, stage_name: str) -> lis
 
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection,
+    db_name: str,
     table_schema: Optional[str] = None,
     table_names: Optional[List[str]] = None,
 ) -> pd.DataFrame:
@@ -356,7 +367,6 @@ def get_valid_schemas_tables_columns_df(
         logger.warning(
             "Provided table_name without table_schema, cannot filter to fetch the specific table"
         )
-
     where_clause = ""
     if table_schema:
         where_clause += f" where t.table_schema ilike '{table_schema}' "
@@ -364,14 +374,16 @@ def get_valid_schemas_tables_columns_df(
             table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
             where_clause += f"AND LOWER(t.table_name) in ({table_names_str}) "
     query = f"""select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
-from information_schema.tables as t
-join information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
+from {db_name}.information_schema.tables as t
+join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
 order by 1, 2, c.ordinal_position"""
     cursor_execute = conn.cursor().execute(query)
     assert cursor_execute, "cursor_execute should not be None here"
     schemas_tables_columns_df = cursor_execute.fetch_pandas_all()
 
-    valid_tables_and_views_df = _fetch_valid_tables_and_views(conn=conn)
+    valid_tables_and_views_df = _fetch_valid_tables_and_views(
+        conn=conn, db_name=db_name
+    )
 
     valid_schemas_tables_columns_df = valid_tables_and_views_df.merge(
         schemas_tables_columns_df, how="inner", on=(_TABLE_SCHEMA_COL, _TABLE_NAME_COL)
@@ -481,10 +493,6 @@ class SnowflakeConnector:
             passcode=self._get_mfa_passcode(),
             passcode_in_password=self._is_mfa_passcode_in_password(),
         )
-        if db_name:
-            set_database(connection, db_name=db_name)
-        if schema_name:
-            set_schema(connection, schema_name=schema_name)
 
         if _QUERY_TAG:
             connection.cursor().execute(f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'")
@@ -532,21 +540,3 @@ class SnowflakeConnector:
                     f"Expected a dict for row object. Instead passed {row}"
                 )
         return out_dict
-
-
-def set_database(conn: SnowflakeConnection, db_name: str) -> None:
-    try:
-        conn.cursor().execute(f"USE DATABASE {db_name}")
-    except Exception as e:
-        raise ValueError(
-            f"Could not connect to database {db_name}. Does the database exist in the account?"
-        ) from e
-
-
-def set_schema(conn: SnowflakeConnection, schema_name: str) -> None:
-    try:
-        conn.cursor().execute(f"USE SCHEMA {schema_name}")
-    except Exception as e:
-        raise ValueError(
-            f"Could not connect to schema {schema_name}. Does the schema exist in the selected database?"
-        ) from e

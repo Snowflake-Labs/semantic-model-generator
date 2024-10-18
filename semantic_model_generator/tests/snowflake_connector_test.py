@@ -114,7 +114,6 @@ def test_connect(
 
     conn.cursor().execute.assert_has_calls(
         [
-            call("USE DATABASE test"),
             call("ALTER SESSION SET QUERY_TAG = 'SEMANTIC_MODEL_GENERATOR'"),
             call("ALTER SESSION SET STATEMENT_TIMEOUT_IN_SECONDS = 120"),
         ]
@@ -138,8 +137,6 @@ def test_connect_with_schema(
 
     conn.cursor().execute.assert_has_calls(
         [
-            call("USE DATABASE test_db"),
-            call("USE SCHEMA test_schema"),
             call("ALTER SESSION SET QUERY_TAG = 'SEMANTIC_MODEL_GENERATOR'"),
             call("ALTER SESSION SET STATEMENT_TIMEOUT_IN_SECONDS = 120"),
         ]
@@ -170,7 +167,7 @@ def test_get_valid_schema_table_columns_df(
     mock_valid_tables.return_value = valid_tables
 
     got = snowflake_connector.get_valid_schemas_tables_columns_df(
-        mock_conn, "TEST_SCHEMA_1", ["table_1"]
+        mock_conn, "TEST_DB", "TEST_SCHEMA_1", ["table_1"]
     )
 
     want_data = {
@@ -188,7 +185,7 @@ def test_get_valid_schema_table_columns_df(
     assert_frame_equal(want, got)
 
     # Assert that the connection executed the expected queries.
-    query = "select t.TABLE_SCHEMA, t.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COMMENT as COLUMN_COMMENT\nfrom information_schema.tables as t\njoin information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name where t.table_schema ilike 'TEST_SCHEMA_1' AND LOWER(t.table_name) in ('table_1') \norder by 1, 2, c.ordinal_position"
+    query = "select t.TABLE_SCHEMA, t.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COMMENT as COLUMN_COMMENT\nfrom TEST_DB.information_schema.tables as t\njoin TEST_DB.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name where t.table_schema ilike 'TEST_SCHEMA_1' AND LOWER(t.table_name) in ('table_1') \norder by 1, 2, c.ordinal_position"
     mock_conn.cursor().execute.assert_any_call(query)
 
 
@@ -235,7 +232,7 @@ def test_fetch_valid_tables_and_views(snowflake_data, expected_df):
     mock_cursor.description = mocked_descriptions
 
     # Call the function to test
-    result_df = snowflake_connector._fetch_valid_tables_and_views(mock_conn)
+    result_df = snowflake_connector._fetch_valid_tables_and_views(mock_conn, "mock_db")
 
     # Assert the result is as expected
     pd.testing.assert_frame_equal(
@@ -243,5 +240,5 @@ def test_fetch_valid_tables_and_views(snowflake_data, expected_df):
     )
 
     # Verify execute was called with correct queries
-    mock_cursor.execute.assert_any_call("show tables in database")
-    mock_cursor.execute.assert_any_call("show views in database")
+    mock_cursor.execute.assert_any_call("show tables in database mock_db")
+    mock_cursor.execute.assert_any_call("show views in database mock_db")

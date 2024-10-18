@@ -6,13 +6,13 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 
-from admin_apps.partner.cortex import (
+from partner.cortex import (
     CortexDimension,
     CortexMeasure,
     CortexSemanticTable,
     CortexTimeDimension,
 )
-from admin_apps.shared_utils import (
+from app_utils.shared_utils import (
     GeneratorAppScreen,
     check_valid_session_state_values,
     format_snowflake_context,
@@ -40,13 +40,15 @@ except ImportError:
 
 
 # Partner semantic support instructions
-LOOKER_IMAGE = "admin_apps/images/looker.png"
+LOOKER_IMAGE = "images/looker.png"
 LOOKER_INSTRUCTIONS = """
 We materialize your [Explore](https://cloud.google.com/looker/docs/reference/param-explore-explore) dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file.
 Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.
 
 **Note**: Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required.
-Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information.
+Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for credential information.
+If using Streamlit in Snowflake, an external access integration is **required**. See project README for external access integration instructions.
+
 
 **Tip**: Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly.
 
@@ -69,11 +71,10 @@ def update_schemas() -> None:
     database = st.session_state["looker_target_database"]
 
     # Fetch the available schemas for the selected databases
+    schemas = []
     try:
         if database:
             schemas = get_available_schemas(database)
-        else:
-            schemas = []
     except ProgrammingError:
         logger.error(f"Insufficient permissions to read from database {database}.")
 
@@ -148,12 +149,16 @@ def set_looker_semantic() -> None:
         st.text_input(
             "Looker SDK Client Secret",
             key="looker_client_secret",
-            help="See [Looker Authentication with an SDK](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for API credentials generation.",
+            help="""See [Looker Authentication with an SDK](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for API credentials generation.
+            Note that the client secret must be passed through external access integration secret if using Streamlit in Snowflake setup.""",
             type="password",
+            disabled=st.session_state.get(
+                "sis", False
+            ),  # Requires external access in SiS setup
         )
 
     st.divider()
-    col1, col2 = st.columns(2, vertical_alignment="center")
+    col1, col2 = st.columns(2)
     with col1:
         st.write(
             """
@@ -240,7 +245,6 @@ def set_looker_semantic() -> None:
                 "looker_explore_name",
                 "looker_base_url",
                 "looker_client_id",
-                "looker_client_secret",
                 "looker_target_database",
                 "looker_target_schema",
                 "looker_target_table_name",
@@ -268,12 +272,16 @@ def set_looker_semantic() -> None:
             if st.session_state[
                 "looker_field_metadata"
             ]:  # Create view only if full rendering is successful
-                run_generate_model_str_from_snowflake(
-                    model_name,
-                    sample_values,
-                    [full_tablename],
-                    allow_joins=experimental_features,
-                )
+                try:
+                    run_generate_model_str_from_snowflake(
+                        model_name,
+                        sample_values,
+                        [full_tablename],
+                        allow_joins=experimental_features,
+                    )
+                except ValueError as e:
+                    st.error(e)
+                    st.stop()
                 st.session_state["partner_setup"] = True
 
                 # Tag looker setup with SIT query tag
@@ -325,12 +333,18 @@ def set_looker_config() -> looker_sdk.sdk.api40.methods.Looker40SDK:
     )
 
     # Get the following values from your Users page in the Admin panel of your Looker instance > Users > Your user > Edit API keys. If you know your user id, you can visit https://your.looker.com/admin/users/<your_user_id>/edit.
-    os.environ["LOOKERSDK_CLIENT_ID"] = st.session_state[
-        "looker_client_id"
-    ]  # No defaults.
-    os.environ["LOOKERSDK_CLIENT_SECRET"] = st.session_state[
-        "looker_client_secret"
-    ]  # No defaults. This should be protected at all costs. Please do not leave it sitting here, even if you don't share this document.
+    os.environ["LOOKERSDK_CLIENT_ID"] = st.session_state["looker_client_id"]
+    # User enters client secret in streamlit app in local run
+    # In SiS setup, it must be passed through external access integration secret
+    if st.session_state.get("sis", False):
+        import _snowflake
+
+        # Use the _snowflake library to access secrets
+        os.environ["LOOKERSDK_CLIENT_SECRET"] = _snowflake.get_generic_secret_string(
+            "looker_client_secret"
+        )
+    else:
+        os.environ["LOOKERSDK_CLIENT_SECRET"] = st.session_state["looker_client_secret"]
 
     sdk = looker_sdk.init40()
     return sdk

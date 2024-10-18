@@ -1,23 +1,18 @@
 # semantic-model-generator
 
-The `Semantic Model Generator` is used to generate a semantic model for use in your Snowflake account.
+The `Semantic Model Generator` is an open-source tool used to generate and curate a semantic model for Snowflake [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst).
 
-You can generate semantic models through our Streamlit app, the command line, or directly in your Python code.
-Please complete the instructions in [setup](#setup), then proceed to the instructions for your desired approach.
+The tool is rendered as a Streamlit application, which can be started in [Streamlit in Snowflake](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit) or locally with open-source Streamlit.
+Setup instructions are separated below for the two methods - Please proceed to your preferred deployment method: [SiS deployment](#streamlit-in-snowflake-deployment) or [local deployment](#local-deployment).
 
 If you want to see what a semantic model looks like, skip to [Examples](#examples).
 
 ## Table of Contents
 
 * [Table of Contents](#table-of-contents)
-* [Setup](#setup)
-* [Streamlit App](#streamlit-app)
-* [CLI Tool](#cli-tool)
-    + [Generation](#generation)
-    + [Validation](#validation)
-* [Python](#python)
-    + [Generation](#generation-1)
-    + [Validation](#validation-1)
+* [Streamlit in Snowflake Deployment](#streamlit-in-snowflake-deployment)
+* [Local Deployment](#local-deployment)
+* [Partner Tool Translation](#partner-tool-translation)
 * [Usage](#usage)
     + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
     + [Auto-Generated Descriptions](#auto-generated-descriptions)
@@ -25,11 +20,73 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 * [Examples](#examples)
 * [Release](#release)
 
-## Setup
+## Streamlit in Snowflake Deployment
 
-We currently leverage credentials saved as environment variables.
+> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake, which is in Private Preview. Please contact your account representative to enable if not already enabled. We also require streamlit 1.35.0, which is generally available.
 
-A. To find your Account locator, please execute the following sql command in your account.
+[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is required**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
+
+If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+
+1. Configure Snowflake CLI
+
+Follow [instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/specify-credentials) for your preferred connection method to connect Snowflake CLI to your Snowflake account. Please [test](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/manage-connections#label-snowcli-connection-test) your connection. Depending on your connection configuration, you may need to continue passing credentials for subsequent Snowflake CLI commands.
+
+2. Deploy app in Streamlit in Snowflake
+
+Run the below command from the project root directory to create all necessary objects in Snowflake. 
+Before running, replace `<STREAMLIT_WAREHOUSE>` with an available warehouse to power the app. 
+
+**Hint**: The owner of the app will be the role specified in your Snowflake CLI connection. To use a different role, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
+
+```bash
+snow sql -f sis_setup/app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
+```
+
+The app, titled Semantic Model Generator can be opened directly in Snowsight. Alternatively, you may run the below command in your terminal to open it.
+
+```bash
+snow streamlit get-url SEMANTIC_MODEL_GENERATOR --open --database cortex_analyst_semantics --schema semantic_model_generator
+```
+
+3. **OPTIONAL**: Setup Looker Integration
+
+The Semantic Model Generator supports translating metadata from a Looker Explore. To add this functionality to the Streamlit in Snowflake app, we need to create an external access integration to allow Snowflake to reach your Looker instance. 
+
+Run the below command to create the external access integration. Before running, replace the following parameters:
+- `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url). Pass the domain excluding https:// such as snowflakedemo.looker.com.
+- `<CLIENT_SECRET>` with your [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
+- `<APP_ROLE>` with the owning role used in step #2 above
+
+**Hint**: Running the below, which creates external access integrations, may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
+
+```bash
+snow sql -f sis_setup/looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
+```
+
+## Local Deployment
+
+Local usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
+
+### Setup connections.toml (Option 1)
+The Snowflake Python connector lets you add connection definitions to a connections.toml configuration file. A connection definition refers to a collection of connection-related parameters. Snowflake Python libraries currently support TOML version 1.0.0.
+
+Please follow these [instructions](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) to create the appropriate connections.toml file. For convenience, we recommend setting the desired connection as your default.
+
+### Environment Variables (Option 2)
+At minimum, the below environment variables are required if using this method to connect to Snowflake.
+
+```bash
+SNOWFLAKE_ROLE
+SNOWFLAKE_WAREHOUSE
+SNOWFLAKE_USER
+SNOWFLAKE_ACCOUNT_LOCATOR
+SNOWFLAKE_HOST
+```
+
+For your convenience, we have created examples of setting these environment variables in [`.env.example`](.env.example). If using environment variables, we recommend creating a `.env` file in the root directory of this repo. Please feel free to set your environment variables directly in terminal if preferred.
+
+To find your Account locator, please execute the following sql command in your account.
 
 ```sql
 SELECT CURRENT_ACCOUNT_LOCATOR();
@@ -44,68 +101,18 @@ However, if you have trouble authenticating with this URL, you can try building 
 * Currently we recommend you to look under the `Account locator (legacy)` method of connection for better compatibility on API.
 * It typically follows format of: `<accountlocator>.<region>.<cloud>.snowflakecomputing.com`. Ensure that you omit
   the `https://` prefix.
-* `SNOWFLAKE_HOST` is required if you are using the Streamlit app, but may not be required for the CLI tool depending on
-  your Snowflake deployment. We would recommend setting it regardless.
 
-We recommend setting these environment variables by creating a `.env` file in the root directory of this repo. See the
-examples in [`.env.example`](.env.example) for reference and proper syntax for `.env` files.
-
-However, if you would like to set these variables directly in your shell/Python environment,
-
-1. MacOS/Linux syntax:
-
-```bash
-export SNOWFLAKE_ROLE="<your-snowflake-role>"
-export SNOWFLAKE_WAREHOUSE="<your-snowflake-warehouse>"
-export SNOWFLAKE_USER="<your-snowflake-user>"
-export SNOWFLAKE_ACCOUNT_LOCATOR="<your-snowflake-account-locator>"
-export SNOWFLAKE_HOST="<your-snowflake-host>"
-```
-
-2. Windows syntax:
-
-```bash
-set SNOWFLAKE_ROLE=<your-snowflake-role>
-set SNOWFLAKE_WAREHOUSE=<your-snowflake-warehouse>
-set SNOWFLAKE_USER=<your-snowflake-user>
-set SNOWFLAKE_ACCOUNT_LOCATOR=<your-snowflake-account-locator>
-set SNOWFLAKE_HOST=<your-snowflake-host>
-```
-
-3. Python syntax:
-
-```python
-import os
-
-# Setting environment variables
-os.environ['SNOWFLAKE_ROLE'] = '<your-snowflake-role>'
-os.environ['SNOWFLAKE_WAREHOUSE'] = '<your-snowflake-warehouse>'
-os.environ['SNOWFLAKE_USER'] = '<your-snowflake-user>'
-os.environ['SNOWFLAKE_ACCOUNT_LOCATOR'] = '<your-snowflake-account-locator>'
-os.environ['SNOWFLAKE_HOST'] = '<your-snowflake-host>'
-```
-
-Our semantic model generators currently support three types of authentication. If no `SNOWFLAKE_AUTHENTICATOR`
-environment variable
-is set, the default is `snowflake`, which uses standard username/password support.
+Our semantic model generator currently support three types of authentication. 
+If no `SNOWFLAKE_AUTHENTICATOR` environment variable is set, the default is `snowflake`, which uses standard username/password support (#1 below).
 
 1. Username and Password
 
-**Note**: If you have MFA enabled, using this default authenticator should send a push notification to your device.
-
+Set the below environment variables:
 ```bash
-# no SNOWFLAKE_AUTHENTICATOR needed
-SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-
-# MacOS/Linux
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-
-# Windows
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
-
-# Python
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
+SNOWFLAKE_USER="<your-snowflake-username>" 
+SNOWFLAKE_PASSWORD="<your-snowflake-password>" 
 ```
+If you have MFA enabled, using this default authenticator should send a push notification to your device.
 
 2. Username/Password with MFA passcode
 
@@ -115,21 +122,6 @@ Using a passcode from your authenticator app:
 SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>" # if your authenticator app reads "123 456", fill in "123456" (No spaces)
-
-# MacOS/Linux
-export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-export SNOWFLAKE_MFA_PASSCODE="<your-snowflake-mfa-passcode>"
-
-# Windows
-set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
-set SNOWFLAKE_MFA_PASSCODE=<your-snowflake-mfa-passcode>
-
-# Python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
-os.environ['SNOWFLAKE_MFA_PASSCODE'] = '<your-snowflake-mfa-passcode>'
 ```
 
 Using a passcode embedded in the password:
@@ -138,21 +130,6 @@ Using a passcode embedded in the password:
 SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
 SNOWFLAKE_PASSWORD="<your-snowflake-password>"
 SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
-
-# MacOS/Linux
-export SNOWFLAKE_AUTHENTICATOR="username_password_mfa"
-export SNOWFLAKE_PASSWORD="<your-snowflake-password>"
-export SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD="true"
-
-# Windows
-set SNOWFLAKE_AUTHENTICATOR=username_password_mfa
-set SNOWFLAKE_PASSWORD=<your-snowflake-password>
-set SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD=true
-
-# Python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'username_password_mfa'
-os.environ['SNOWFLAKE_PASSWORD'] = '<your-snowflake-password>'
-os.environ['SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD'] = 'true'
 ```
 
 3. Single Sign-On (SSO) with Okta
@@ -160,133 +137,56 @@ os.environ['SNOWFLAKE_MFA_PASSCODE_IN_PASSWORD'] = 'true'
 ```bash
 # no SNOWFLAKE_PASSWORD needed
 SNOWFLAKE_AUTHENTICATOR="externalbrowser"
-
-# MacOS/Linux
-export SNOWFLAKE_AUTHENTICATOR="externalbrowser"
-
-# Windows
-set SNOWFLAKE_AUTHENTICATOR=externalbrowser
-
-# Python
-os.environ['SNOWFLAKE_AUTHENTICATOR'] = 'externalbrowser'
 ```
 
-## Streamlit App
+### Start Local Streamlit App
 
-We offer a convenient Streamlit app that supports creating semantic models from scratch as well as iterating on existing
-ones uploaded to a Snowflake stage.
+Once you have completed 1 of the 2 setup options above, you're ready to start the local Streamlit app.
 
-To install dependencies for the Streamlit app, run
+1) If you have Make on your machine, run the below command to install dependencies for the Streamlit app.
 
 ```bash
 make setup_admin_app
 ```
 
-This uses `pip` to install dependencies from the root `pyproject.toml`; feel free to use `conda` or any package manager
-you prefer.
-
-Once installed, you can run the app using the provided Makefile target, or with your current version of Python manually
-specified:
-
+This uses `pip` to install dependencies from the root `pyproject.toml`. Feel free to use `conda` or any package manager
+you prefer. Below is an alternative to the Make command.
 ```bash
-# Make target
-make run_admin_app
-
-# directly
-python3.11 -m streamlit run admin_apps/app.py
+pip install .
 ```
 
-### Partner Support
-
 The generator supports merging data from your existing semantic models built with partners such as dbt and Looker. To
-use the Looker features, please install the extras:
+use the Looker-specific features, please use the below command to install the extras. This is only required for looker translation.
 
 ```bash
 pip install -e ".[looker]"
 ```
 
-## CLI Tool
-
-You may also generate a semantic model directly from the CLI. To do this, first install the CLI tool dependencies, which
-differ from the Streamlit app's dependencies.
-
-Unlike the Streamlit route above, using the CLI assumes that you will manage your environment using `poetry` and `pyenv`
-for Python versions.
-This has only been tested on MacOS/Linux.
-
-1. If you need brew, run `make install-homebrew`.
-2. If you need pyenv, `make install-pyenv` and `make install-python-3.8`.
-3. Run `make setup` to install all external dependencies into your Poetry environment. This will also install `poetry`
-   if needed.
-4. Spawn a shell in the virtual environment using `poetry shell`. This will activate your virtual environment.
-
-### Generation
-
-You are now ready to generate semantic models via the CLI! The generation command uses the following syntax:
+2) You can run the app using the provided Makefile target if you have Make on your machine.
 
 ```bash
-python -m semantic_model_generator.generate_model \
-    --base_tables  "['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>','<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']" \
-    --semantic_model_name "<a-meaningful-semantic-model-name>" \
-    --snowflake_account="<your-snowflake-account>"
+make run_admin_app
 ```
 
-You may generate a semantic model for a given list of fully qualified tables following the `{database}.{schema}.{table}`
-format. Each table in this list should be a physical table or a view present in your database.
-
-All generated semantic models by default are saved either under `semantic_model_generator/output_models` if running from
-the root of this project or the current directory you're in.
-
-### Validation
-
-You may also use the CLI tool to validate one of your semantic models. From inside your Poetry shell, run
+Alternatively, you can use your current version of Python to start the app manually. Please use Python 3.8-3.11.
 
 ```bash
-python -m semantic_model_generator.validate_model \
-    --yaml_path="/path/to/your/model_yaml.yaml \
-    --snowflake_account="<your-account-name>"
+python3 -m streamlit run app.py
 ```
 
-## Python
+## Partner Semantic Translation
 
-You may also create/validate your semantic models from directly within your Python code. First, ensure that you have
-installed the Python package. Note, the version below should be the latest version under the `dist/` directory.
+We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst
+semantic files using logic and metadata from partner tools.
+Please see below for details about current partner support.
 
-```bash
-pip install dist/*.whl
-```
+**IMPORTANT**: Instructions for each of the below sources are provided in the Streamlit application.
 
-### Generation
-
-```python
-from semantic_model_generator.generate_model import generate_base_semantic_model_from_snowflake
-
-BASE_TABLES = ['<your-database-name-1>.<your-schema-name-1>.<your-base-table-or-view-name-1>',
-               '<your-database-name-2>.<your-schema-name-2>.<your-base-table-or-view-name-2>']
-SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
-SEMANTIC_MODEL_NAME = "<a-meaningful-semantic-model-name>"
-
-generate_base_semantic_model_from_snowflake(
-    base_tables=BASE_TABLES,
-    snowflake_account=SNOWFLAKE_ACCOUNT,
-    semantic_model_name=SEMANTIC_MODEL_NAME,
-)
-```
-
-### Validation
-
-```python
-from semantic_model_generator.validate_model import validate_from_local_path
-
-YAML_PATH = "/path/to/your/model_yaml.yaml"
-SNOWFLAKE_ACCOUNT = "<your-snowflake-account>"
-
-validate_from_local_path(
-    yaml_path=YAML_PATH,
-    snowflake_account=SNOWFLAKE_ACCOUNT
-)
-
-```
+| Source   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
+|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DBT Semantic Model   | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake. |
+| DBT SQL Model | DBT SQL Models should be materialized in Snowflake with persist docs to capture comments. A new semantic file can be generated for these newly materialized tables/views in Snowflake directly.| |
+| Looker Explore | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
 
 ## Usage
 
@@ -296,7 +196,7 @@ Due to context window as well as quality constraints, we currently limit the siz
 30,980 tokens (~123,920 characters).
 
 Please note sample values and verified queries is not counted into this token length constraints. You can include as
-much sample values or verified queries as you'd like with limiting the overall file to <1MB.
+many sample values or verified queries as you'd like with limiting the overall file to <1MB.
 
 ### Auto-Generated Descriptions
 
@@ -319,19 +219,6 @@ In addition, consider adding the following elements to your semantic model:
     * Example: `col1 - col2` could be the `expr` for a logical column.
 2. Synonyms. Any additional synonyms for column names.
 3. Filters. Additional filters with their relevant `expr`.
-
-### Partner Semantic Support
-
-We continue to add support for partner semantic and metric layers. Our aim is to expedite the creation of Cortex Analyst
-semantic files using logic and metadata from partner tools.
-Please see below for details about current partner support.
-
-**IMPORTANT**: Use the [Streamlit App](#streamlit-app) to leverage existing partner semantic/metric layers.
-
-| Tool   | Method                                                                                                                                                                                                                                       | Requirements                                                                                                                                                                                                                                                                                                                                                                                                             |
-|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| DBT    | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake.                                                                                                                                                                                                                                                                                                                      |
-| Looker | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
 
 ## Examples
 

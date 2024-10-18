@@ -2,7 +2,7 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError
 
-from admin_apps.shared_utils import (
+from app_utils.shared_utils import (
     GeneratorAppScreen,
     format_snowflake_context,
     get_available_databases,
@@ -68,7 +68,7 @@ def update_tables() -> None:
     st.session_state["selected_tables"] = valid_selected_tables
 
 
-@st.dialog("Selecting your tables", width="large")
+@st.experimental_dialog("Selecting your tables", width="large")
 def table_selector_dialog() -> None:
     st.write(
         "Please fill out the following fields to start building your semantic model."
@@ -125,14 +125,17 @@ def table_selector_dialog() -> None:
 
     submit = st.button("Submit", use_container_width=True, type="primary")
     if submit:
-        run_generate_model_str_from_snowflake(
-            model_name,
-            sample_values,
-            st.session_state["selected_tables"],
-            allow_joins=experimental_features,
-        )
-        st.session_state["page"] = GeneratorAppScreen.ITERATION
-        st.rerun()
+        try:
+            run_generate_model_str_from_snowflake(
+                model_name,
+                sample_values,
+                st.session_state["selected_tables"],
+                allow_joins=experimental_features,
+            )
+            st.session_state["page"] = GeneratorAppScreen.ITERATION
+            st.rerun()
+        except ValueError as e:
+            st.error(e)
 
 
 def show() -> None:
