@@ -47,7 +47,7 @@ If you do not have Snowflake CLI installed, the setup can be replicated manually
 SET my_streamlit_warehouse=<streamlit warehouse>;
 ```
 
-## Snowflake CLI Installation:
+### Snowflake CLI Installation
 
 1. Configure Snowflake CLI
 
@@ -70,20 +70,23 @@ The app, titled Semantic Model Generator can be opened directly in Snowsight. Al
 snow streamlit get-url SEMANTIC_MODEL_GENERATOR --open --database cortex_analyst_semantics --schema semantic_model_generator
 ```
 
-3. **OPTIONAL**: Setup Looker Integration
+### **OPTIONAL**: Setup Looker Integration
 
 The Semantic Model Generator supports translating metadata from a Looker Explore. To add this functionality to the Streamlit in Snowflake app, we need to create an external access integration to allow Snowflake to reach your Looker instance. 
 
-Run the below command to create the external access integration. Before running, replace the following parameters:
-- `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url). Pass the domain excluding https:// such as snowflakedemo.looker.com.
-- `<CLIENT_SECRET>` with your [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
-- `<APP_ROLE>` with the owning role used in step #2 above
+Have the following information available:
+- `<LOOKER_URL>`: [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url). Pass the domain excluding https:// such as snowflakedemo.looker.com.
+- `<CLIENT_SECRET>`: [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
+- `<APP_ROLE>`: the owning role used in step #2 above
 
-**Hint**: Running the below, which creates external access integrations, may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
+If using the CLI method, run the below command to create the external access integration. Before running, replace the parameters.
+
+**Hint**: Creating external access integrations may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
 snow sql -f sis_setup/looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
 ```
+If using any other method (e.g., Git Integration), you will need to update and run [looker_integration.sql](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/looker_integration.sql) in Snowsight with these variables replaced.
 
 ## Local Deployment
 
