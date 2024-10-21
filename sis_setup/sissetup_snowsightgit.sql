@@ -79,7 +79,7 @@ MAIN_FILE = 'app.py'
 TITLE = "Semantic Model Generator"
 IMPORTS = ('@cortex_analyst_semantics.semantic_model_generator.streamlit_stage/looker_sdk.zip',
 '@cortex_analyst_semantics.semantic_model_generator.streamlit_stage/strictyaml.zip')
-QUERY_WAREHOUSE = IDENTIFIER($my_streamlit_warehouse)
+QUERY_WAREHOUSE = $my_streamlit_warehouse
 COMMENT = '{"origin": "sf_sit",
             "name": "skimantics",
             "version": {"major": 2, "minor": 0},
