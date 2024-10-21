@@ -32,9 +32,10 @@ SELECT SYSTEM$ENABLE_BEHAVIOR_CHANGE_BUNDLE('2024_08');
 SELECT SYSTEM$BEHAVIOR_CHANGE_BUNDLE_STATUS('2024_08');
 ```
 > A typical error you might see if you do not have this feature enabled looks like this:
-![images/error39.png](https://github.com/user-attachments/assets/d296adf7-d27d-41ca-bd62-72939ac85be2)
-> 
-> For more information on this bundle please see our [BCR Documentation](https://docs.snowflake.com/en/release-notes/behavior-changes). 
+<img src = "images/error39.png" width=30% height=30%>
+
+> For more information on this bundle please see our [BCR Documentation](https://docs.snowflake.com/en/release-notes/behavior-changes).
+
 
 [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is required**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
