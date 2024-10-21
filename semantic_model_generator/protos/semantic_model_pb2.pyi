@@ -266,20 +266,22 @@ class SemanticModel(_message.Message):
     def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., metrics: _Optional[_Iterable[_Union[Metric, _Mapping]]] = ..., relationships: _Optional[_Iterable[_Union[Relationship, _Mapping]]] = ..., verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ...) -> None: ...
 
 class VerifiedQuery(_message.Message):
-    __slots__ = ("name", "semantic_model_name", "question", "sql", "verified_at", "verified_by")
+    __slots__ = ("name", "semantic_model_name", "question", "sql", "verified_at", "verified_by", "use_as_onboarding_question")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SEMANTIC_MODEL_NAME_FIELD_NUMBER: _ClassVar[int]
     QUESTION_FIELD_NUMBER: _ClassVar[int]
     SQL_FIELD_NUMBER: _ClassVar[int]
     VERIFIED_AT_FIELD_NUMBER: _ClassVar[int]
     VERIFIED_BY_FIELD_NUMBER: _ClassVar[int]
+    USE_AS_ONBOARDING_QUESTION_FIELD_NUMBER: _ClassVar[int]
     name: str
     semantic_model_name: str
     question: str
     sql: str
     verified_at: int
     verified_by: str
-    def __init__(self, name: _Optional[str] = ..., semantic_model_name: _Optional[str] = ..., question: _Optional[str] = ..., sql: _Optional[str] = ..., verified_at: _Optional[int] = ..., verified_by: _Optional[str] = ...) -> None: ...
+    use_as_onboarding_question: bool
+    def __init__(self, name: _Optional[str] = ..., semantic_model_name: _Optional[str] = ..., question: _Optional[str] = ..., sql: _Optional[str] = ..., verified_at: _Optional[int] = ..., verified_by: _Optional[str] = ..., use_as_onboarding_question: bool = ...) -> None: ...
 
 class VerifiedQueryRepository(_message.Message):
     __slots__ = ("verified_queries",)
