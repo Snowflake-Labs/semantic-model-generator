@@ -68,14 +68,14 @@ COPY FILES
   FROM @CORTEX_ANALYST_SEMANTICS.PUBLIC.git_snowflake_semantic_model_generator/branches/main/app_utils/
   PATTERN='.*[.]py';
 
--- Create Streamlit App
+-- Create Streamlit App - Replace <query_warehouse> with a valid warehouse
 CREATE OR REPLACE STREAMLIT CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.SEMANTIC_MODEL_GENERATOR
 ROOT_LOCATION = '@CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator'
 MAIN_FILE = 'app.py'
 TITLE = "Semantic Model Generator"
 IMPORTS = ('@cortex_analyst_semantics.semantic_model_generator.streamlit_stage/looker_sdk.zip',
 '@cortex_analyst_semantics.semantic_model_generator.streamlit_stage/strictyaml.zip')
-QUERY_WAREHOUSE = COMPUTE_WH
+QUERY_WAREHOUSE = <query_warehouse>
 COMMENT = '{"origin": "sf_sit",
             "name": "skimantics",
             "version": {"major": 2, "minor": 0},
