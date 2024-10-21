@@ -994,7 +994,7 @@ def upload_yaml(file_name: str) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         tmp_file_path = os.path.join(temp_dir, f"{file_name}.yaml")
 
-        with open(tmp_file_path, "w") as temp_file:
+        with open(tmp_file_path, "w", encoding='utf-8') as temp_file:
             temp_file.write(yaml)
 
         st.session_state.session.file.put(
