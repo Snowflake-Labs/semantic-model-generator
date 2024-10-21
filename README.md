@@ -22,11 +22,28 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 ## Streamlit in Snowflake Deployment
 
-> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake, which is in Private Preview. Please contact your account representative to enable if not already enabled. We also require streamlit 1.35.0, which is generally available.
+> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake.  This feature is part of the 2024-08 BCR (Behavior Change Bundle) which is currently **disabled by default**.  A user with ACCOUNTADMIN priveleges can enable this feature in your account by running the following code in Snowsight:
+> 
+```sql
+SELECT SYSTEM$ENABLE_BEHAVIOR_CHANGE_BUNDLE('2024_08');
+```
+> You can check to see if this BCR is already enabled by running:
+```sql
+SELECT SYSTEM$BEHAVIOR_CHANGE_BUNDLE_STATUS('2024_08');
+```
+> A typical error you might see if you do not have this feature enabled looks like this:
+![images/error39.png](https://github.com/user-attachments/assets/d296adf7-d27d-41ca-bd62-72939ac85be2)
+> 
+> For more information on this bundle please see our [BCR Documentation](https://docs.snowflake.com/en/release-notes/behavior-changes). 
 
 [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is required**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
-If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext), Snowsight or [Snowflake Native Git Integration](https://docs.snowflake.com/en/developer-guide/git/git-overview):
+ - For VS Code extention, please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly.
+ - If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+ - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/edit/main/sissetup_snowsightgit.sql) and run in Snowsight.
+
+For CLI installation:
 
 1. Configure Snowflake CLI
 
