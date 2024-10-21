@@ -120,6 +120,7 @@ class GeneratorAppScreen(str, Enum):
 
     ONBOARDING = "onboarding"
     ITERATION = "iteration"
+    COMPARATOR = "comparator"
 
 
 def return_home_button() -> None:
@@ -880,6 +881,28 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
         set_schema(conn, st.session_state.snowflake_stage.stage_schema)
         # Downloads the YAML to {temp_dir}/{file_name}.
         download_yaml_sql = f"GET @{st.session_state.snowflake_stage.stage_name}/{file_name} file://{temp_dir}"
+        conn.cursor().execute(download_yaml_sql)
+
+        tmp_file_path = os.path.join(temp_dir, f"{file_name}")
+        with open(tmp_file_path, "r") as temp_file:
+            # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
+            yaml_str = temp_file.read()
+            return yaml_str
+
+
+def download_yaml_fqn(file_name: str, conn: SnowflakeConnection) -> str:
+    """util to download a semantic YAML from a stage."""
+    import os
+    import tempfile
+
+    if not file_name.endswith(".yaml") and not file_name.startswith("@"):
+        raise ValueError(
+            "file_name should be a valid, fully qualified stage name starting with @ with .yaml suffix."
+        )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Downloads the YAML to {temp_dir}/{file_name}.
+        download_yaml_sql = f"GET {file_name} file://{temp_dir}"
         conn.cursor().execute(download_yaml_sql)
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")

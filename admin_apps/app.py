@@ -62,7 +62,7 @@ def verify_environment_setup() -> None:
 
 
 if __name__ == "__main__":
-    from admin_apps.journeys import builder, iteration, partner
+    from admin_apps.journeys import builder, iteration, partner, comparator
 
     def onboarding_dialog() -> None:
         """
@@ -114,6 +114,14 @@ if __name__ == "__main__":
                     action="start",
                 )
                 partner.show()
+            st.markdown("")
+            if st.button(
+                "**📝 Compare two semantic models**",
+                use_container_width=True,
+                type="primary",
+            ):
+                comparator.init_dialog()
+            st.markdown("")
 
     verify_environment_setup()
 
@@ -130,5 +138,7 @@ if __name__ == "__main__":
     # The builder flow is simply an intermediate dialog before the iteration flow.
     if st.session_state["page"] == GeneratorAppScreen.ITERATION:
         iteration.show()
+    elif st.session_state["page"] == GeneratorAppScreen.COMPARATOR:
+        comparator.show()
     else:
         onboarding_dialog()
