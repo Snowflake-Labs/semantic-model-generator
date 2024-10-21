@@ -22,11 +22,32 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 ## Streamlit in Snowflake Deployment
 
-> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake, which is in Private Preview. Please contact your account representative to enable if not already enabled. We also require streamlit 1.35.0, which is generally available.
+> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake.  This feature is part of the 2024-08 BCR (Behavior Change Bundle) which is currently **disabled by default**.  A user with ACCOUNTADMIN privileges can enable this feature in your account by running the following code in Snowsight:
+> 
+```sql
+SELECT SYSTEM$ENABLE_BEHAVIOR_CHANGE_BUNDLE('2024_08');
+```
+> You can check to see if this BCR is already enabled by running:
+```sql
+SELECT SYSTEM$BEHAVIOR_CHANGE_BUNDLE_STATUS('2024_08');
+```
+> A typical error you might see if you do not have this feature enabled looks like this:
+<img src = "images/error39.png" width=30% height=30%>
+
+> For more information on this bundle please see our [BCR Documentation](https://docs.snowflake.com/en/release-notes/behavior-changes).
+
 
 [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is required**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
-If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext) or Snowsight. Please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly. If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+If you do not have Snowflake CLI installed, the setup can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext), Snowsight or [Snowflake Native Git Integration](https://docs.snowflake.com/en/developer-guide/git/git-overview):
+ - For VS Code extention, please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly.
+ - If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+ - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/sissetup_snowsightgit.sql) and run in Snowsight.  Please note that you will have to set the Streamlit Warehouse as a variable in line 2:
+```sql
+SET my_streamlit_warehouse=<streamlit warehouse>;
+```
+
+### Snowflake CLI Installation
 
 1. Configure Snowflake CLI
 
@@ -49,20 +70,23 @@ The app, titled Semantic Model Generator can be opened directly in Snowsight. Al
 snow streamlit get-url SEMANTIC_MODEL_GENERATOR --open --database cortex_analyst_semantics --schema semantic_model_generator
 ```
 
-3. **OPTIONAL**: Setup Looker Integration
+### **OPTIONAL**: Setup Looker Integration
 
 The Semantic Model Generator supports translating metadata from a Looker Explore. To add this functionality to the Streamlit in Snowflake app, we need to create an external access integration to allow Snowflake to reach your Looker instance. 
 
-Run the below command to create the external access integration. Before running, replace the following parameters:
-- `<LOOKER_URL>` with your [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url). Pass the domain excluding https:// such as snowflakedemo.looker.com.
-- `<CLIENT_SECRET>` with your [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
-- `<APP_ROLE>` with the owning role used in step #2 above
+Have the following information available:
+- `<LOOKER_URL>`: [Looker Base URL](https://cloud.google.com/looker/docs/admin-panel-platform-api#api_host_url). Pass the domain excluding https:// such as snowflakedemo.looker.com.
+- `<CLIENT_SECRET>`: [Looker Client Secret](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk)
+- `<APP_ROLE>`: the owning role used in step #2 above
 
-**Hint**: Running the below, which creates external access integrations, may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
+If using the CLI method, run the below command to create the external access integration. Before running, replace the parameters.
+
+**Hint**: Creating external access integrations may require increased privileges. To use a different role from what is specified in your Snowflake CLI connection, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
 snow sql -f sis_setup/looker_integration.sql -D "looker_url=<LOOKER_URL>" -D "client_secret=<CLIENT_SECRET>" -D "streamlit_role=<APP_ROLE>"
 ```
+If using any other method (e.g., Git Integration), you will need to update and run [looker_integration.sql](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/looker_integration.sql) in Snowsight with these variables replaced.
 
 ## Local Deployment
 
