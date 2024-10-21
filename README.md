@@ -22,7 +22,7 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 
 ## Streamlit in Snowflake Deployment
 
-> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake.  This feature is part of the 2024-08 BCR (Behavior Change Bundle) which is currently **disabled by default**.  A user with ACCOUNTADMIN priveleges can enable this feature in your account by running the following code in Snowsight:
+> **Note**: Deploying this app in Streamlit in Snowflake requires support for python 3.9+ in Streamlit in Snowflake.  This feature is part of the 2024-08 BCR (Behavior Change Bundle) which is currently **disabled by default**.  A user with ACCOUNTADMIN privileges can enable this feature in your account by running the following code in Snowsight:
 > 
 ```sql
 SELECT SYSTEM$ENABLE_BEHAVIOR_CHANGE_BUNDLE('2024_08');
@@ -42,7 +42,7 @@ SELECT SYSTEM$BEHAVIOR_CHANGE_BUNDLE_STATUS('2024_08');
 If you do not have Snowflake CLI installed, Steps #2 and #3 below can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext), Snowsight or [Snowflake Native Git Integration](https://docs.snowflake.com/en/developer-guide/git/git-overview):
  - For VS Code extention, please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly.
  - If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
- - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/edit/main/sissetup_snowsightgit.sql) and run in Snowsight.
+ - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/sissetup_snowsightgit.sql) and run in Snowsight.
 
 For CLI installation:
 
