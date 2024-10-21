@@ -232,19 +232,24 @@ def joins_dialog() -> None:
                 )
             )
 
-            if not left_table_object.primary_key.columns:
-                primary_keys = get_table_primary_keys(
-                    get_snowflake_connection(),
-                    table_fqn=fully_qualified_table_name(left_table_object.base_table),
-                )
-                left_table_object.primary_key.columns.extend(primary_keys or [""])
+            with st.spinner("Fetching primary keys..."):
+                if not left_table_object.primary_key.columns:
+                    primary_keys = get_table_primary_keys(
+                        get_snowflake_connection(),
+                        table_fqn=fully_qualified_table_name(
+                            left_table_object.base_table
+                        ),
+                    )
+                    left_table_object.primary_key.columns.extend(primary_keys or [""])
 
-            if not right_table_object.primary_key.columns:
-                primary_keys = get_table_primary_keys(
-                    get_snowflake_connection(),
-                    table_fqn=fully_qualified_table_name(right_table_object.base_table),
-                )
-                right_table_object.primary_key.columns.extend(primary_keys or [""])
+                if not right_table_object.primary_key.columns:
+                    primary_keys = get_table_primary_keys(
+                        get_snowflake_connection(),
+                        table_fqn=fully_qualified_table_name(
+                            right_table_object.base_table
+                        ),
+                    )
+                    right_table_object.primary_key.columns.extend(primary_keys or [""])
 
         del st.session_state.semantic_model.relationships[:]
         st.session_state.semantic_model.relationships.extend(
