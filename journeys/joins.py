@@ -3,7 +3,14 @@ from typing import Optional
 import streamlit as st
 from streamlit_extras.row import row
 
+from app_utils.shared_utils import get_snowflake_connection
+from semantic_model_generator.data_processing.cte_utils import (
+    fully_qualified_table_name,
+)
 from semantic_model_generator.protos import semantic_model_pb2
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    get_table_primary_keys,
+)
 
 SUPPORTED_JOIN_TYPES = [
     join_type
@@ -167,7 +174,6 @@ def relationship_builder(
 
 @st.experimental_dialog("Join Builder", width="large")
 def joins_dialog() -> None:
-
     if "builder_joins" not in st.session_state:
         # Making a copy of the original relationships list so we can modify freely without affecting the original.
         st.session_state.builder_joins = st.session_state.semantic_model.relationships[
@@ -209,6 +215,36 @@ def joins_dialog() -> None:
                     f"The join path between {relationship.left_table} and {relationship.right_table} is missing joinable columns."
                 )
                 return
+
+            # Populate primary key information for each table in a join relationship.
+            left_table_object = next(
+                (
+                    table
+                    for table in st.session_state.semantic_model.tables
+                    if table.name == relationship.left_table
+                )
+            )
+            right_table_object = next(
+                (
+                    table
+                    for table in st.session_state.semantic_model.tables
+                    if table.name == relationship.right_table
+                )
+            )
+
+            if not left_table_object.primary_key.columns:
+                primary_keys = get_table_primary_keys(
+                    get_snowflake_connection(),
+                    table_fqn=fully_qualified_table_name(left_table_object.base_table),
+                )
+                left_table_object.primary_key.columns.extend(primary_keys or [""])
+
+            if not right_table_object.primary_key.columns:
+                primary_keys = get_table_primary_keys(
+                    get_snowflake_connection(),
+                    table_fqn=fully_qualified_table_name(right_table_object.base_table),
+                )
+                right_table_object.primary_key.columns.extend(primary_keys or [""])
 
         del st.session_state.semantic_model.relationships[:]
         st.session_state.semantic_model.relationships.extend(
