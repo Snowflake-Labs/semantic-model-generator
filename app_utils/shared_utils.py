@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from io import StringIO
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Union
 
 import pandas as pd
 import streamlit as st
@@ -200,7 +200,7 @@ def get_available_stages(schema: str) -> List[str]:
     return fetch_stages_in_schema(get_snowflake_connection(), schema)
 
 
-def stage_selector_container() -> None | List[str]:
+def stage_selector_container() -> Optional[List[str]]:
     """
     Common component that encapsulates db/schema/stage selection for the admin app.
     When a db/schema/stage is selected, it is saved to the session state for reading elsewhere.
@@ -1247,23 +1247,23 @@ class AppMetadata:
     """
 
     @property
-    def user(self) -> str | None:
+    def user(self) -> Optional[str]:
         return os.getenv("SNOWFLAKE_USER")
 
     @property
-    def stage(self) -> str | None:
+    def stage(self) -> Optional[str]:
         if stage_exists():
             stage = st.session_state.snowflake_stage
             return f"{stage.stage_database}.{stage.stage_schema}.{stage.stage_name}"
         return None
 
     @property
-    def model(self) -> str | None:
+    def model(self) -> Optional[str]:
         if semantic_model_exists():
             return st.session_state.semantic_model.name  # type: ignore
         return None
 
-    def to_dict(self) -> dict[str, str | None]:
+    def to_dict(self) -> dict[str, Union[str,None]]:
         return {
             "User": self.user,
             "Stage": self.stage,

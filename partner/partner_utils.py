@@ -113,7 +113,7 @@ class PartnerCompareRow:
             else {}
         )
 
-    def render_row(self) -> None | dict[str, Any]:  # type: ignore
+    def render_row(self) -> Union[None, dict[str, Any]]:  # type: ignore
         toggle_options = ["merged", "cortex", "partner", "remove"]
         metadata = {}
 

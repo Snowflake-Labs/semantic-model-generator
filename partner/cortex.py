@@ -18,11 +18,11 @@ class CortexDimension:
 
         self.data: dict[str, Any] = data
         self.name: str = data["name"]
-        self.synonyms: None | list[str] = data.get("synonyms", None)
+        self.synonyms: Optional[list[str]] = data.get("synonyms", None)
         self.data_type: str = data.get("data_type", "TEXT")
         self.expr: str = data["expr"]
-        self.description: None | str = data.get("description", None)
-        self.sample_values: None | list[str] = data.get("sample_values", None)
+        self.description: Optional[str] = data.get("description", None)
+        self.sample_values: Optional[list[str]] = data.get("sample_values", None)
         self.unique: bool = data.get("unique", False)
 
     def get_name(self) -> str:
@@ -90,13 +90,13 @@ class CortexSemanticTable:
     def __init__(self, data: dict[str, Any]):
         self.data: dict[str, Any] = data
         self.name: str = data["name"]
-        self.description: None | str = data["description"]
+        self.description: Optional[str] = data["description"]
         self.base_table_db: str = data["base_table"]["database"]
         self.base_table_schema: str = data["base_table"]["schema"]
         self.base_table_table: str = data["base_table"]["table"]
-        self.dimensions: None | list[dict[str, Any]] = data["dimensions"]
-        self.time_dimensions: None | list[dict[str, Any]] = data["time_dimensions"]
-        self.measures: None | list[dict[str, Any]] = data["measures"]
+        self.dimensions: Optional[list[dict[str, Any]]] = data["dimensions"]
+        self.time_dimensions: Optional[list[dict[str, Any]]] = data["time_dimensions"]
+        self.measures: Optional[list[dict[str, Any]]] = data["measures"]
 
     def get_data(self) -> dict[str, Any]:
         return self.data
