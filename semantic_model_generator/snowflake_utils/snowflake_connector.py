@@ -126,6 +126,19 @@ Please provide a business description for the column. Only return the descriptio
             return ""
 
 
+def get_table_primary_keys(
+    conn: SnowflakeConnection,
+    table_fqn: str,
+) -> list[str] | None:
+    query = f"show primary keys in table {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    primary_keys = cursor.fetchall()
+    if primary_keys:
+        return [pk[3] for pk in primary_keys]
+    return None
+
+
 def get_table_representation(
     conn: SnowflakeConnection,
     schema_name: str,

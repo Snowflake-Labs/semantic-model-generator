@@ -117,8 +117,8 @@ def table_selector_dialog() -> None:
 
     st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
     experimental_features = st.checkbox(
-        "Enable experimental features (optional)",
-        help="Checking this box will enable generation of experimental features in the semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Some features (e.g. joins) are currently in Private Preview and available only to select accounts. Reach out to your account team for access.",
+        "Enable joins (optional)",
+        help="Checking this box will enable you to add/edit join paths in your semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Reach out to your account team for access.",
     )
 
     st.session_state["experimental_features"] = experimental_features
