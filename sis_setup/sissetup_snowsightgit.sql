@@ -1,6 +1,6 @@
 -- Please first set your Streamlit Warehouse here by replacing <streamlit warehouse> with a valid warehouse:
 
-SET my_streamlit_warehouse=<streamlit warehouse>;
+SET my_streamlit_warehouse='<streamlit warehouse>';
 
 CREATE DATABASE IF NOT EXISTS CORTEX_ANALYST_SEMANTICS;
 USE DATABASE CORTEX_ANALYST_SEMANTICS;
