@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 import pandas as pd
@@ -91,31 +90,56 @@ def comparator_app() -> None:
             user_message = [
                 {"role": "user", "content": [{"type": "text", "text": prompt}]}
             ]
-            connector = SnowflakeConnector(
+            connection = SnowflakeConnector(
                 account_name=st.session_state.account_name,
                 max_workers=1,
-            )
-            conn = connector.open_connection(db_name="")
-            col1, col2 = st.columns(2)
-            with col1, st.container(border=True), st.spinner("Model 1 is thinking..."):
-                semantic_model = st.session_state[MODEL1_YAML]
-                json_resp = send_message(
-                    conn, user_message, yaml_to_semantic_model(semantic_model)
-                )
-                display_content(conn, json_resp["message"]["content"])
-                st.json(json_resp, expanded=False)
+            ).open_connection(db_name="")
 
-            with col2, st.container(border=True), st.spinner("Model 2 is thinking..."):
-                semantic_model = st.session_state[MODEL2_YAML]
-                json_resp = send_message(
-                    conn, user_message, yaml_to_semantic_model(semantic_model)
-                )
-                display_content(conn, json_resp["message"]["content"])
-                st.json(json_resp, expanded=False)
+            col1, col2 = st.columns(2)
+            ask_cortex_analyst(
+                user_message,
+                st.session_state[MODEL1_YAML],
+                connection,
+                col1,
+                "Model 1 is thinking...",
+            )
+            ask_cortex_analyst(
+                user_message,
+                st.session_state[MODEL2_YAML],
+                connection,
+                col2,
+                "Model 2 is thinking...",
+            )
 
     # TODO:
     # - Show the differences
     # - Check if both models are pointing at the same table
+
+
+def ask_cortex_analyst(
+    prompt: str,
+    semantic_model: str,
+    conn: SnowflakeConnection,
+    container: Any,
+    spinner_text: str,
+) -> None:
+    """Ask the Cortex Analyst a question and display the response.
+
+    Args:
+        prompt (str): The question to ask the Cortex Analyst.
+        semantic_model (str): The semantic model to use for the question.
+        conn (SnowflakeConnection): The Snowflake connection to use for the question.
+        container (st.DeltaGenerator): The streamlit container to display the response (e.g. st.columns()).
+        spinner_text (str): The text to display in the waiting spinner
+
+    Returns:
+        None
+
+    """
+    with container, st.container(border=True), st.spinner(spinner_text):
+        json_resp = send_message(conn, prompt, yaml_to_semantic_model(semantic_model))
+        display_content(conn, json_resp["message"]["content"])
+        st.json(json_resp, expanded=False)
 
 
 @st.cache_data(show_spinner=False)
@@ -145,18 +169,10 @@ def display_content(
     conn: SnowflakeConnection,
     content: list[dict[str, Any]],
 ) -> None:
-    """Displays a content item for a message. For generated SQL, allow user to add to verified queries directly or edit then add."""
+    """Displays a content item for a message from the Cortex Analyst."""
     for item in content:
         if item["type"] == "text":
-            # If API rejects to answer directly and provided disambiguate suggestions, we'll return text with <SUGGESTION> as prefix.
-            if "<SUGGESTION>" in item["text"]:
-                suggestion_response = json.loads(item["text"][12:])[0]
-                st.markdown(suggestion_response["explanation"])
-                with st.expander("Suggestions", expanded=True):
-                    for suggestion in suggestion_response["suggestions"]:
-                        st.markdown(f"- {suggestion}")
-            else:
-                st.markdown(item["text"])
+            st.markdown(item["text"])
         elif item["type"] == "suggestions":
             with st.expander("Suggestions", expanded=True):
                 for suggestion in item["suggestions"]:
@@ -170,6 +186,9 @@ def display_content(
 
                 df = pd.read_sql(sql, conn)
                 st.dataframe(df, hide_index=True)
+        else:
+            logger.warning(f"Unknown content type: {item['type']}")
+            st.write(item)
 
 
 def is_session_state_initialized() -> bool:
