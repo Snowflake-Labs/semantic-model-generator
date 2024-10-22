@@ -115,7 +115,6 @@ type: {column_row['DATA_TYPE']};
 values: {';'.join(column_values) if column_values else ""};
 Please provide a business description for the column. Only return the description without any other text."""
             complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
-            logger.debug(f"Complete_sql: {complete_sql}")
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:

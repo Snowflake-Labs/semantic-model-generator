@@ -12,7 +12,6 @@ from typing import Any, Optional
 import pandas as pd
 import requests
 import streamlit as st
-from loguru import logger
 from PIL import Image
 from snowflake.connector import SnowflakeConnection
 
@@ -912,8 +911,6 @@ def send_message(
         "semantic_model": proto_to_yaml(semantic_model),
     }
     api_endpoint = API_ENDPOINT.format(HOST=st.session_state.host_name)
-    logger.debug(api_endpoint)
-    logger.debug(request_body)
     resp = requests.post(
         api_endpoint,
         json=request_body,

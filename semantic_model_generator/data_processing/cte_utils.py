@@ -142,7 +142,6 @@ def _generate_cte_for(
         cte += ",\n".join(expr_columns) + "\n"
         cte += f"FROM {fully_qualified_table_name(table.base_table)}"
         cte += ")"
-
         return cte
 
 
