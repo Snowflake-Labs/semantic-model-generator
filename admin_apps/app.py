@@ -62,7 +62,7 @@ def verify_environment_setup() -> None:
 
 
 if __name__ == "__main__":
-    from admin_apps.journeys import builder, iteration, partner, comparator
+    from admin_apps.journeys import builder, comparator, iteration, partner
 
     def onboarding_dialog() -> None:
         """

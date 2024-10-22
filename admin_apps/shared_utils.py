@@ -10,7 +10,9 @@ from io import StringIO
 from typing import Any, Optional
 
 import pandas as pd
+import requests
 import streamlit as st
+from loguru import logger
 from PIL import Image
 from snowflake.connector import SnowflakeConnection
 
@@ -42,6 +44,8 @@ LOGO_URL_LARGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Snow
 LOGO_URL_SMALL = (
     "https://logos-world.net/wp-content/uploads/2022/11/Snowflake-Symbol.png"
 )
+
+API_ENDPOINT = "https://{HOST}/api/v2/cortex/analyst/message"
 
 
 @st.cache_resource
@@ -890,26 +894,39 @@ def download_yaml(file_name: str, conn: SnowflakeConnection) -> str:
             return yaml_str
 
 
-def download_yaml_fqn(file_name: str, conn: SnowflakeConnection) -> str:
-    """util to download a semantic YAML from a stage."""
-    import os
-    import tempfile
+def send_message(
+    _conn: SnowflakeConnection,
+    messages: list[dict[str, str]],
+    semantic_model: semantic_model_pb2.SemanticModel,
+) -> dict[str, Any]:
+    """
+    Calls the REST API with a list of messages and returns the response.
+    Args:
+        _conn: SnowflakeConnection, used to grab the token for auth.
+        messages: list of chat messages to pass to the Analyst API.
 
-    if not file_name.endswith(".yaml") and not file_name.startswith("@"):
-        raise ValueError(
-            "file_name should be a valid, fully qualified stage name starting with @ with .yaml suffix."
-        )
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Downloads the YAML to {temp_dir}/{file_name}.
-        download_yaml_sql = f"GET {file_name} file://{temp_dir}"
-        conn.cursor().execute(download_yaml_sql)
-
-        tmp_file_path = os.path.join(temp_dir, f"{file_name}")
-        with open(tmp_file_path, "r") as temp_file:
-            # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
-            yaml_str = temp_file.read()
-            return yaml_str
+    Returns: The raw ChatMessage response from Analyst.
+    """
+    request_body = {
+        "messages": messages,
+        "semantic_model": proto_to_yaml(semantic_model),
+    }
+    api_endpoint = API_ENDPOINT.format(HOST=st.session_state.host_name)
+    logger.debug(api_endpoint)
+    logger.debug(request_body)
+    resp = requests.post(
+        api_endpoint,
+        json=request_body,
+        headers={
+            "Authorization": f'Snowflake Token="{_conn.rest.token}"',  # type: ignore[union-attr]
+            "Content-Type": "application/json",
+        },
+    )
+    if resp.status_code < 400:
+        json_resp: dict[str, Any] = resp.json()
+        return json_resp
+    else:
+        raise Exception(f"Failed request with status {resp.status_code}: {resp.text}")
 
 
 def get_sit_query_tag(

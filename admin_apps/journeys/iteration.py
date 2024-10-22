@@ -14,6 +14,7 @@ from streamlit_monaco import st_monaco
 
 from admin_apps.journeys.joins import joins_dialog
 from admin_apps.shared_utils import (
+    API_ENDPOINT,
     GeneratorAppScreen,
     SnowflakeStage,
     changed_from_last_validated_model,
@@ -73,9 +74,6 @@ def pretty_print_sql(sql: str) -> str:
     # Generate formatted SQL, specifying the dialect if necessary for specific syntax transformations
     formatted_sql: str = expression.sql(dialect="snowflake", pretty=True)
     return formatted_sql
-
-
-API_ENDPOINT = "https://{HOST}/api/v2/cortex/analyst/message"
 
 
 @st.cache_data(ttl=60, show_spinner=False)

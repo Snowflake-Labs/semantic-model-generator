@@ -1,9 +1,19 @@
+import json
+from typing import Any
+
+import pandas as pd
+import sqlglot
 import streamlit as st
-from admin_apps.shared_utils import GeneratorAppScreen
-from admin_apps.shared_utils import return_home_button
-from admin_apps.shared_utils import download_yaml_fqn
-from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model, proto_to_yaml
+from loguru import logger
+from snowflake.connector import SnowflakeConnection
 from streamlit_monaco import st_monaco
+
+from admin_apps.shared_utils import GeneratorAppScreen, return_home_button, send_message
+from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    SnowflakeConnector,
+)
+from semantic_model_generator.validate_model import validate
 
 MODEL1_PATH = "model1_path"
 MODEL1_YAML = "model1_yaml"
@@ -16,13 +26,10 @@ def init_session_states() -> None:
 
 
 def comparator_app() -> None:
-    st.write(
-        """
-        ## Compare two semantic models
-        """
-    )
+    return_home_button()
+    st.write("## Compare two semantic models")
     col1, col2 = st.columns(2)
-    with col1:
+    with col1, st.container(border=True):
         st.write(f"Model 1 from: `{st.session_state[MODEL1_PATH]}`")
         content1 = st_monaco(
             value=st.session_state[MODEL1_YAML],
@@ -30,7 +37,7 @@ def comparator_app() -> None:
             language="yaml",
         )
 
-    with col2:
+    with col2, st.container(border=True):
         st.write(f"Model 2 from: `{st.session_state[MODEL2_PATH]}`")
         content2 = st_monaco(
             value=st.session_state[MODEL2_YAML],
@@ -38,24 +45,174 @@ def comparator_app() -> None:
             language="yaml",
         )
 
-    # TODO:
-    # - Compare the two models
-    # - Show the differences
-    # - Validation of the models
-    # - Check if both models are pointing at the same table
-    # - dialog to ask questions
-    # - Results of the cortex analyst with both models
+    if st.button("Validate models"):
+        with st.spinner(f"validating {st.session_state[MODEL1_PATH]}..."):
+            try:
+                validate(content1, st.session_state.account_name)
+                st.session_state["model1_valid"] = True
+                st.session_state[MODEL1_YAML] = content1
+            except Exception as e:
+                st.error(f"Validation failed on the first model with error: {e}")
+                st.session_state["model1_valid"] = False
 
-    return_home_button()
+        with st.spinner(f"validating {st.session_state[MODEL2_PATH]}..."):
+            try:
+                validate(content2, st.session_state.account_name)
+                st.session_state["model2_valid"] = True
+                st.session_state[MODEL2_YAML] = content2
+            except Exception as e:
+                st.error(f"Validation failed on the second model with error: {e}")
+                st.session_state["model2_valid"] = False
+
+        if st.session_state.get("model1_valid", False) and st.session_state.get(
+            "model2_valid", False
+        ):
+            st.success("Both models are correct.")
+            st.session_state["validated"] = True
+        else:
+            st.error("Please fix the models and try again.")
+            st.session_state["validated"] = False
+
+    if (
+        content1 != st.session_state[MODEL1_YAML]
+        or content2 != st.session_state[MODEL2_YAML]
+    ):
+        st.info("Please validate the models again after making changes.")
+        st.session_state["validated"] = False
+
+    if not st.session_state.get("validated", False):
+        st.info("Please validate the models first.")
+    else:
+        prompt = st.text_input(
+            "What question would you like to ask the Cortex Analyst?"
+        )
+        if prompt:
+            st.write(f"Asking both models question: {prompt}")
+            user_message = [
+                {"role": "user", "content": [{"type": "text", "text": prompt}]}
+            ]
+            connector = SnowflakeConnector(
+                account_name=st.session_state.account_name,
+                max_workers=1,
+            )
+            conn = connector.open_connection(db_name="")
+            col1, col2 = st.columns(2)
+            with col1, st.container(border=True), st.spinner("Model 1 is thinking..."):
+                semantic_model = st.session_state[MODEL1_YAML]
+                json_resp = send_message(
+                    conn, user_message, yaml_to_semantic_model(semantic_model)
+                )
+                display_content(conn, json_resp["message"]["content"])
+                st.json(json_resp, expanded=False)
+
+            with col2, st.container(border=True), st.spinner("Model 2 is thinking..."):
+                semantic_model = st.session_state[MODEL2_YAML]
+                json_resp = send_message(
+                    conn, user_message, yaml_to_semantic_model(semantic_model)
+                )
+                display_content(conn, json_resp["message"]["content"])
+                st.json(json_resp, expanded=False)
+
+    # TODO:
+    # - Show the differences
+    # - Check if both models are pointing at the same table
+
+
+@st.cache_data(show_spinner=False)
+def prettify_sql(sql: str) -> str:
+    """
+    Prettify SQL using SQLGlot with an option to use the Snowflake dialect for syntax checks.
+
+    Args:
+    sql (str): SQL query string to be formatted.
+
+    Returns:
+    str: Formatted SQL string or input SQL if sqlglot failed to parse.
+    """
+    try:
+        # Parse the SQL using SQLGlot
+        expression = sqlglot.parse_one(sql, dialect="snowflake")
+
+        # Generate formatted SQL, specifying the dialect if necessary for specific syntax transformations
+        formatted_sql: str = expression.sql(dialect="snowflake", pretty=True)
+        return formatted_sql
+    except Exception as e:
+        logger.debug(f"Failed to prettify SQL: {e}")
+        return sql
+
+
+def display_content(
+    conn: SnowflakeConnection,
+    content: list[dict[str, Any]],
+) -> None:
+    """Displays a content item for a message. For generated SQL, allow user to add to verified queries directly or edit then add."""
+    for item in content:
+        if item["type"] == "text":
+            # If API rejects to answer directly and provided disambiguate suggestions, we'll return text with <SUGGESTION> as prefix.
+            if "<SUGGESTION>" in item["text"]:
+                suggestion_response = json.loads(item["text"][12:])[0]
+                st.markdown(suggestion_response["explanation"])
+                with st.expander("Suggestions", expanded=True):
+                    for suggestion in suggestion_response["suggestions"]:
+                        st.markdown(f"- {suggestion}")
+            else:
+                st.markdown(item["text"])
+        elif item["type"] == "suggestions":
+            with st.expander("Suggestions", expanded=True):
+                for suggestion in item["suggestions"]:
+                    st.markdown(f"- {suggestion}")
+        elif item["type"] == "sql":
+            with st.container(height=500, border=False):
+                sql = item["statement"]
+                sql = prettify_sql(sql)
+                with st.container(height=250, border=False):
+                    st.code(item["statement"], language="sql")
+
+                df = pd.read_sql(sql, conn)
+                st.dataframe(df, hide_index=True)
 
 
 def is_session_state_initialized() -> bool:
-    return all([
-        MODEL1_YAML in st.session_state,
-        MODEL2_YAML in st.session_state,
-        MODEL1_PATH in st.session_state,
-        MODEL2_PATH in st.session_state,
-    ])
+    return all(
+        [
+            MODEL1_YAML in st.session_state,
+            MODEL2_YAML in st.session_state,
+            MODEL1_PATH in st.session_state,
+            MODEL2_PATH in st.session_state,
+        ]
+    )
+
+
+@st.dialog("Welcome to the Cortex Analyst Annotation Workspace! 📝", width="large")
+def init_dialog() -> None:
+    init_session_states()
+
+    st.write(
+        "Please choose the two semantic model files that you would like to compare."
+    )
+
+    model_1_file = st.file_uploader(
+        "Choose first semantic model file",
+        type=["yaml"],
+        help="Choose a local YAML file that contains semantic model.",
+    )
+    model_2_file = st.file_uploader(
+        "Choose second semantic model file",
+        type=["yaml"],
+        help="Choose a local YAML file that contains semantic model.",
+    )
+
+    if st.button("Compare"):
+        if model_1_file is None or model_2_file is None:
+            st.error("Please upload the both models first.")
+        else:
+            st.session_state[MODEL1_PATH] = model_1_file.name
+            st.session_state[MODEL1_YAML] = model_1_file.getvalue().decode("utf-8")
+            st.session_state[MODEL2_PATH] = model_2_file.name
+            st.session_state[MODEL2_YAML] = model_2_file.getvalue().decode("utf-8")
+            st.rerun()
+
+    return_home_button()
 
 
 def show() -> None:
@@ -64,52 +221,3 @@ def show() -> None:
         comparator_app()
     else:
         init_dialog()
-
-
-def read_semantic_model(model_path: str) -> str:
-    """Read the semantic model from the given path (local or snowflake stage).
-    
-    Args:
-        model_path (str): The path to the semantic model.
-
-    Returns:
-        str: The semantic model as a string.
-
-    Raises:
-        FileNotFoundError: If the model is not found.
-    """
-    if model_path.startswith('@'):
-        return download_yaml_fqn(model_path)
-    else:
-        with open(model_path, "r") as f:
-            return f.read()
-
-
-@st.dialog("Welcome to the Cortex Analyst Annotation Workspace! 📝", width="large")
-def init_dialog() -> None:
-    init_session_states()
-
-    st.write("Please enter the paths (local or stage) of the two models you would like to compare.")
-
-    model_1_path = st.text_input("Model 1", placeholder="e.g. /local/path/to/model1.yaml")
-    model_2_path = st.text_input("Model 2", placeholder="e.g. @DATABASE.SCHEMA.STAGE_NAME/path/to/model2.yaml")
-
-    if st.button("Compare"):
-        model_1_yaml = model_2_yaml = None
-        try:
-            model_1_yaml = read_semantic_model(model_1_path)
-        except FileNotFoundError as e:
-            st.error(f"Model 1 not found: {e}")
-        try:
-            model_2_yaml = read_semantic_model(model_2_path)
-        except FileNotFoundError as e:
-            st.error(f"Model 2 not found: {e}")
-
-        if model_1_yaml and model_2_yaml:
-            st.session_state[MODEL1_PATH] = model_1_path
-            st.session_state[MODEL1_YAML] = model_1_yaml
-            st.session_state[MODEL2_PATH] = model_2_path
-            st.session_state[MODEL2_YAML] = model_2_yaml
-            st.rerun()
-
-    return_home_button()
