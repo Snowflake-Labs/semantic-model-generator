@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import pandas as pd
 import streamlit as st
@@ -523,7 +523,7 @@ def render_looker_explore_as_table(
     target_lag: Optional[int] = 20,
     target_lag_unit: Optional[str] = "minutes",
     warehouse: Optional[str] = None,
-) -> None | dict[str, dict[str, str]]:
+) -> Union[None,dict[str, dict[str, str]]]:
     """
     Creates materialized table corresponding to Looker Explore.
     Args:

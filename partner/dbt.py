@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import pandas as pd
 import streamlit as st
@@ -80,7 +80,7 @@ def upload_dbt_semantic() -> None:
             key="dbt_files",
         )
     if uploaded_files:
-        partner_semantic: list[None | DBTSemanticModel] = []
+        partner_semantic: list[Union[None,DBTSemanticModel]] = []
         for file in uploaded_files:
             partner_semantic.extend(read_dbt_yaml(file))  # type: ignore
 
@@ -111,7 +111,7 @@ class DBTEntity:
         self.name: str = entity["name"]
         self.type: str = entity.get("type", None)
         self.expr: str = entity.get("expr", self.name)
-        self.description: None | str = entity.get("description", None)
+        self.description: Optional[str] = entity.get("description", None)
         self.cortex_map = {
             "name": self.name,
             "description": self.description,
@@ -153,7 +153,7 @@ class DBTMeasure(DBTEntity):
 
     def __init__(self, entity: dict[str, Any]):
         super().__init__(entity)
-        self.agg: None | str = entity.get("agg", None)
+        self.agg: Optional[str] = entity.get("agg", None)
         self.cortex_map = {
             "name": self.name,
             "description": self.description,
@@ -195,10 +195,10 @@ class DBTSemanticModel:
     def __init__(self, data: dict[str, Any]):
         self.data: dict[str, Any] = data
         self.name: str = data["name"]
-        self.description: None | str = data.get("description", None)
-        self.entities: None | list[dict[str, Any]] = data["entities"]
-        self.dimensions: None | list[dict[str, Any]] = data["dimensions"]
-        self.measures: None | list[dict[str, Any]] = data["measures"]
+        self.description: Optional[str] = data.get("description", None)
+        self.entities: Optional[list[dict[str, Any]]] = data["entities"]
+        self.dimensions: Optional[list[dict[str, Any]]] = data["dimensions"]
+        self.measures: Optional[list[dict[str, Any]]] = data["measures"]
 
     def get_data(self) -> dict[str, Any]:
         return self.data
