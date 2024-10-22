@@ -129,7 +129,7 @@ Please provide a business description for the column. Only return the descriptio
 def get_table_primary_keys(
     conn: SnowflakeConnection,
     table_fqn: str,
-) -> list[str] | None:
+) -> Optional[list[str]]:
     query = f"show primary keys in table {table_fqn};"
     cursor = conn.cursor()
     cursor.execute(query)
