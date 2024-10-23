@@ -11,7 +11,7 @@ class TestRemoveLogicalTableCTE:
         Testing that we remove logical table CTEs corresponding to existing table names.
         """
         query = "WITH __logical_table AS (SELECT * FROM table1) SELECT * FROM __logical_table"
-        table_names = ["logical_table"]
+        table_names = ["LOGICAL_TABLE"]
         expected_query = "SELECT * FROM __logical_table"
 
         actual_output = remove_ltable_cte(query, table_names=table_names)

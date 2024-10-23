@@ -92,12 +92,13 @@ def remove_ltable_cte(sql_w_ltable_cte: str, table_names: list[str]) -> str:
     if not is_logical_table(with_.expressions[0].alias):
         raise ValueError("Analyst queries must contain the logical CTE.")
 
+    table_names_lower = [table_name.lower() for table_name in table_names]
     # Iterate through all CTEs. If a CTE starts with the logical table prefix and matches a table name, remove it.
     non_logical_cte = [
         cte
         for cte in with_.expressions
         if not is_logical_table(cte.alias)
-        or cte.alias.replace(_LOGICAL_TABLE_PREFIX, "") not in table_names
+        or cte.alias.replace(_LOGICAL_TABLE_PREFIX, "").lower() not in table_names_lower
     ]
 
     # Replace the original expressions list with the filtered list
