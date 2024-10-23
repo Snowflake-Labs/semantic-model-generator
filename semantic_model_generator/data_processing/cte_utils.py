@@ -93,7 +93,8 @@ def remove_ltable_cte(sql_w_ltable_cte: str, table_names: list[str]) -> str:
         raise ValueError("Analyst queries must contain the logical CTE.")
 
     table_names_lower = [table_name.lower() for table_name in table_names]
-    # Iterate through all CTEs. If a CTE starts with the logical table prefix and matches a table name, remove it.
+    # Iterate through all CTEs, and filter out logical table CTEs.
+    # This is done by checking if the CTE alias starts with the logical table prefix and if the alias is in a table in the semantic model.
     non_logical_cte = [
         cte
         for cte in with_.expressions

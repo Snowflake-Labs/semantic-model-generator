@@ -26,7 +26,7 @@ class TestRemoveLogicalTableCTE:
         query = (
             "WITH __other_table AS (SELECT * FROM table1) SELECT * FROM __other_table"
         )
-        table_names = ["logical_table"]
+        table_names = ["LOGICAL_TABLE"]
         expected_query = (
             "WITH __other_table AS ( SELECT * FROM table1 ) SELECT * FROM __other_table"
         )
@@ -38,13 +38,11 @@ class TestRemoveLogicalTableCTE:
 
     def test_mixed_ctes(self) -> None:
         """
-        Testing that in a query with a mixture of CTEs for logical tables and other tables, only the logical table CTEs are removed.
-        Returns:
-
+        Given a query containing a mixture of CTEs, only the logical table CTEs should be removed.
         """
-        query = "WITH __logical_table AS (SELECT * FROM table1), __other_table AS (SELECT * FROM table2) SELECT * FROM __logical_table"
-        table_names = ["logical_table"]
-        expected_query = "WITH __other_table AS ( SELECT * FROM table2 ) SELECT * FROM __logical_table"
+        query = "WITH __logical_table AS (SELECT * FROM table1), __other_table AS (SELECT * FROM table2), __custom_table AS (SELECT * FROM table3) SELECT * FROM __logical_table"
+        table_names = ["LOGICAL_TABLE"]
+        expected_query = "WITH __other_table AS ( SELECT * FROM table2 ), __custom_table AS ( SELECT * FROM table3 ) SELECT * FROM __logical_table"
 
         actual_output = remove_ltable_cte(query, table_names=table_names)
         actual_output = re.sub(r"\s+", " ", actual_output)
@@ -56,7 +54,7 @@ class TestRemoveLogicalTableCTE:
         Testing that an error is thrown if there is no CTE in the query.
         """
         query = "SELECT * FROM table1"
-        table_names = ["logical_table"]
+        table_names = ["LOGICAL_TABLE"]
 
         with pytest.raises(ValueError):
             remove_ltable_cte(query, table_names=table_names)
@@ -66,7 +64,7 @@ class TestRemoveLogicalTableCTE:
         Testing that an error is thrown if the first CTE is not a logical table.
         """
         query = "WITH random_alias AS (SELECT * FROM table1), __logical_table AS (SELECT * FROM table2) SELECT * FROM __logical_table"
-        table_names = ["logical_table"]
+        table_names = ["LOGICAL_TABLE"]
 
         with pytest.raises(ValueError):
             remove_ltable_cte(query, table_names=table_names)
