@@ -37,15 +37,11 @@ SELECT SYSTEM$BEHAVIOR_CHANGE_BUNDLE_STATUS('2024_08');
 > For more information on this bundle please see our [BCR Documentation](https://docs.snowflake.com/en/release-notes/behavior-changes).
 
 
-[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is required**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
+[Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is recommended**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
 If you do not have Snowflake CLI installed, the setup can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext), Snowsight or [Snowflake Native Git Integration](https://docs.snowflake.com/en/developer-guide/git/git-overview):
- - For VS Code extention, please note that parameters passed (with flag `-D`) will be need to be hard-coded in the `.sql` files directly.
  - If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
- - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/sissetup_snowsightgit.sql) and run in Snowsight.  Please note that you will have to set the Streamlit Warehouse as a variable in line 2:
-```sql
-SET my_streamlit_warehouse=<streamlit warehouse>;
-```
+ - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/sissetup_snowsightgit.sql) and run in Snowsight. 
 
 ### Snowflake CLI Installation
 
@@ -56,12 +52,11 @@ Follow [instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cl
 2. Deploy app in Streamlit in Snowflake
 
 Run the below command from the project root directory to create all necessary objects in Snowflake. 
-Before running, replace `<STREAMLIT_WAREHOUSE>` with an available warehouse to power the app. 
 
 **Hint**: The owner of the app will be the role specified in your Snowflake CLI connection. To use a different role, append `--role <DESIRED_ROLE>` to the end of the command, replacing `<DESIRED_ROLE>`.
 
 ```bash
-snow sql -f sis_setup/app_setup.sql -D "warehouse=<STREAMLIT_WAREHOUSE>"
+snow sql -f sis_setup/app_setup.sql
 ```
 
 The app, titled Semantic Model Generator can be opened directly in Snowsight. Alternatively, you may run the below command in your terminal to open it.
