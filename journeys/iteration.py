@@ -91,6 +91,9 @@ def process_message(_conn: SnowflakeConnection, prompt: str) -> None:
                 )
             except ValueError as e:
                 st.error(e)
+                # Remove the user message from the chat history if the request fails.
+                # We should only save messages to history for successful (user, assistant) turns.
+                st.session_state.messages.pop()
 
 
 def show_expr_for_ref(message_index: int) -> None:
