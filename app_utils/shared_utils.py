@@ -997,6 +997,9 @@ def upload_yaml(file_name: str) -> None:
         with open(tmp_file_path, "w", encoding='utf-8') as temp_file:
             temp_file.write(yaml)
 
+        if 'session' not in st.session_state:
+            set_snowpark_session(get_snowflake_connection())
+
         st.session_state.session.file.put(
             tmp_file_path,
             f"@{st.session_state.snowflake_stage.stage_name}",
@@ -1049,6 +1052,9 @@ def download_yaml(file_name: str, stage_name: str) -> str:
     """util to download a semantic YAML from a stage."""
     import os
     import tempfile
+
+    if 'session' not in st.session_state:
+        set_snowpark_session(get_snowflake_connection())
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Downloads the YAML to {temp_dir}/{file_name}.
