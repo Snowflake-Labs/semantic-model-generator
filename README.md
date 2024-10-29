@@ -85,7 +85,7 @@ If using any other method (e.g., Git Integration), you will need to update and r
 
 ## Local Deployment
 
-Local usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](start-local-streamlit-app) once completed.
+Local usage of the Streamlit app offers Snowflake connections via [Snowflake connections.toml](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file) OR environment variables. The app will first check for a connections.toml before using environment variables. Please follow the setup for your desired method and continue to [Start Local Streamlit App](#local-deployment) once completed.
 
 ### Setup connections.toml (Option 1)
 The Snowflake Python connector lets you add connection definitions to a connections.toml configuration file. A connection definition refers to a collection of connection-related parameters. Snowflake Python libraries currently support TOML version 1.0.0.
