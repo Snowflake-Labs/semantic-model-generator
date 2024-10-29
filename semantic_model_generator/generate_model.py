@@ -207,11 +207,12 @@ def raw_schema_to_semantic_context(
     # This is done concurrently because `process_table` is I/O bound, executing potentially long-running
     # queries to fetch column metadata and sample values.
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_table = [
+        table_futures = [
             executor.submit(process_table, table, conn, n_sample_values)
             for table in base_tables
         ]
-        for future in concurrent.futures.as_completed(future_to_table):
+        concurrent.futures.wait(table_futures)
+        for future in table_futures:
             table_object = future.result()
             table_objects.append(table_object)
 
