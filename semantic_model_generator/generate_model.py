@@ -203,18 +203,17 @@ def raw_schema_to_semantic_context(
     start_time = time.time()
     table_objects = []
 
+    # Create a Table object representation for each provided table name.
+    # This is done concurrently because `process_table` is I/O bound, executing potentially long-running
+    # queries to fetch column metadata and sample values.
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_table = {
-            executor.submit(process_table, table, conn, n_sample_values): table
+        future_to_table = [
+            executor.submit(process_table, table, conn, n_sample_values)
             for table in base_tables
-        }
+        ]
         for future in concurrent.futures.as_completed(future_to_table):
-            table = future_to_table[future]
-            try:
-                table_object = future.result()
-                table_objects.append(table_object)
-            except Exception as exc:
-                logger.error(f"Table {table} generated an exception: {exc}")
+            table_object = future.result()
+            table_objects.append(table_object)
 
     placeholder_relationships = _get_placeholder_joins() if allow_joins else None
     context = semantic_model_pb2.SemanticModel(
