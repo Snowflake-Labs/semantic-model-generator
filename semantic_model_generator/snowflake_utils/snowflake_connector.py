@@ -146,7 +146,6 @@ def get_table_representation(
     table_index: int,
     ndv_per_column: int,
     columns_df: pd.DataFrame,
-    max_workers: int,
 ) -> Table:
     table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
 
@@ -160,7 +159,7 @@ def get_table_representation(
             ndv=ndv_per_column,
         )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_col_index = {
             executor.submit(_get_col, col_index, column_row): col_index
             for col_index, (_, column_row) in enumerate(columns_df.iterrows())
