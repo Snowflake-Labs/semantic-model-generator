@@ -307,6 +307,9 @@ message VerifiedQuery {
   int64 verified_at = 5 [(optional) = true];
   // Name of the person who verified this query.
   string verified_by = 6 [(optional) = true];
+  // Whether to always include in this question in the suggested questions
+  // module
+  bool use_as_onboarding_question = 7 [(optional) = true];
 }
 
 // VerifiedQueryRepository is a simply a collection of verified queries.
