@@ -1057,7 +1057,7 @@ def download_yaml(file_name: str, stage_name: str) -> str:
         )
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")
-        with open(tmp_file_path, "r") as temp_file:
+        with open(tmp_file_path, "r", encoding='utf-8') as temp_file:
             # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
             yaml_str = temp_file.read()
             return yaml_str
