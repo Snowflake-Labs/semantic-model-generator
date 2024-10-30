@@ -75,27 +75,40 @@ def _is_identifier_quoted(col_name: str) -> bool:
     return '"' in col_name
 
 
-def remove_ltable_cte(sql_w_ltable_cte: str) -> str:
-    """Given a sql with prefix'd logical table conversion CTE,
-    return:
-        sql_without_logical_cte: the sql without the logical table conversion CTE.
+def remove_ltable_cte(sql_w_ltable_cte: str, table_names: list[str]) -> str:
+    """
+    Given a SQL with prefix'd logical table conversion CTE(s), remove the logical table conversions.
+    Args:
+        sql_w_ltable_cte: the sql with logical table conversion CTE(s).
+        table_names: list of tables in the semantic model.
 
-    Raises:
-        ValueError: If didn't find any CTE or parsed first CTE is not logical table CTE.
+    Returns: the sql without the logical table conversion CTE.
+    Raises: ValueError if didn't find any CTE or parsed first CTE is not logical table CTE.
     """
     ast = sqlglot.parse_one(sql_w_ltable_cte, read=Snowflake)
     with_ = ast.args.get("with")
     if with_ is None:
-        raise ValueError("Must contain the logical CTE.")
+        raise ValueError("Analyst queries must contain the logical CTE.")
     if not is_logical_table(with_.expressions[0].alias):
-        raise ValueError("Must contain the logical CTE.")
+        raise ValueError("Analyst queries must contain the logical CTE.")
 
-    if len(with_.expressions) == 1:
-        # If only one cte, remove full with clause
-        with_.pop()
-    else:
-        # Otherwise simply remove the first cte.
-        with_.expressions[0].pop()
+    table_names_lower = [table_name.lower() for table_name in table_names]
+    # Iterate through all CTEs, and filter out logical table CTEs.
+    # This is done by checking if the CTE alias starts with the logical table prefix and if the alias is in a table in the semantic model.
+    non_logical_cte = [
+        cte
+        for cte in with_.expressions
+        if not is_logical_table(cte.alias)
+        or cte.alias.replace(_LOGICAL_TABLE_PREFIX, "").lower() not in table_names_lower
+    ]
+
+    # Replace the original expressions list with the filtered list
+    with_.set("expressions", non_logical_cte)
+
+    # If no expressions are left for whatever reason, remove the entire WITH clause.
+    if not with_.expressions:
+        ast.set("with", None)
+
     sql_without_logical_cte = ast.sql(dialect=Snowflake, pretty=True)
     return sql_without_logical_cte  # type: ignore [no-any-return]
 
