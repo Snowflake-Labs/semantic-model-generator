@@ -1,7 +1,7 @@
 import json
 import time
 from enum import Enum
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
