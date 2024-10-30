@@ -1,3 +1,8 @@
+from streamlit import config 
+# Set minCachedMessageSize to 500 MB to disable forward message cache:
+# st.set_config would trigger an error, only the set_config from config module works
+config.set_option("global.minCachedMessageSize", 500 * 1e6)
+
 import json
 import time
 from typing import Any, Dict, List, Optional
