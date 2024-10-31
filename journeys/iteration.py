@@ -1,4 +1,5 @@
-from streamlit import config 
+from streamlit import config
+
 # Set minCachedMessageSize to 500 MB to disable forward message cache:
 # st.set_config would trigger an error, only the set_config from config module works
 config.set_option("global.minCachedMessageSize", 500 * 1e6)
@@ -663,6 +664,7 @@ def show() -> None:
             if "last_saved_yaml" not in st.session_state:
                 st.session_state["last_saved_yaml"] = yaml
 
+        st.write(st.session_state["logs"])
         left, right = st.columns(2)
         yaml_container = left.container(height=760)
         chat_container = right.container(height=760)

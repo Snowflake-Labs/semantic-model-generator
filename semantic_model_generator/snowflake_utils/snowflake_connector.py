@@ -1,9 +1,14 @@
 import concurrent.futures
+import multiprocessing
+import threading
+import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List, Optional, TypeVar
+from typing import Any, Dict, Generator, List, Optional, TypeVar, Tuple
 
 import pandas as pd
+from joblib import Parallel, delayed
 from loguru import logger
 from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
@@ -146,11 +151,17 @@ def get_table_representation(
     table_index: int,
     ndv_per_column: int,
     columns_df: pd.DataFrame,
-) -> Table:
-    table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
+) -> Tuple[Table, list[str]]:
+    table_comment = (
+        "test2 "  # _get_table_comment(conn, schema_name, table_name, columns_df)
+    )
 
-    def _get_col(col_index: int, column_row: pd.Series) -> Column:
-        return _get_column_representation(
+    def _get_col(col_index: int, column_row: pd.Series) -> Tuple[Column, str]:
+        start_time = time.time()
+        start_time_formatted = time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime(start_time)
+        )
+        repy = _get_column_representation(
             conn=conn,
             schema_name=schema_name,
             table_name=table_name,
@@ -158,25 +169,27 @@ def get_table_representation(
             column_index=col_index,
             ndv=ndv_per_column,
         )
+        end_time = time.time()
+        end_time_formatted = time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime(end_time)
+        )
+        return (
+            repy,
+            f"Process ID: {threading.current_thread().name}, Finish processing column: {table_name}.{column_row[_COLUMN_NAME_COL]}, StartTime: {start_time_formatted}, EndTime: {end_time_formatted}",
+        )
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_col_index = {
-            executor.submit(_get_col, col_index, column_row): col_index
-            for col_index, (_, column_row) in enumerate(columns_df.iterrows())
-        }
-        index_and_column = []
-        for future in concurrent.futures.as_completed(future_to_col_index):
-            col_index = future_to_col_index[future]
-            column = future.result()
-            index_and_column.append((col_index, column))
-        columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
+    # Run _get_table_comment and _get_col in parallel
+    columns = Parallel(n_jobs=-1, backend="threading")(
+        delayed(_get_col)(col_index, column_row)
+        for col_index, (_, column_row) in enumerate(columns_df.iterrows())
+    )
 
     return Table(
         id_=table_index,
         name=table_name,
         comment=table_comment,
-        columns=columns,
-    )
+        columns=[col[0] for col in columns],
+    ), [col[1] for col in columns]
 
 
 def _get_column_representation(
@@ -190,6 +203,8 @@ def _get_column_representation(
     column_name = column_row[_COLUMN_NAME_COL]
     column_datatype = column_row[_DATATYPE_COL]
     column_values = None
+    column_comment = "test"  # _get_column_comment(conn, column_row, column_values)
+
     if ndv > 0:
         # Pull sample values.
         try:
@@ -214,8 +229,6 @@ def _get_column_representation(
                     )
         except Exception as e:
             logger.error(f"unable to get values: {e}")
-
-    column_comment = _get_column_comment(conn, column_row, column_values)
 
     column = Column(
         id_=column_index,

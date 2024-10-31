@@ -1,11 +1,15 @@
-import concurrent.futures
+import multiprocessing
+import threading
+
+import streamlit as st
 import os
 import time
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
+from joblib import Parallel, delayed
 from loguru import logger
-from snowflake.connector import SnowflakeConnection
+from snowflake.connector import SnowflakeConnection, connect
 
 from semantic_model_generator.data_processing import data_types, proto_utils
 from semantic_model_generator.protos import semantic_model_pb2
@@ -164,7 +168,12 @@ def _raw_table_to_semantic_context_table(
 
 def process_table(
     table: str, conn: SnowflakeConnection, n_sample_values: int
-) -> semantic_model_pb2.Table:
+) -> Tuple[semantic_model_pb2.Table, str]:
+    start_time = time.time()
+    start_time_formatted = datetime.fromtimestamp(start_time).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
     fqn_table = create_fqn_table(table)
     valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
         conn=conn,
@@ -178,7 +187,7 @@ def process_table(
         valid_schemas_tables_columns_df["TABLE_NAME"] == fqn_table.table
     ]
 
-    raw_table = get_table_representation(
+    raw_table, logs = get_table_representation(
         conn=conn,
         schema_name=fqn_table.database + "." + fqn_table.schema_name,
         table_name=fqn_table.table,
@@ -186,10 +195,18 @@ def process_table(
         ndv_per_column=n_sample_values,
         columns_df=valid_columns_df_this_table,
     )
-    return _raw_table_to_semantic_context_table(
-        database=fqn_table.database,
-        schema=fqn_table.schema_name,
-        raw_table=raw_table,
+
+    end_time = time.time()
+    end_time_formatted = datetime.fromtimestamp(end_time).strftime("%Y-%m-%d %H:%M:%S")
+
+    return (
+        _raw_table_to_semantic_context_table(
+            database=fqn_table.database,
+            schema=fqn_table.schema_name,
+            raw_table=raw_table,
+        ),
+        f"Process ID: {threading.current_thread().name}, Finish processing table: {table}, StartTime: {start_time_formatted}, EndTime: {end_time_formatted}"
+        + "\n".join(logs),
     )
 
 
@@ -201,30 +218,25 @@ def raw_schema_to_semantic_context(
     allow_joins: Optional[bool] = False,
 ) -> semantic_model_pb2.SemanticModel:
     start_time = time.time()
-    table_objects = []
+    st.session_state["logs"] = []
 
     # Create a Table object representation for each provided table name.
     # This is done concurrently because `process_table` is I/O bound, executing potentially long-running
     # queries to fetch column metadata and sample values.
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        table_futures = [
-            executor.submit(process_table, table, conn, n_sample_values)
-            for table in base_tables
-        ]
-        concurrent.futures.wait(table_futures)
-        for future in table_futures:
-            table_object = future.result()
-            table_objects.append(table_object)
+    table_objects = Parallel(n_jobs=-1, backend="threading")(
+        delayed(process_table)(table, conn, n_sample_values) for table in base_tables
+    )
 
     placeholder_relationships = _get_placeholder_joins() if allow_joins else None
     context = semantic_model_pb2.SemanticModel(
         name=semantic_model_name,
-        tables=table_objects,
+        tables=[obj[0] for obj in table_objects],
         relationships=placeholder_relationships,
     )
     end_time = time.time()
     elapsed_time = end_time - start_time
     logger.info(f"Time taken to generate semantic model: {elapsed_time} seconds.")
+    st.session_state["logs"] = [obj[1] for obj in table_objects]
     return context
 
 
