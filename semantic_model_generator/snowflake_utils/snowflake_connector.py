@@ -159,7 +159,7 @@ def get_table_representation(
             ndv=ndv_per_column,
         )
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_col_index = {
             executor.submit(_get_col, col_index, column_row): col_index
             for col_index, (_, column_row) in enumerate(columns_df.iterrows())

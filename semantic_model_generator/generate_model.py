@@ -206,7 +206,7 @@ def raw_schema_to_semantic_context(
     # Create a Table object representation for each provided table name.
     # This is done concurrently because `process_table` is I/O bound, executing potentially long-running
     # queries to fetch column metadata and sample values.
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         table_futures = [
             executor.submit(process_table, table, conn, n_sample_values)
             for table in base_tables
