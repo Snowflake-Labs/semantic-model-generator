@@ -289,6 +289,8 @@ message SemanticModel {
   repeated Relationship relationships = 5 [(optional) = true];
   // List of verified queries for this semantic model.
   repeated VerifiedQuery verified_queries = 6 [(optional) = true];
+  // Custom instructions that will be applied to the final SQL generation.
+  string custom_instructions = 7 [(optional) = true];
 }
 
 // VerifiedQuery represents a (question, sql) pair that has been manually

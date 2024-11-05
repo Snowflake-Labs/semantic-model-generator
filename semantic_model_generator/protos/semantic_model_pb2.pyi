@@ -250,20 +250,22 @@ class Relationship(_message.Message):
     def __init__(self, name: _Optional[str] = ..., left_table: _Optional[str] = ..., right_table: _Optional[str] = ..., relationship_columns: _Optional[_Iterable[_Union[RelationKey, _Mapping]]] = ..., join_type: _Optional[_Union[JoinType, str]] = ..., relationship_type: _Optional[_Union[RelationshipType, str]] = ...) -> None: ...
 
 class SemanticModel(_message.Message):
-    __slots__ = ("name", "description", "tables", "metrics", "relationships", "verified_queries")
+    __slots__ = ("name", "description", "tables", "metrics", "relationships", "verified_queries", "custom_instructions")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     TABLES_FIELD_NUMBER: _ClassVar[int]
     METRICS_FIELD_NUMBER: _ClassVar[int]
     RELATIONSHIPS_FIELD_NUMBER: _ClassVar[int]
     VERIFIED_QUERIES_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_INSTRUCTIONS_FIELD_NUMBER: _ClassVar[int]
     name: str
     description: str
     tables: _containers.RepeatedCompositeFieldContainer[Table]
     metrics: _containers.RepeatedCompositeFieldContainer[Metric]
     relationships: _containers.RepeatedCompositeFieldContainer[Relationship]
     verified_queries: _containers.RepeatedCompositeFieldContainer[VerifiedQuery]
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., metrics: _Optional[_Iterable[_Union[Metric, _Mapping]]] = ..., relationships: _Optional[_Iterable[_Union[Relationship, _Mapping]]] = ..., verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ...) -> None: ...
+    custom_instructions: str
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., metrics: _Optional[_Iterable[_Union[Metric, _Mapping]]] = ..., relationships: _Optional[_Iterable[_Union[Relationship, _Mapping]]] = ..., verified_queries: _Optional[_Iterable[_Union[VerifiedQuery, _Mapping]]] = ..., custom_instructions: _Optional[str] = ...) -> None: ...
 
 class VerifiedQuery(_message.Message):
     __slots__ = ("name", "semantic_model_name", "question", "sql", "verified_at", "verified_by", "use_as_onboarding_question")
