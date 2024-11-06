@@ -183,9 +183,11 @@ def display_content(
                 sql = prettify_sql(sql)
                 with st.container(height=250, border=False):
                     st.code(item["statement"], language="sql")
-
-                df = pd.read_sql(sql, conn)
-                st.dataframe(df, hide_index=True)
+                try:
+                    df = pd.read_sql(sql, conn)
+                    st.dataframe(df, hide_index=True)
+                except Exception as e:
+                    st.error(f"Failed to execute SQL: {e}")
         else:
             logger.warning(f"Unknown content type: {item['type']}")
             st.write(item)
