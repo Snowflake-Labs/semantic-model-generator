@@ -1,0 +1,12 @@
+dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ py -0
+ -V:3.13 *        Python 3.13 (64-bit)
+ -V:3.11          Python 3.11 (64-bit)
+ -V:3.10          Python 3.10 (Store)
+
+ dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ py -3.11 -m venv streamlit_env
+
+dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ source streamlit_env/Scripts/activate
+
