@@ -10,3 +10,19 @@ $ py -3.11 -m venv streamlit_env
 dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
 $ source streamlit_env/Scripts/activate
 
+(streamlit_env) 
+dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ pip install .
+
+(streamlit_env)
+dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ pip install streamlit
+
+(streamlit_env) 
+dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ python -m streamlit run app.py
+
+(streamlit_env) 
+dansi@DESKTOP-504011A MINGW64 ~/semantic-model-generator (main)
+$ deactivate
+
