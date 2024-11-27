@@ -70,7 +70,7 @@ class RetrievalResult(_message.Message):
     def __init__(self, value: _Optional[str] = ..., score: _Optional[float] = ...) -> None: ...
 
 class Column(_message.Message):
-    __slots__ = ("name", "synonyms", "description", "expr", "data_type", "kind", "unique", "default_aggregation", "sample_values", "index_and_retrieve_values", "retrieved_literals", "cortex_search_service_name")
+    __slots__ = ("name", "synonyms", "description", "expr", "data_type", "kind", "unique", "default_aggregation", "sample_values", "index_and_retrieve_values", "retrieved_literals", "cortex_search_service_name", "cortex_search_service")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SYNONYMS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -83,6 +83,7 @@ class Column(_message.Message):
     INDEX_AND_RETRIEVE_VALUES_FIELD_NUMBER: _ClassVar[int]
     RETRIEVED_LITERALS_FIELD_NUMBER: _ClassVar[int]
     CORTEX_SEARCH_SERVICE_NAME_FIELD_NUMBER: _ClassVar[int]
+    CORTEX_SEARCH_SERVICE_FIELD_NUMBER: _ClassVar[int]
     name: str
     synonyms: _containers.RepeatedScalarFieldContainer[str]
     description: str
@@ -95,7 +96,8 @@ class Column(_message.Message):
     index_and_retrieve_values: bool
     retrieved_literals: _containers.RepeatedCompositeFieldContainer[RetrievalResult]
     cortex_search_service_name: str
-    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., kind: _Optional[_Union[ColumnKind, str]] = ..., unique: bool = ..., default_aggregation: _Optional[_Union[AggregationType, str]] = ..., sample_values: _Optional[_Iterable[str]] = ..., index_and_retrieve_values: bool = ..., retrieved_literals: _Optional[_Iterable[_Union[RetrievalResult, _Mapping]]] = ..., cortex_search_service_name: _Optional[str] = ...) -> None: ...
+    cortex_search_service: CortexSearchService
+    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., kind: _Optional[_Union[ColumnKind, str]] = ..., unique: bool = ..., default_aggregation: _Optional[_Union[AggregationType, str]] = ..., sample_values: _Optional[_Iterable[str]] = ..., index_and_retrieve_values: bool = ..., retrieved_literals: _Optional[_Iterable[_Union[RetrievalResult, _Mapping]]] = ..., cortex_search_service_name: _Optional[str] = ..., cortex_search_service: _Optional[_Union[CortexSearchService, _Mapping]] = ...) -> None: ...
 
 class Dimension(_message.Message):
     __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values", "cortex_search_service_name")
@@ -116,6 +118,18 @@ class Dimension(_message.Message):
     sample_values: _containers.RepeatedScalarFieldContainer[str]
     cortex_search_service_name: str
     def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., unique: bool = ..., sample_values: _Optional[_Iterable[str]] = ..., cortex_search_service_name: _Optional[str] = ...) -> None: ...
+
+class CortexSearchService(_message.Message):
+    __slots__ = ("database", "schema", "service", "literal_column")
+    DATABASE_FIELD_NUMBER: _ClassVar[int]
+    SCHEMA_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_FIELD_NUMBER: _ClassVar[int]
+    LITERAL_COLUMN_FIELD_NUMBER: _ClassVar[int]
+    database: str
+    schema: str
+    service: str
+    literal_column: str
+    def __init__(self, database: _Optional[str] = ..., schema: _Optional[str] = ..., service: _Optional[str] = ..., literal_column: _Optional[str] = ...) -> None: ...
 
 class TimeDimension(_message.Message):
     __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values")
