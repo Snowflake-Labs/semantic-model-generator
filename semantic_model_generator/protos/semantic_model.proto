@@ -80,8 +80,10 @@ message Column {
   // Retrieved literals of this column.
   repeated RetrievalResult retrieved_literals = 11 [(optional) = true];
 
-  // Name of a Cortex Search Service configured on this column.
-  string cortex_search_service_name = 12 [(optional) = true];
+  // A Cortex Search Service configured on this column to retrieve literals.
+  string cortex_search_service_name = 12
+  [(optional) = true, deprecated = true];
+  CortexSearchService cortex_search_service = 13 [(optional) = true];
 }
 
 // Dimension columns contain categorical values (e.g. state, user_type,
@@ -107,6 +109,14 @@ message Dimension {
   repeated string sample_values = 7 [(optional) = true];
   // Name of a Cortex Search Service configured on this column.
   string cortex_search_service_name = 9 [(optional) = true];
+}
+
+// Fully qualified Cortex Search Service name.
+message CortexSearchService {
+  string database = 1 [(optional) = true];
+  string schema = 2 [(optional) = true];
+  string service = 3;
+  string literal_column = 4 [(optional) = true];
 }
 
 // Time dimension columns contain time values (e.g. sale_date, created_at,

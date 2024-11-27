@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import descriptor_pb2 as google_dot_protobuf_dot_descriptor__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14semantic_model.proto\x12\x18semantic_model_generator\x1a google/protobuf/descriptor.proto\"/\n\x0fRetrievalResult\x12\r\n\x05value\x18\x01 \x01(\t\x12\r\n\x05score\x18\x02 \x01(\x02\"\xcb\x03\n\x06\x43olumn\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12\x32\n\x04kind\x18\x06 \x01(\x0e\x32$.semantic_model_generator.ColumnKind\x12\x14\n\x06unique\x18\x07 \x01(\x08\x42\x04\x90\x82\x19\x01\x12L\n\x13\x64\x65\x66\x61ult_aggregation\x18\x08 \x01(\x0e\x32).semantic_model_generator.AggregationTypeB\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\t \x03(\tB\x04\x90\x82\x19\x01\x12\'\n\x19index_and_retrieve_values\x18\n \x01(\x08\x42\x04\x90\x82\x19\x01\x12K\n\x12retrieved_literals\x18\x0b \x03(\x0b\x32).semantic_model_generator.RetrievalResultB\x04\x90\x82\x19\x01\x12(\n\x1a\x63ortex_search_service_name\x18\x0c \x01(\tB\x04\x90\x82\x19\x01\"\xd6\x01\n\tDimension\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12\x14\n\x06unique\x18\x06 \x01(\x08\x42\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\x07 \x03(\tB\x04\x90\x82\x19\x01\x12(\n\x1a\x63ortex_search_service_name\x18\t \x01(\tB\x04\x90\x82\x19\x01\"\xb0\x01\n\rTimeDimension\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12\x14\n\x06unique\x18\x06 \x01(\x08\x42\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\x07 \x03(\tB\x04\x90\x82\x19\x01\"\xe2\x01\n\x07Measure\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12L\n\x13\x64\x65\x66\x61ult_aggregation\x18\x06 \x01(\x0e\x32).semantic_model_generator.AggregationTypeB\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\x07 \x03(\tB\x04\x90\x82\x19\x01\"b\n\x0bNamedFilter\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\"F\n\x13\x46ullyQualifiedTable\x12\x10\n\x08\x64\x61tabase\x18\x01 \x01(\t\x12\x0e\n\x06schema\x18\x02 \x01(\t\x12\r\n\x05table\x18\x03 \x01(\t\"\x1d\n\nPrimaryKey\x12\x0f\n\x07\x63olumns\x18\x01 \x03(\t\"\x8b\x04\n\x05Table\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x41\n\nbase_table\x18\x04 \x01(\x0b\x32-.semantic_model_generator.FullyQualifiedTable\x12\x37\n\x07\x63olumns\x18\x05 \x03(\x0b\x32 .semantic_model_generator.ColumnB\x04\x90\x82\x19\x01\x12=\n\ndimensions\x18\t \x03(\x0b\x32#.semantic_model_generator.DimensionB\x04\x90\x82\x19\x01\x12\x46\n\x0ftime_dimensions\x18\n \x03(\x0b\x32\'.semantic_model_generator.TimeDimensionB\x04\x90\x82\x19\x01\x12\x39\n\x08measures\x18\x0b \x03(\x0b\x32!.semantic_model_generator.MeasureB\x04\x90\x82\x19\x01\x12?\n\x0bprimary_key\x18\x06 \x01(\x0b\x32$.semantic_model_generator.PrimaryKeyB\x04\x90\x82\x19\x01\x12<\n\x07\x66ilters\x18\x08 \x03(\x0b\x32%.semantic_model_generator.NamedFilterB\x04\x90\x82\x19\x01\"\xa2\x01\n\x06Metric\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12=\n\x06\x66ilter\x18\x05 \x01(\x0b\x32\'.semantic_model_generator.MetricsFilterB\x04\x90\x82\x19\x01\"#\n\rMetricsFilter\x12\x12\n\x04\x65xpr\x18\x01 \x01(\tB\x04\x98\x82\x19\x01\"8\n\x0bRelationKey\x12\x13\n\x0bleft_column\x18\x01 \x01(\t\x12\x14\n\x0cright_column\x18\x02 \x01(\t\"\x88\x02\n\x0cRelationship\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x12\n\nleft_table\x18\x02 \x01(\t\x12\x13\n\x0bright_table\x18\x03 \x01(\t\x12\x43\n\x14relationship_columns\x18\x07 \x03(\x0b\x32%.semantic_model_generator.RelationKey\x12\x35\n\tjoin_type\x18\x05 \x01(\x0e\x32\".semantic_model_generator.JoinType\x12\x45\n\x11relationship_type\x18\x06 \x01(\x0e\x32*.semantic_model_generator.RelationshipType\"\xd3\x02\n\rSemanticModel\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x19\n\x0b\x64\x65scription\x18\x02 \x01(\tB\x04\x90\x82\x19\x01\x12/\n\x06tables\x18\x03 \x03(\x0b\x32\x1f.semantic_model_generator.Table\x12\x37\n\x07metrics\x18\x04 \x03(\x0b\x32 .semantic_model_generator.MetricB\x04\x90\x82\x19\x01\x12\x43\n\rrelationships\x18\x05 \x03(\x0b\x32&.semantic_model_generator.RelationshipB\x04\x90\x82\x19\x01\x12G\n\x10verified_queries\x18\x06 \x03(\x0b\x32\'.semantic_model_generator.VerifiedQueryB\x04\x90\x82\x19\x01\x12!\n\x13\x63ustom_instructions\x18\x07 \x01(\tB\x04\x90\x82\x19\x01\"\xc5\x01\n\rVerifiedQuery\x12\x0c\n\x04name\x18\x01 \x01(\t\x12!\n\x13semantic_model_name\x18\x02 \x01(\tB\x04\x90\x82\x19\x01\x12\x10\n\x08question\x18\x03 \x01(\t\x12\x11\n\x03sql\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x19\n\x0bverified_at\x18\x05 \x01(\x03\x42\x04\x90\x82\x19\x01\x12\x19\n\x0bverified_by\x18\x06 \x01(\tB\x04\x90\x82\x19\x01\x12(\n\x1ause_as_onboarding_question\x18\x07 \x01(\x08\x42\x04\x90\x82\x19\x01\"\\\n\x17VerifiedQueryRepository\x12\x41\n\x10verified_queries\x18\x01 \x03(\x0b\x32\'.semantic_model_generator.VerifiedQuery*~\n\x0f\x41ggregationType\x12\x1c\n\x18\x61ggregation_type_unknown\x10\x00\x12\x07\n\x03sum\x10\x01\x12\x07\n\x03\x61vg\x10\x02\x12\n\n\x06median\x10\x07\x12\x07\n\x03min\x10\x03\x12\x07\n\x03max\x10\x04\x12\t\n\x05\x63ount\x10\x05\x12\x12\n\x0e\x63ount_distinct\x10\x06*U\n\nColumnKind\x12\x17\n\x13\x63olumn_kind_unknown\x10\x00\x12\r\n\tdimension\x10\x01\x12\x0b\n\x07measure\x10\x02\x12\x12\n\x0etime_dimension\x10\x03*<\n\x08JoinType\x12\x15\n\x11join_type_unknown\x10\x00\x12\t\n\x05inner\x10\x01\x12\x0e\n\nleft_outer\x10\x02*R\n\x10RelationshipType\x12\x1d\n\x19relationship_type_unknown\x10\x00\x12\x0e\n\none_to_one\x10\x01\x12\x0f\n\x0bmany_to_one\x10\x02:4\n\x08optional\x12\x1d.google.protobuf.FieldOptions\x18\xa2\x90\x03 \x01(\x08\x88\x01\x01::\n\x0esql_expression\x12\x1d.google.protobuf.FieldOptions\x18\xa3\x90\x03 \x01(\x08\x88\x01\x01:4\n\x08id_field\x12\x1d.google.protobuf.FieldOptions\x18\xa4\x90\x03 \x01(\x08\x88\x01\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14semantic_model.proto\x12\x18semantic_model_generator\x1a google/protobuf/descriptor.proto\"/\n\x0fRetrievalResult\x12\r\n\x05value\x18\x01 \x01(\t\x12\r\n\x05score\x18\x02 \x01(\x02\"\xa1\x04\n\x06\x43olumn\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12\x32\n\x04kind\x18\x06 \x01(\x0e\x32$.semantic_model_generator.ColumnKind\x12\x14\n\x06unique\x18\x07 \x01(\x08\x42\x04\x90\x82\x19\x01\x12L\n\x13\x64\x65\x66\x61ult_aggregation\x18\x08 \x01(\x0e\x32).semantic_model_generator.AggregationTypeB\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\t \x03(\tB\x04\x90\x82\x19\x01\x12\'\n\x19index_and_retrieve_values\x18\n \x01(\x08\x42\x04\x90\x82\x19\x01\x12K\n\x12retrieved_literals\x18\x0b \x03(\x0b\x32).semantic_model_generator.RetrievalResultB\x04\x90\x82\x19\x01\x12*\n\x1a\x63ortex_search_service_name\x18\x0c \x01(\tB\x06\x18\x01\x90\x82\x19\x01\x12R\n\x15\x63ortex_search_service\x18\r \x01(\x0b\x32-.semantic_model_generator.CortexSearchServiceB\x04\x90\x82\x19\x01\"\xd6\x01\n\tDimension\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12\x14\n\x06unique\x18\x06 \x01(\x08\x42\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\x07 \x03(\tB\x04\x90\x82\x19\x01\x12(\n\x1a\x63ortex_search_service_name\x18\t \x01(\tB\x04\x90\x82\x19\x01\"r\n\x13\x43ortexSearchService\x12\x16\n\x08\x64\x61tabase\x18\x01 \x01(\tB\x04\x90\x82\x19\x01\x12\x14\n\x06schema\x18\x02 \x01(\tB\x04\x90\x82\x19\x01\x12\x0f\n\x07service\x18\x03 \x01(\t\x12\x1c\n\x0eliteral_column\x18\x04 \x01(\tB\x04\x90\x82\x19\x01\"\xb0\x01\n\rTimeDimension\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12\x14\n\x06unique\x18\x06 \x01(\x08\x42\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\x07 \x03(\tB\x04\x90\x82\x19\x01\"\xe2\x01\n\x07Measure\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x11\n\tdata_type\x18\x05 \x01(\t\x12L\n\x13\x64\x65\x66\x61ult_aggregation\x18\x06 \x01(\x0e\x32).semantic_model_generator.AggregationTypeB\x04\x90\x82\x19\x01\x12\x1b\n\rsample_values\x18\x07 \x03(\tB\x04\x90\x82\x19\x01\"b\n\x0bNamedFilter\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\"F\n\x13\x46ullyQualifiedTable\x12\x10\n\x08\x64\x61tabase\x18\x01 \x01(\t\x12\x0e\n\x06schema\x18\x02 \x01(\t\x12\r\n\x05table\x18\x03 \x01(\t\"\x1d\n\nPrimaryKey\x12\x0f\n\x07\x63olumns\x18\x01 \x03(\t\"\x8b\x04\n\x05Table\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x41\n\nbase_table\x18\x04 \x01(\x0b\x32-.semantic_model_generator.FullyQualifiedTable\x12\x37\n\x07\x63olumns\x18\x05 \x03(\x0b\x32 .semantic_model_generator.ColumnB\x04\x90\x82\x19\x01\x12=\n\ndimensions\x18\t \x03(\x0b\x32#.semantic_model_generator.DimensionB\x04\x90\x82\x19\x01\x12\x46\n\x0ftime_dimensions\x18\n \x03(\x0b\x32\'.semantic_model_generator.TimeDimensionB\x04\x90\x82\x19\x01\x12\x39\n\x08measures\x18\x0b \x03(\x0b\x32!.semantic_model_generator.MeasureB\x04\x90\x82\x19\x01\x12?\n\x0bprimary_key\x18\x06 \x01(\x0b\x32$.semantic_model_generator.PrimaryKeyB\x04\x90\x82\x19\x01\x12<\n\x07\x66ilters\x18\x08 \x03(\x0b\x32%.semantic_model_generator.NamedFilterB\x04\x90\x82\x19\x01\"\xa2\x01\n\x06Metric\x12\x12\n\x04name\x18\x01 \x01(\tB\x04\xa0\x82\x19\x01\x12\x16\n\x08synonyms\x18\x02 \x03(\tB\x04\x90\x82\x19\x01\x12\x19\n\x0b\x64\x65scription\x18\x03 \x01(\tB\x04\x90\x82\x19\x01\x12\x12\n\x04\x65xpr\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12=\n\x06\x66ilter\x18\x05 \x01(\x0b\x32\'.semantic_model_generator.MetricsFilterB\x04\x90\x82\x19\x01\"#\n\rMetricsFilter\x12\x12\n\x04\x65xpr\x18\x01 \x01(\tB\x04\x98\x82\x19\x01\"8\n\x0bRelationKey\x12\x13\n\x0bleft_column\x18\x01 \x01(\t\x12\x14\n\x0cright_column\x18\x02 \x01(\t\"\x88\x02\n\x0cRelationship\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x12\n\nleft_table\x18\x02 \x01(\t\x12\x13\n\x0bright_table\x18\x03 \x01(\t\x12\x43\n\x14relationship_columns\x18\x07 \x03(\x0b\x32%.semantic_model_generator.RelationKey\x12\x35\n\tjoin_type\x18\x05 \x01(\x0e\x32\".semantic_model_generator.JoinType\x12\x45\n\x11relationship_type\x18\x06 \x01(\x0e\x32*.semantic_model_generator.RelationshipType\"\xd3\x02\n\rSemanticModel\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x19\n\x0b\x64\x65scription\x18\x02 \x01(\tB\x04\x90\x82\x19\x01\x12/\n\x06tables\x18\x03 \x03(\x0b\x32\x1f.semantic_model_generator.Table\x12\x37\n\x07metrics\x18\x04 \x03(\x0b\x32 .semantic_model_generator.MetricB\x04\x90\x82\x19\x01\x12\x43\n\rrelationships\x18\x05 \x03(\x0b\x32&.semantic_model_generator.RelationshipB\x04\x90\x82\x19\x01\x12G\n\x10verified_queries\x18\x06 \x03(\x0b\x32\'.semantic_model_generator.VerifiedQueryB\x04\x90\x82\x19\x01\x12!\n\x13\x63ustom_instructions\x18\x07 \x01(\tB\x04\x90\x82\x19\x01\"\xc5\x01\n\rVerifiedQuery\x12\x0c\n\x04name\x18\x01 \x01(\t\x12!\n\x13semantic_model_name\x18\x02 \x01(\tB\x04\x90\x82\x19\x01\x12\x10\n\x08question\x18\x03 \x01(\t\x12\x11\n\x03sql\x18\x04 \x01(\tB\x04\x98\x82\x19\x01\x12\x19\n\x0bverified_at\x18\x05 \x01(\x03\x42\x04\x90\x82\x19\x01\x12\x19\n\x0bverified_by\x18\x06 \x01(\tB\x04\x90\x82\x19\x01\x12(\n\x1ause_as_onboarding_question\x18\x07 \x01(\x08\x42\x04\x90\x82\x19\x01\"\\\n\x17VerifiedQueryRepository\x12\x41\n\x10verified_queries\x18\x01 \x03(\x0b\x32\'.semantic_model_generator.VerifiedQuery*~\n\x0f\x41ggregationType\x12\x1c\n\x18\x61ggregation_type_unknown\x10\x00\x12\x07\n\x03sum\x10\x01\x12\x07\n\x03\x61vg\x10\x02\x12\n\n\x06median\x10\x07\x12\x07\n\x03min\x10\x03\x12\x07\n\x03max\x10\x04\x12\t\n\x05\x63ount\x10\x05\x12\x12\n\x0e\x63ount_distinct\x10\x06*U\n\nColumnKind\x12\x17\n\x13\x63olumn_kind_unknown\x10\x00\x12\r\n\tdimension\x10\x01\x12\x0b\n\x07measure\x10\x02\x12\x12\n\x0etime_dimension\x10\x03*<\n\x08JoinType\x12\x15\n\x11join_type_unknown\x10\x00\x12\t\n\x05inner\x10\x01\x12\x0e\n\nleft_outer\x10\x02*R\n\x10RelationshipType\x12\x1d\n\x19relationship_type_unknown\x10\x00\x12\x0e\n\none_to_one\x10\x01\x12\x0f\n\x0bmany_to_one\x10\x02:4\n\x08optional\x12\x1d.google.protobuf.FieldOptions\x18\xa2\x90\x03 \x01(\x08\x88\x01\x01::\n\x0esql_expression\x12\x1d.google.protobuf.FieldOptions\x18\xa3\x90\x03 \x01(\x08\x88\x01\x01:4\n\x08id_field\x12\x1d.google.protobuf.FieldOptions\x18\xa4\x90\x03 \x01(\x08\x88\x01\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,7 +41,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_COLUMN'].fields_by_name['retrieved_literals']._options = None
   _globals['_COLUMN'].fields_by_name['retrieved_literals']._serialized_options = b'\220\202\031\001'
   _globals['_COLUMN'].fields_by_name['cortex_search_service_name']._options = None
-  _globals['_COLUMN'].fields_by_name['cortex_search_service_name']._serialized_options = b'\220\202\031\001'
+  _globals['_COLUMN'].fields_by_name['cortex_search_service_name']._serialized_options = b'\030\001\220\202\031\001'
+  _globals['_COLUMN'].fields_by_name['cortex_search_service']._options = None
+  _globals['_COLUMN'].fields_by_name['cortex_search_service']._serialized_options = b'\220\202\031\001'
   _globals['_DIMENSION'].fields_by_name['name']._options = None
   _globals['_DIMENSION'].fields_by_name['name']._serialized_options = b'\240\202\031\001'
   _globals['_DIMENSION'].fields_by_name['synonyms']._options = None
@@ -56,6 +58,12 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_DIMENSION'].fields_by_name['sample_values']._serialized_options = b'\220\202\031\001'
   _globals['_DIMENSION'].fields_by_name['cortex_search_service_name']._options = None
   _globals['_DIMENSION'].fields_by_name['cortex_search_service_name']._serialized_options = b'\220\202\031\001'
+  _globals['_CORTEXSEARCHSERVICE'].fields_by_name['database']._options = None
+  _globals['_CORTEXSEARCHSERVICE'].fields_by_name['database']._serialized_options = b'\220\202\031\001'
+  _globals['_CORTEXSEARCHSERVICE'].fields_by_name['schema']._options = None
+  _globals['_CORTEXSEARCHSERVICE'].fields_by_name['schema']._serialized_options = b'\220\202\031\001'
+  _globals['_CORTEXSEARCHSERVICE'].fields_by_name['literal_column']._options = None
+  _globals['_CORTEXSEARCHSERVICE'].fields_by_name['literal_column']._serialized_options = b'\220\202\031\001'
   _globals['_TIMEDIMENSION'].fields_by_name['name']._options = None
   _globals['_TIMEDIMENSION'].fields_by_name['name']._serialized_options = b'\240\202\031\001'
   _globals['_TIMEDIMENSION'].fields_by_name['synonyms']._options = None
@@ -136,44 +144,46 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_VERIFIEDQUERY'].fields_by_name['verified_by']._serialized_options = b'\220\202\031\001'
   _globals['_VERIFIEDQUERY'].fields_by_name['use_as_onboarding_question']._options = None
   _globals['_VERIFIEDQUERY'].fields_by_name['use_as_onboarding_question']._serialized_options = b'\220\202\031\001'
-  _globals['_AGGREGATIONTYPE']._serialized_start=3112
-  _globals['_AGGREGATIONTYPE']._serialized_end=3238
-  _globals['_COLUMNKIND']._serialized_start=3240
-  _globals['_COLUMNKIND']._serialized_end=3325
-  _globals['_JOINTYPE']._serialized_start=3327
-  _globals['_JOINTYPE']._serialized_end=3387
-  _globals['_RELATIONSHIPTYPE']._serialized_start=3389
-  _globals['_RELATIONSHIPTYPE']._serialized_end=3471
+  _globals['_AGGREGATIONTYPE']._serialized_start=3314
+  _globals['_AGGREGATIONTYPE']._serialized_end=3440
+  _globals['_COLUMNKIND']._serialized_start=3442
+  _globals['_COLUMNKIND']._serialized_end=3527
+  _globals['_JOINTYPE']._serialized_start=3529
+  _globals['_JOINTYPE']._serialized_end=3589
+  _globals['_RELATIONSHIPTYPE']._serialized_start=3591
+  _globals['_RELATIONSHIPTYPE']._serialized_end=3673
   _globals['_RETRIEVALRESULT']._serialized_start=84
   _globals['_RETRIEVALRESULT']._serialized_end=131
   _globals['_COLUMN']._serialized_start=134
-  _globals['_COLUMN']._serialized_end=593
-  _globals['_DIMENSION']._serialized_start=596
-  _globals['_DIMENSION']._serialized_end=810
-  _globals['_TIMEDIMENSION']._serialized_start=813
-  _globals['_TIMEDIMENSION']._serialized_end=989
-  _globals['_MEASURE']._serialized_start=992
-  _globals['_MEASURE']._serialized_end=1218
-  _globals['_NAMEDFILTER']._serialized_start=1220
-  _globals['_NAMEDFILTER']._serialized_end=1318
-  _globals['_FULLYQUALIFIEDTABLE']._serialized_start=1320
-  _globals['_FULLYQUALIFIEDTABLE']._serialized_end=1390
-  _globals['_PRIMARYKEY']._serialized_start=1392
-  _globals['_PRIMARYKEY']._serialized_end=1421
-  _globals['_TABLE']._serialized_start=1424
-  _globals['_TABLE']._serialized_end=1947
-  _globals['_METRIC']._serialized_start=1950
-  _globals['_METRIC']._serialized_end=2112
-  _globals['_METRICSFILTER']._serialized_start=2114
-  _globals['_METRICSFILTER']._serialized_end=2149
-  _globals['_RELATIONKEY']._serialized_start=2151
-  _globals['_RELATIONKEY']._serialized_end=2207
-  _globals['_RELATIONSHIP']._serialized_start=2210
-  _globals['_RELATIONSHIP']._serialized_end=2474
-  _globals['_SEMANTICMODEL']._serialized_start=2477
-  _globals['_SEMANTICMODEL']._serialized_end=2816
-  _globals['_VERIFIEDQUERY']._serialized_start=2819
-  _globals['_VERIFIEDQUERY']._serialized_end=3016
-  _globals['_VERIFIEDQUERYREPOSITORY']._serialized_start=3018
-  _globals['_VERIFIEDQUERYREPOSITORY']._serialized_end=3110
+  _globals['_COLUMN']._serialized_end=679
+  _globals['_DIMENSION']._serialized_start=682
+  _globals['_DIMENSION']._serialized_end=896
+  _globals['_CORTEXSEARCHSERVICE']._serialized_start=898
+  _globals['_CORTEXSEARCHSERVICE']._serialized_end=1012
+  _globals['_TIMEDIMENSION']._serialized_start=1015
+  _globals['_TIMEDIMENSION']._serialized_end=1191
+  _globals['_MEASURE']._serialized_start=1194
+  _globals['_MEASURE']._serialized_end=1420
+  _globals['_NAMEDFILTER']._serialized_start=1422
+  _globals['_NAMEDFILTER']._serialized_end=1520
+  _globals['_FULLYQUALIFIEDTABLE']._serialized_start=1522
+  _globals['_FULLYQUALIFIEDTABLE']._serialized_end=1592
+  _globals['_PRIMARYKEY']._serialized_start=1594
+  _globals['_PRIMARYKEY']._serialized_end=1623
+  _globals['_TABLE']._serialized_start=1626
+  _globals['_TABLE']._serialized_end=2149
+  _globals['_METRIC']._serialized_start=2152
+  _globals['_METRIC']._serialized_end=2314
+  _globals['_METRICSFILTER']._serialized_start=2316
+  _globals['_METRICSFILTER']._serialized_end=2351
+  _globals['_RELATIONKEY']._serialized_start=2353
+  _globals['_RELATIONKEY']._serialized_end=2409
+  _globals['_RELATIONSHIP']._serialized_start=2412
+  _globals['_RELATIONSHIP']._serialized_end=2676
+  _globals['_SEMANTICMODEL']._serialized_start=2679
+  _globals['_SEMANTICMODEL']._serialized_end=3018
+  _globals['_VERIFIEDQUERY']._serialized_start=3021
+  _globals['_VERIFIEDQUERY']._serialized_end=3218
+  _globals['_VERIFIEDQUERYREPOSITORY']._serialized_start=3220
+  _globals['_VERIFIEDQUERYREPOSITORY']._serialized_end=3312
 # @@protoc_insertion_point(module_scope)
