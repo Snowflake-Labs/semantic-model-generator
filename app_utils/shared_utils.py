@@ -38,6 +38,7 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_tables_views_in_schema,
     fetch_warehouses,
     fetch_yaml_names_in_stage,
+    fetch_columns_names_in_table,
 )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
@@ -196,6 +197,71 @@ def get_available_stages(schema: str) -> List[str]:
         List[str]: A list of available stages.
     """
     return fetch_stages_in_schema(get_snowflake_connection(), schema)
+
+@st.cache_resource(show_spinner=False)
+def validate_table_columns(table: str, columns_must_exist) -> bool:
+    """
+    Fetches the available stages from the Snowflake account.
+
+    Returns:
+        List[str]: A list of available stages.
+    """
+    columns_names = fetch_columns_names_in_table(get_snowflake_connection(), table)
+    for col in columns_must_exist:
+        if col not in columns_names:
+            return False
+    return True
+
+
+
+def table_selector_container() -> Optional[str]:
+    """
+    Common component that encapsulates db/schema/table selection for the admin app.
+    When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_tables = []
+
+    # First, retrieve all databases that the user has access to.
+    eval_database = st.selectbox(
+        "Eval database",
+        options=get_available_databases(),
+        index=None,
+        key="selected_eval_database",
+    )
+    if eval_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            available_schemas = get_available_schemas(eval_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    eval_schema = st.selectbox(
+        "Eval schema",
+        options=available_schemas,
+        index=None,
+        key="selected_eval_schema",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    if eval_schema:
+        # When a valid schema is selected, fetch the available tables in that schema.
+        try:
+            available_tables = get_available_tables(eval_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    tables = st.selectbox(
+        "Table name",
+        options=available_tables,
+        index=None,
+        key="selected_eval_table",
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+
+    return tables
 
 
 @st.cache_resource(show_spinner=False)
@@ -1407,4 +1473,17 @@ class SnowflakeStage:
             "Database": self.stage_database,
             "Schema": self.stage_schema,
             "Stage": self.stage_name,
+        }
+
+@dataclass
+class SnowflakeTable:
+    table_database: str
+    table_schema: str
+    table_name: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "Database": self.table_database,
+            "Schema": self.table_schema,
+            "Table": self.table_name,
         }

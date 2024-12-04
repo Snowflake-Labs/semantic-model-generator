@@ -15,6 +15,7 @@ from app_utils.chat import send_message
 from app_utils.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
+    SnowflakeTable,
     changed_from_last_validated_model,
     download_yaml,
     get_snowflake_connection,
@@ -22,6 +23,8 @@ from app_utils.shared_utils import (
     init_session_states,
     return_home_button,
     stage_selector_container,
+    table_selector_container,
+    validate_table_columns,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
@@ -367,6 +370,35 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
+@st.experimental_dialog("Evaluation Data", width="large")
+def evaluation_data_dialog() -> None:
+    evaluation_table_columns = ["ID", "QUERY", "GOLD_SQL"]
+    st.markdown("Please enter evaluation select table")
+    table_selector_container()
+    if st.button("Use Table"):
+        if (
+            not st.session_state["selected_eval_database"]
+            or not st.session_state["selected_eval_schema"]
+            or not st.session_state["selected_eval_table"]
+        ):
+            st.error("Please fill in all fields.")
+            return
+
+        if not validate_table_columns(st.session_state["selected_eval_table"], evaluation_table_columns):
+            st.error("Table must have columns {evaluation_table_columns} to be used in Evaluation")
+            return
+
+        st.session_state["eval_table"] = SnowflakeTable(
+            table_database=st.session_state["selected_eval_database"],
+            table_schema=st.session_state["selected_eval_schema"],
+            table_name=st.session_state["selected_eval_table"],
+        )
+        st.rerun()
+
+
+
+
+
 @st.experimental_dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
@@ -605,6 +637,19 @@ def set_up_requirements() -> None:
         help="Checking this box will enable you to add/edit join paths in your semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Reach out to your account team for access.",
     )
 
+    # # TODOTZ - uncomment this block to use defaults for testing
+    # print("USING DEFAULTS FOR TESTING")
+    # st.session_state["snowflake_stage"] = SnowflakeStage(
+    #     stage_database="TZAYATS",
+    #     stage_schema="TZAYATS.TESTING",
+    #     stage_name="TZAYATS.TESTING.MY_SEMANTIC_MODELS",
+    # )
+    # st.session_state["file_name"] = "revenue_timeseries_update.yaml"
+    # st.session_state["page"] = GeneratorAppScreen.ITERATION
+    # st.session_state["experimental_features"] = experimental_features
+    # st.rerun()
+
+    # TODOTZ - comment this block to use defaults for testing
     if st.button(
         "Submit",
         disabled=not st.session_state["selected_iteration_database"]
@@ -661,6 +706,15 @@ the semantic model must be validated to be uploaded."""
 PARTNER_SEMANTIC_HELP = """Uploaded semantic files from a partner tool?
 Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
+
+
+def evaluation_mode_show() -> None:
+    header_row = row([0.65, 0.15], vertical_align="center")
+    header_row.markdown("**Evaluation**")
+    if header_row.button("Select Eval Data"):
+        evaluation_data_dialog()
+    if "eval_table" in st.session_state:
+        st.write(f'Using this table as eval table {st.session_state["eval_table"].to_dict()}')
 
 
 def show() -> None:

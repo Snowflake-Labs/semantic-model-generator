@@ -345,6 +345,20 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
 
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
+def fetch_columns_names_in_table(conn: SnowflakeConnection, table_fqn: str) -> list[str]:
+    """
+    Fetches all columns that the current user has access to in the current table
+    Args:
+        conn: SnowflakeConnection to run the query
+        table_fqn: The fully qualified name of the table to connect to.
+
+    Returns: a list of column names
+    """
+    query = f"DESCRIBE TABLE {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    columns = cursor.fetchall()
+    return [result[0] for result in columns]
 
 def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
     """
