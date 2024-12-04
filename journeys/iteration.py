@@ -654,19 +654,6 @@ def set_up_requirements() -> None:
         help="Checking this box will enable you to add/edit join paths in your semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Reach out to your account team for access.",
     )
 
-    # # TODOTZ - uncomment this block to use defaults for testing
-    # print("USING DEFAULTS FOR TESTING")
-    # st.session_state["snowflake_stage"] = SnowflakeStage(
-    #     stage_database="TZAYATS",
-    #     stage_schema="TZAYATS.TESTING",
-    #     stage_name="TZAYATS.TESTING.MY_SEMANTIC_MODELS",
-    # )
-    # st.session_state["file_name"] = "revenue_timeseries_update.yaml"
-    # st.session_state["page"] = GeneratorAppScreen.ITERATION
-    # st.session_state["experimental_features"] = experimental_features
-    # st.rerun()
-
-    # TODOTZ - comment this block to use defaults for testing
     if st.button(
         "Submit",
         disabled=not st.session_state["selected_iteration_database"]
