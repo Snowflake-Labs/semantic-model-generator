@@ -107,8 +107,11 @@ message Dimension {
   bool unique = 6 [(optional) = true];
   // Sample values of this column.
   repeated string sample_values = 7 [(optional) = true];
-  // Name of a Cortex Search Service configured on this column.
-  string cortex_search_service_name = 9 [(optional) = true];
+  // A Cortex Search Service configured on this column to retrieve literals.
+  CortexSearchService cortex_search_service = 8 [(optional) = true];
+  string cortex_search_service_name = 9
+  [(optional) = true, deprecated = true];
+
 }
 
 // Fully qualified Cortex Search Service name.
