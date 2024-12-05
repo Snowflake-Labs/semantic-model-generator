@@ -383,6 +383,35 @@ def fetch_yaml_names_in_stage(
     # The file name is prefixed with "@{stage_name}/", so we need to remove that prefix.
     return [result[0].split("/")[-1] for result in yaml_files]
 
+def create_table_in_schema(
+    conn: SnowflakeConnection, table_name: str, schema_name: str, columns_schema: List[str]
+) -> bool:
+    """
+    Creates a table in the specified schema with the specified columns
+    Args:
+        conn: SnowflakeConnection to run the query
+        table_name: The name of the table to create
+        schema_name: The name of the schema to create the table in
+        columns: A list of Column objects representing the columns of the table
+
+    Returns: True if the table was created successfully, False otherwise
+    """
+    # Construct the create table query
+    create_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {schema_name}.{table_name} (
+        {', '.join(columns_schema)}
+    )
+    """
+
+    # Execute the query
+    cursor = conn.cursor()
+    try:
+        cursor.execute(create_table_query)
+        return True
+    except ProgrammingError as e:
+        logger.error(f"Error creating table: {e}")
+        return False
+    
 
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection,
