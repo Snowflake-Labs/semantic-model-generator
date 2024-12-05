@@ -24,7 +24,9 @@ from app_utils.shared_utils import (
     return_home_button,
     stage_selector_container,
     table_selector_container,
+    schema_selector_container,
     validate_table_columns,
+    validate_table_exist,
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
@@ -373,8 +375,11 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 @st.experimental_dialog("Evaluation Data", width="large")
 def evaluation_data_dialog() -> None:
     evaluation_table_columns = ["ID", "QUERY", "GOLD_SQL"]
-    st.markdown("Please enter evaluation select table")
-    table_selector_container()
+    st.markdown("Please select evaluation table")
+    table_selector_container(
+        db_selector={"key": "selected_eval_database","label":"Eval database"},
+        schema_selector={"key": "selected_eval_schema","label":"Eval schema"},
+        table_selector={"key": "selected_eval_table","label":"Eval table"},)
     if st.button("Use Table"):
         if (
             not st.session_state["selected_eval_database"]
@@ -395,6 +400,79 @@ def evaluation_data_dialog() -> None:
         )
         st.rerun()
 
+
+    if not eval_results_existing_table:
+        schema_selector_container(
+            db_selector={"key": "selected_results_eval_database","label":"Results database"},
+            schema_selector={"key": "selected_results_eval_schema","label":"Results schema"},)
+
+        new_table_name = st.text_input(
+                    key="selected_eval_results_table_name",
+                    label="Enter the table name to upload evaluation results",
+                )
+        if st.button("Create Table"):
+            if (
+                not st.session_state["selected_results_eval_database"]
+                or not st.session_state["selected_results_eval_schema"]
+                or not new_table_name
+            ):
+                st.error("Please fill in all fields.")
+                return
+
+            if (
+                st.session_state["selected_results_eval_database"]
+                and st.session_state["selected_results_eval_schema"]
+                and validate_table_exist(st.session_state["selected_results_eval_schema"],new_table_name)
+            ):
+                st.error("Table already exists")
+                return
+
+
+            with st.spinner("Creating table..."):
+                success = create_table_in_schema(conn = get_snowflake_connection(),
+                                                schema_name=st.session_state["selected_results_eval_schema"],
+                                                table_name=new_table_name,
+                                                columns_schema={f"{k} {v}" for k,v in results_table_columns.items()})
+                if success:
+                    st.success(f"Table {new_table_name} created successfully!")
+                else:
+                    st.error(f"Failed to create table {new_table_name}")
+                    return
+
+            fqn_table_name = ".".join([st.session_state["selected_results_eval_schema"],new_table_name.upper()])
+
+            st.session_state["eval_results_table"] = SnowflakeTable(
+                table_database=st.session_state["selected_results_eval_database"],
+                table_schema=st.session_state["selected_results_eval_schema"],
+                table_name=fqn_table_name,
+            )
+
+            st.rerun()
+
+    else:
+        table_selector_container(
+        db_selector={"key": "selected_results_eval_database","label":"Results database"},
+        schema_selector={"key": "selected_results_eval_schema","label":"Results schema"},
+        table_selector={"key": "selected_results_eval_table","label":"Results table"},)
+        if st.button("Use Table"):
+            if (
+                not st.session_state["selected_results_eval_database"]
+                or not st.session_state["selected_results_eval_schema"]
+                or not st.session_state["selected_results_eval_table"]
+            ):
+                st.error("Please fill in all fields.")
+                return
+
+            if not validate_table_columns(st.session_state["selected_results_eval_table"], tuple(results_table_columns.keys())):
+                st.error(f"Table must have columns {list(results_table_columns.keys())}.")
+                return
+
+            st.session_state["eval_results_table"] = SnowflakeTable(
+                table_database=st.session_state["selected_results_eval_database"],
+                table_schema=st.session_state["selected_results_eval_schema"],
+                table_name=st.session_state["selected_results_eval_table"],
+            )
+            st.rerun()
 
 
 
@@ -708,13 +786,35 @@ Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 
+
 def evaluation_mode_show() -> None:
-    header_row = row([0.65, 0.15], vertical_align="center")
+    header_row = row([0.7, 0.3,0.3], vertical_align="center")
     header_row.markdown("**Evaluation**")
-    if header_row.button("Select Eval Data"):
+    if header_row.button("Select Eval Table"):
         evaluation_data_dialog()
+    if header_row.button("Select Result Table"):
+        evaluation_results_data_dialog()
+
+    if "validated" in st.session_state and not st.session_state["validated"]:
+        st.error("Please validate your semantic model before evaluating.")
+        return
+
+    if "eval_table" not in st.session_state:
+        st.error("Please select evaluation tables.")
+        return
+
+    if "eval_results_table" not in st.session_state:
+        st.error("Please select evaluation results tables.")
+        return
+
+    # TODO Replace with actual evaluation code probably from seperate file
     if "eval_table" in st.session_state:
         st.write(f'Using this table as eval table {st.session_state["eval_table"].to_dict()}')
+    if "eval_results_table" in st.session_state:
+        st.write(f'Using this table as eval results table {st.session_state["eval_results_table"].to_dict()}')
+    if st.session_state.validated:
+        st.write("Model validated")
+
 
 
 def show() -> None:

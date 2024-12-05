@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import time
+import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from io import StringIO
@@ -199,7 +200,7 @@ def get_available_stages(schema: str) -> List[str]:
     return fetch_stages_in_schema(get_snowflake_connection(), schema)
 
 @st.cache_resource(show_spinner=False)
-def validate_table_columns(table: str, columns_must_exist) -> bool:
+def validate_table_columns(table: str, columns_must_exist: Tuple[str]) -> bool:
     """
     Fetches the available stages from the Snowflake account.
 
@@ -212,9 +213,22 @@ def validate_table_columns(table: str, columns_must_exist) -> bool:
             return False
     return True
 
+@st.cache_resource(show_spinner=False)
+def validate_table_exist(schema: str, table_name) -> bool:
+    """
+    Validate table exist in the Snowflake account.
+
+    Returns:
+        List[str]: A list of available stages.
+    """
+    table_names = fetch_tables_views_in_schema(get_snowflake_connection(), schema)
+    table_names = [table.split(".")[2] for table in table_names]
+    if table_name.upper() in table_names:
+        return True
+    return False
 
 
-def table_selector_container() -> Optional[str]:
+def schema_selector_container(db_selector:Dict[str,str], schema_selector:Dict[str,str]) -> Optional[str]:
     """
     Common component that encapsulates db/schema/table selection for the admin app.
     When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
@@ -225,10 +239,10 @@ def table_selector_container() -> Optional[str]:
 
     # First, retrieve all databases that the user has access to.
     eval_database = st.selectbox(
-        "Eval database",
+        db_selector["label"],
         options=get_available_databases(),
         index=None,
-        key="selected_eval_database",
+        key=db_selector["key"],
     )
     if eval_database:
         # When a valid database is selected, fetch the available schemas in that database.
@@ -239,10 +253,51 @@ def table_selector_container() -> Optional[str]:
             st.stop()
 
     eval_schema = st.selectbox(
-        "Eval schema",
+        schema_selector["label"],
         options=available_schemas,
         index=None,
-        key="selected_eval_schema",
+        key=schema_selector["key"],
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    if eval_schema:
+        # When a valid schema is selected, fetch the available tables in that schema.
+        try:
+            available_tables = get_available_tables(eval_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    return available_tables
+
+def table_selector_container(db_selector:Dict[str,str], schema_selector:Dict[str,str],table_selector:Dict[str,str]) -> Optional[str]:
+    """
+    Common component that encapsulates db/schema/table selection for the admin app.
+    When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_tables = []
+
+    # First, retrieve all databases that the user has access to.
+    eval_database = st.selectbox(
+        db_selector["label"],
+        options=get_available_databases(),
+        index=None,
+        key=db_selector["key"],
+    )
+    if eval_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            available_schemas = get_available_schemas(eval_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    eval_schema = st.selectbox(
+        schema_selector["label"],
+        options=available_schemas,
+        index=None,
+        key=schema_selector["key"],
         format_func=lambda x: format_snowflake_context(x, -1),
     )
     if eval_schema:
@@ -254,10 +309,10 @@ def table_selector_container() -> Optional[str]:
             st.stop()
 
     tables = st.selectbox(
-        "Table name",
+        table_selector["label"],
         options=available_tables,
         index=None,
-        key="selected_eval_table",
+        key=table_selector["key"],
         format_func=lambda x: format_snowflake_context(x, -1),
     )
 
