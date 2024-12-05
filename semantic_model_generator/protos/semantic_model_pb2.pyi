@@ -100,7 +100,7 @@ class Column(_message.Message):
     def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., kind: _Optional[_Union[ColumnKind, str]] = ..., unique: bool = ..., default_aggregation: _Optional[_Union[AggregationType, str]] = ..., sample_values: _Optional[_Iterable[str]] = ..., index_and_retrieve_values: bool = ..., retrieved_literals: _Optional[_Iterable[_Union[RetrievalResult, _Mapping]]] = ..., cortex_search_service_name: _Optional[str] = ..., cortex_search_service: _Optional[_Union[CortexSearchService, _Mapping]] = ...) -> None: ...
 
 class Dimension(_message.Message):
-    __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values", "cortex_search_service_name")
+    __slots__ = ("name", "synonyms", "description", "expr", "data_type", "unique", "sample_values", "cortex_search_service", "cortex_search_service_name")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SYNONYMS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -108,6 +108,7 @@ class Dimension(_message.Message):
     DATA_TYPE_FIELD_NUMBER: _ClassVar[int]
     UNIQUE_FIELD_NUMBER: _ClassVar[int]
     SAMPLE_VALUES_FIELD_NUMBER: _ClassVar[int]
+    CORTEX_SEARCH_SERVICE_FIELD_NUMBER: _ClassVar[int]
     CORTEX_SEARCH_SERVICE_NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     synonyms: _containers.RepeatedScalarFieldContainer[str]
@@ -116,8 +117,9 @@ class Dimension(_message.Message):
     data_type: str
     unique: bool
     sample_values: _containers.RepeatedScalarFieldContainer[str]
+    cortex_search_service: CortexSearchService
     cortex_search_service_name: str
-    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., unique: bool = ..., sample_values: _Optional[_Iterable[str]] = ..., cortex_search_service_name: _Optional[str] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., synonyms: _Optional[_Iterable[str]] = ..., description: _Optional[str] = ..., expr: _Optional[str] = ..., data_type: _Optional[str] = ..., unique: bool = ..., sample_values: _Optional[_Iterable[str]] = ..., cortex_search_service: _Optional[_Union[CortexSearchService, _Mapping]] = ..., cortex_search_service_name: _Optional[str] = ...) -> None: ...
 
 class CortexSearchService(_message.Message):
     __slots__ = ("database", "schema", "service", "literal_column")
