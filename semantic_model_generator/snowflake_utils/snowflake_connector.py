@@ -345,7 +345,10 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
 
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
-def fetch_columns_names_in_table(conn: SnowflakeConnection, table_fqn: str) -> list[str]:
+
+def fetch_columns_names_in_table(
+    conn: SnowflakeConnection, table_fqn: str
+) -> list[str]:
     """
     Fetches all columns that the current user has access to in the current table
     Args:
@@ -399,8 +402,12 @@ def fetch_yaml_names_in_stage(
     # The file name is prefixed with "@{stage_name}/", so we need to remove that prefix.
     return [result[0].split("/")[-1] for result in yaml_files]
 
+
 def create_table_in_schema(
-    conn: SnowflakeConnection, table_name: str, schema_name: str, columns_schema: List[str]
+    conn: SnowflakeConnection,
+    table_name: str,
+    schema_name: str,
+    columns_schema: List[str],
 ) -> bool:
     """
     Creates a table in the specified schema with the specified columns
@@ -427,7 +434,7 @@ def create_table_in_schema(
     except ProgrammingError as e:
         logger.error(f"Error creating table: {e}")
         return False
-    
+
 
 def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
     query = f"SELECT * FROM {table_fqn};"

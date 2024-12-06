@@ -377,9 +377,10 @@ def evaluation_data_dialog() -> None:
     evaluation_table_columns = ["ID", "QUERY", "GOLD_SQL"]
     st.markdown("Please select evaluation table")
     table_selector_container(
-        db_selector={"key": "selected_eval_database","label":"Eval database"},
-        schema_selector={"key": "selected_eval_schema","label":"Eval schema"},
-        table_selector={"key": "selected_eval_table","label":"Eval table"},)
+        db_selector={"key": "selected_eval_database", "label": "Eval database"},
+        schema_selector={"key": "selected_eval_schema", "label": "Eval schema"},
+        table_selector={"key": "selected_eval_table", "label": "Eval table"},
+    )
     if st.button("Use Table"):
         if (
             not st.session_state["selected_eval_database"]
@@ -407,9 +408,9 @@ def evaluation_data_dialog() -> None:
             schema_selector={"key": "selected_results_eval_schema","label":"Results schema"},)
 
         new_table_name = st.text_input(
-                    key="selected_eval_results_table_name",
-                    label="Enter the table name to upload evaluation results",
-                )
+            key="selected_eval_results_table_name",
+            label="Enter the table name to upload evaluation results",
+        )
         if st.button("Create Table"):
             if (
                 not st.session_state["selected_results_eval_database"]
@@ -422,17 +423,23 @@ def evaluation_data_dialog() -> None:
             if (
                 st.session_state["selected_results_eval_database"]
                 and st.session_state["selected_results_eval_schema"]
-                and validate_table_exist(st.session_state["selected_results_eval_schema"],new_table_name)
+                and validate_table_exist(
+                    st.session_state["selected_results_eval_schema"], new_table_name
+                )
             ):
                 st.error("Table already exists")
                 return
 
 
             with st.spinner("Creating table..."):
-                success = create_table_in_schema(conn = get_snowflake_connection(),
-                                                schema_name=st.session_state["selected_results_eval_schema"],
-                                                table_name=new_table_name,
-                                                columns_schema={f"{k} {v}" for k,v in results_table_columns.items()})
+                success = create_table_in_schema(
+                    conn=get_snowflake_connection(),
+                    schema_name=st.session_state["selected_results_eval_schema"],
+                    table_name=new_table_name,
+                    columns_schema=[
+                        f"{k} {v}" for k, v in results_table_columns.items()
+                    ],
+                )
                 if success:
                     st.success(f"Table {new_table_name} created successfully!")
                 else:
@@ -451,9 +458,19 @@ def evaluation_data_dialog() -> None:
 
     else:
         table_selector_container(
-        db_selector={"key": "selected_results_eval_database","label":"Results database"},
-        schema_selector={"key": "selected_results_eval_schema","label":"Results schema"},
-        table_selector={"key": "selected_results_eval_table","label":"Results table"},)
+            db_selector={
+                "key": "selected_results_eval_database",
+                "label": "Results database",
+            },
+            schema_selector={
+                "key": "selected_results_eval_schema",
+                "label": "Results schema",
+            },
+            table_selector={
+                "key": "selected_results_eval_table",
+                "label": "Results table",
+            },
+        )
         if st.button("Use Table"):
             if (
                 not st.session_state["selected_results_eval_database"]
@@ -473,8 +490,6 @@ def evaluation_data_dialog() -> None:
                 table_name=st.session_state["selected_results_eval_table"],
             )
             st.rerun()
-
-
 
 
 @st.experimental_dialog("Upload", width="small")
@@ -786,9 +801,8 @@ Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 
-
 def evaluation_mode_show() -> None:
-    header_row = row([0.7, 0.3,0.3], vertical_align="center")
+    header_row = row([0.7, 0.3, 0.3], vertical_align="center")
     header_row.markdown("**Evaluation**")
     if header_row.button("Select Eval Table"):
         evaluation_data_dialog()
@@ -809,9 +823,13 @@ def evaluation_mode_show() -> None:
 
     # TODO Replace with actual evaluation code probably from seperate file
     if "eval_table" in st.session_state:
-        st.write(f'Using this table as eval table {st.session_state["eval_table"].to_dict()}')
+        st.write(
+            f'Using this table as eval table {st.session_state["eval_table"].to_dict()}'
+        )
     if "eval_results_table" in st.session_state:
-        st.write(f'Using this table as eval results table {st.session_state["eval_results_table"].to_dict()}')
+        st.write(
+            f'Using this table as eval results table {st.session_state["eval_results_table"].to_dict()}'
+        )
     if st.session_state.validated:
         st.write("Model validated")
 
