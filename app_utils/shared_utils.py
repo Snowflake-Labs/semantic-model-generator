@@ -1539,8 +1539,7 @@ class SnowflakeStage:
             "Stage": self.stage_name,
         }
 
-
-@dataclass
+@dataclass(frozen=True)
 class SnowflakeTable:
     table_database: str
     table_schema: str

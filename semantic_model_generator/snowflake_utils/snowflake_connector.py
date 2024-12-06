@@ -403,6 +403,23 @@ def fetch_yaml_names_in_stage(
     return [result[0].split("/")[-1] for result in yaml_files]
 
 
+def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
+    """
+
+    Args:
+        conn:
+        table_fqn:
+
+    Returns:
+
+    """
+    query = f"SELECT * FROM {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    query_result = cursor.fetch_pandas_all()
+    return query_result
+
+
 def create_table_in_schema(
     conn: SnowflakeConnection,
     table_name: str,
@@ -492,10 +509,14 @@ def get_valid_schemas_tables_columns_df(
         if table_names:
             table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
             where_clause += f"AND LOWER(t.table_name) in ({table_names_str}) "
-    query = f"""select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
-from {db_name}.information_schema.tables as t
-join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
-order by 1, 2, c.ordinal_position"""
+    query = dedent(
+        f"""
+        select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
+        from {db_name}.information_schema.tables as t
+        join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
+        order by 1, 2, c.ordinal_position
+        """
+    )
     cursor_execute = conn.cursor().execute(query)
     assert cursor_execute, "cursor_execute should not be None here"
     schemas_tables_columns_df = cursor_execute.fetch_pandas_all()

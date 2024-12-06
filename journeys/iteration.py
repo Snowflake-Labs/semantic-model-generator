@@ -10,6 +10,7 @@ from streamlit import config
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
 from streamlit_extras.stylable_container import stylable_container
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_table
 
 from app_utils.chat import send_message
 from app_utils.shared_utils import (
@@ -44,6 +45,31 @@ from semantic_model_generator.data_processing.proto_utils import (
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.validate_model import validate
+from semantic_model_generator.snowflake_utils.snowflake_connector import get_table_hash
+
+EVALUATION_TABLE_COLUMNS = ["ID", "QUERY", "GOLD_SQL"]
+
+
+LLM_JUDTE_PROMPT_TEMPLATE = """\
+[INST] Your task is to determine whether the two given dataframes are
+equivalent semantically in the context of a question. You should attempt to
+answer the given question by using the data in each dataframe. If the two
+answers are equivalent, those two dataframes are considered equivalent.
+Otherwise, they are not equivalent. Please also provide your reasoning.
+If they are equivalent, output "REASON: <reason>. ANSWER: true". If they are
+not equivalent, output "REASON: <reason>. ANSWER: false".
+
+### QUESTION: {input_question}
+
+* DATAFRAME 1:
+{frame1_str}
+
+* DATAFRAME 2:
+{frame2_str}
+
+Are the two dataframes equivalent?
+OUTPUT:
+[/INST] """
 
 # Set minCachedMessageSize to 500 MB to disable forward message cache:
 # st.set_config would trigger an error, only the set_config from config module works
@@ -120,7 +146,7 @@ def show_expr_for_ref(message_index: int) -> None:
         st.table(col_df.set_index(col_df.columns[1]))
 
 
-@st.experimental_dialog("Edit", width="large")
+@st.dialog("Edit", width="large")
 def edit_verified_query(
     conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
@@ -372,7 +398,17 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
-@st.experimental_dialog("Evaluation Data", width="large")
+def clear_evaluation_data() -> None:
+    # TODO(kschmaus) should this all be stored in one object
+    st.session_state["selected_eval_database"] = None
+    st.session_state["selected_eval_schema"] = None
+    st.session_state["selected_eval_table"] = None
+    st.session_state["eval_table"] = None
+    st.session_state["eval_table_hash"] = None
+    st.session_state["eval_table_frame"] = None
+
+
+@st.dialog("Evaluation Data", width="large")
 def evaluation_data_dialog() -> None:
     evaluation_table_columns = ["ID", "QUERY", "GOLD_SQL"]
     st.markdown("Please select evaluation table")
@@ -399,6 +435,16 @@ def evaluation_data_dialog() -> None:
             table_schema=st.session_state["selected_eval_schema"],
             table_name=st.session_state["selected_eval_table"],
         )
+        st.session_state["eval_table_hash"] = get_table_hash(
+            conn=get_snowflake_connection(), table_fqn=st.session_state.eval_table.table_name
+        )
+        eval_table_frame = fetch_table(
+            conn=get_snowflake_connection(), table_fqn=st.session_state.eval_table.table_name
+        )
+        st.session_state["eval_table_frame"] = eval_table_frame.set_index("ID")
+        # TODO(kschmaus): remove
+        st.session_state["eval_table_frame"] = st.session_state["eval_table_frame"]
+
         st.rerun()
 
 
@@ -492,7 +538,7 @@ def evaluation_data_dialog() -> None:
             st.rerun()
 
 
-@st.experimental_dialog("Upload", width="small")
+@st.dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
@@ -804,7 +850,7 @@ Note that the Cortex Analyst semantic model must be validated before integrating
 def evaluation_mode_show() -> None:
     header_row = row([0.7, 0.3, 0.3], vertical_align="center")
     header_row.markdown("**Evaluation**")
-    if header_row.button("Select Eval Table"):
+    if header_row.button("Select Eval Table", on_click=clear_evaluation_data):
         evaluation_data_dialog()
     if header_row.button("Select Result Table"):
         evaluation_results_data_dialog()
@@ -821,15 +867,18 @@ def evaluation_mode_show() -> None:
         st.error("Please select evaluation results tables.")
         return
 
-    # TODO Replace with actual evaluation code probably from seperate file
-    if "eval_table" in st.session_state:
-        st.write(
-            f'Using this table as eval table {st.session_state["eval_table"].to_dict()}'
+    if st.session_state.get("eval_table"):
+        summary_stats = dedent(
+            f"""\
+            * Evaluation Query Table: {st.session_state["eval_table"].table_name}
+            * Evaluation Result Table: {st.session_state["eval_results_table"].table_name}
+            * Evaluation Table Hash: {st.session_state["eval_table_hash"]}
+            * Semantic Model YAML Hash: {hash(st.session_state["working_yml"])}
+            * Query Count: {len(st.session_state["eval_table_frame"])}
+            """
         )
-    if "eval_results_table" in st.session_state:
-        st.write(
-            f'Using this table as eval results table {st.session_state["eval_results_table"].to_dict()}'
-        )
+        st.write(summary_stats)
+
     if st.session_state.validated:
         st.write("Model validated")
 
