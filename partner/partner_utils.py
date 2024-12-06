@@ -306,9 +306,7 @@ def integrate_partner_semantics() -> None:
             index=0,
             help=COMPARE_SEMANTICS_HELP,
         )
-        orphan_label, orphan_col1, orphan_col2 = st.columns(
-            3, gap="small"
-        )
+        orphan_label, orphan_col1, orphan_col2 = st.columns(3, gap="small")
         with orphan_label:
             st.write("Retain unmatched fields:")
         with orphan_col1:

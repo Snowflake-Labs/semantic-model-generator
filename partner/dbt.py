@@ -69,8 +69,9 @@ def upload_dbt_semantic() -> None:
         stage_files = st.multiselect("Staged files", options=available_files)
         if stage_files:
             for staged_file in stage_files:
-                file_content = download_yaml(staged_file,
-                                             st.session_state["selected_iteration_stage"])
+                file_content = download_yaml(
+                    staged_file, st.session_state["selected_iteration_stage"]
+                )
                 uploaded_files.append(file_content)
     else:
         uploaded_files = st.file_uploader(  # type: ignore
@@ -80,7 +81,7 @@ def upload_dbt_semantic() -> None:
             key="dbt_files",
         )
     if uploaded_files:
-        partner_semantic: list[Union[None,DBTSemanticModel]] = []
+        partner_semantic: list[Union[None, DBTSemanticModel]] = []
         for file in uploaded_files:
             partner_semantic.extend(read_dbt_yaml(file))  # type: ignore
 

@@ -523,7 +523,7 @@ def render_looker_explore_as_table(
     target_lag: Optional[int] = 20,
     target_lag_unit: Optional[str] = "minutes",
     warehouse: Optional[str] = None,
-) -> Union[None,dict[str, dict[str, str]]]:
+) -> Union[None, dict[str, dict[str, str]]]:
     """
     Creates materialized table corresponding to Looker Explore.
     Args:
