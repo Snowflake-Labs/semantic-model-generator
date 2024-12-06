@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+=======
+from streamlit import config
+
+# Set minCachedMessageSize to 500 MB to disable forward message cache:
+# st.set_config would trigger an error, only the set_config from config module works
+config.set_option("global.minCachedMessageSize", 500 * 1e6)
+
+>>>>>>> ed4d939 (fmt)
 import json
 import time
 from typing import Any, Dict, List, Optional
@@ -386,9 +395,10 @@ def evaluation_data_dialog() -> None:
     evaluation_table_columns = ["ID", "QUERY", "GOLD_SQL"]
     st.markdown("Please select evaluation table")
     table_selector_container(
-        db_selector={"key": "selected_eval_database","label":"Eval database"},
-        schema_selector={"key": "selected_eval_schema","label":"Eval schema"},
-        table_selector={"key": "selected_eval_table","label":"Eval table"},)
+        db_selector={"key": "selected_eval_database", "label": "Eval database"},
+        schema_selector={"key": "selected_eval_schema", "label": "Eval schema"},
+        table_selector={"key": "selected_eval_table", "label": "Eval table"},
+    )
     if st.button("Use Table"):
         if (
             not st.session_state["selected_eval_database"]
@@ -397,8 +407,10 @@ def evaluation_data_dialog() -> None:
         ):
             st.error("Please fill in all fields.")
             return
-        
-        if not validate_table_columns(st.session_state["selected_eval_table"], tuple(evaluation_table_columns)):
+
+        if not validate_table_columns(
+            st.session_state["selected_eval_table"], tuple(evaluation_table_columns)
+        ):
             st.error("Table must have columns {evaluation_table_columns}.")
             return
 
@@ -409,21 +421,34 @@ def evaluation_data_dialog() -> None:
         )
         st.rerun()
 
+
 @st.experimental_dialog("Evaluation Data", width="large")
 def evaluation_results_data_dialog() -> None:
-    results_table_columns = {"ID":"VARCHAR", "QUERY":"VARCHAR", "GOLD_SQL":"VARCHAR","PREDICTED_SQL":"VARCHAR"}
+    results_table_columns = {
+        "ID": "VARCHAR",
+        "QUERY": "VARCHAR",
+        "GOLD_SQL": "VARCHAR",
+        "PREDICTED_SQL": "VARCHAR",
+    }
     st.markdown("Please select results table")
     eval_results_existing_table = st.checkbox("Use existing table")
 
     if not eval_results_existing_table:
         schema_selector_container(
-            db_selector={"key": "selected_results_eval_database","label":"Results database"},
-            schema_selector={"key": "selected_results_eval_schema","label":"Results schema"},)
-        
+            db_selector={
+                "key": "selected_results_eval_database",
+                "label": "Results database",
+            },
+            schema_selector={
+                "key": "selected_results_eval_schema",
+                "label": "Results schema",
+            },
+        )
+
         new_table_name = st.text_input(
-                    key="selected_eval_results_table_name",
-                    label="Enter the table name to upload evaluation results",
-                )
+            key="selected_eval_results_table_name",
+            label="Enter the table name to upload evaluation results",
+        )
         if st.button("Create Table"):
             if (
                 not st.session_state["selected_results_eval_database"]
@@ -432,28 +457,38 @@ def evaluation_results_data_dialog() -> None:
             ):
                 st.error("Please fill in all fields.")
                 return
-            
+
             if (
                 st.session_state["selected_results_eval_database"]
                 and st.session_state["selected_results_eval_schema"]
-                and validate_table_exist(st.session_state["selected_results_eval_schema"],new_table_name)
+                and validate_table_exist(
+                    st.session_state["selected_results_eval_schema"], new_table_name
+                )
             ):
                 st.error("Table already exists")
                 return
-            
 
             with st.spinner("Creating table..."):
-                success = create_table_in_schema(conn = get_snowflake_connection(),
-                                                schema_name=st.session_state["selected_results_eval_schema"],
-                                                table_name=new_table_name,
-                                                columns_schema={f"{k} {v}" for k,v in results_table_columns.items()})
+                success = create_table_in_schema(
+                    conn=get_snowflake_connection(),
+                    schema_name=st.session_state["selected_results_eval_schema"],
+                    table_name=new_table_name,
+                    columns_schema=[
+                        f"{k} {v}" for k, v in results_table_columns.items()
+                    ],
+                )
                 if success:
                     st.success(f"Table {new_table_name} created successfully!")
                 else:
                     st.error(f"Failed to create table {new_table_name}")
                     return
-            
-            fqn_table_name = ".".join([st.session_state["selected_results_eval_schema"],new_table_name.upper()])
+
+            fqn_table_name = ".".join(
+                [
+                    st.session_state["selected_results_eval_schema"],
+                    new_table_name.upper(),
+                ]
+            )
 
             st.session_state["eval_results_table"] = SnowflakeTable(
                 table_database=st.session_state["selected_results_eval_database"],
@@ -465,9 +500,19 @@ def evaluation_results_data_dialog() -> None:
 
     else:
         table_selector_container(
-        db_selector={"key": "selected_results_eval_database","label":"Results database"},
-        schema_selector={"key": "selected_results_eval_schema","label":"Results schema"},
-        table_selector={"key": "selected_results_eval_table","label":"Results table"},)
+            db_selector={
+                "key": "selected_results_eval_database",
+                "label": "Results database",
+            },
+            schema_selector={
+                "key": "selected_results_eval_schema",
+                "label": "Results schema",
+            },
+            table_selector={
+                "key": "selected_results_eval_table",
+                "label": "Results table",
+            },
+        )
         if st.button("Use Table"):
             if (
                 not st.session_state["selected_results_eval_database"]
@@ -476,9 +521,14 @@ def evaluation_results_data_dialog() -> None:
             ):
                 st.error("Please fill in all fields.")
                 return
-            
-            if not validate_table_columns(st.session_state["selected_results_eval_table"], tuple(results_table_columns.keys())):
-                st.error(f"Table must have columns {list(results_table_columns.keys())}.")
+
+            if not validate_table_columns(
+                st.session_state["selected_results_eval_table"],
+                tuple(results_table_columns.keys()),
+            ):
+                st.error(
+                    f"Table must have columns {list(results_table_columns.keys())}."
+                )
                 return
 
             st.session_state["eval_results_table"] = SnowflakeTable(
@@ -487,8 +537,6 @@ def evaluation_results_data_dialog() -> None:
                 table_name=st.session_state["selected_results_eval_table"],
             )
             st.rerun()
-
-
 
 
 @st.experimental_dialog("Upload", width="small")
@@ -613,7 +661,6 @@ def yaml_editor(yaml_str: str) -> None:
     st.session_state.eval_mode = checkbox_row.checkbox(
         "Evaluation Mode",
     )
-
 
     # Style text_area to mirror st.code
     with stylable_container(key="customized_text_area", css_styles=css_yaml_editor):
@@ -801,35 +848,37 @@ Use this feature to integrate partner semantic specs into Cortex Analyst's spec.
 Note that the Cortex Analyst semantic model must be validated before integrating partner semantics."""
 
 
-
 def evaluation_mode_show() -> None:
-    header_row = row([0.7, 0.3,0.3], vertical_align="center")
+    header_row = row([0.7, 0.3, 0.3], vertical_align="center")
     header_row.markdown("**Evaluation**")
     if header_row.button("Select Eval Table"):
         evaluation_data_dialog()
     if header_row.button("Select Result Table"):
         evaluation_results_data_dialog()
-    
+
     if "validated" in st.session_state and not st.session_state["validated"]:
         st.error("Please validate your semantic model before evaluating.")
         return
-    
+
     if "eval_table" not in st.session_state:
         st.error("Please select evaluation tables.")
         return
-    
+
     if "eval_results_table" not in st.session_state:
         st.error("Please select evaluation results tables.")
         return
 
     # TODO Replace with actual evaluation code probably from seperate file
     if "eval_table" in st.session_state:
-        st.write(f'Using this table as eval table {st.session_state["eval_table"].to_dict()}')
+        st.write(
+            f'Using this table as eval table {st.session_state["eval_table"].to_dict()}'
+        )
     if "eval_results_table" in st.session_state:
-        st.write(f'Using this table as eval results table {st.session_state["eval_results_table"].to_dict()}')
+        st.write(
+            f'Using this table as eval results table {st.session_state["eval_results_table"].to_dict()}'
+        )
     if st.session_state.validated:
         st.write("Model validated")
-    
 
 
 def show() -> None:
@@ -873,7 +922,7 @@ def show() -> None:
                     st.session_state.working_yml, language="yaml", line_numbers=True
                 )
             elif st.session_state.eval_mode:
-                
+
                 evaluation_mode_show()
             else:
                 header_row = row([0.85, 0.15], vertical_align="center")

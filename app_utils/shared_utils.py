@@ -198,8 +198,9 @@ def get_available_stages(schema: str) -> List[str]:
     """
     return fetch_stages_in_schema(get_snowflake_connection(), schema)
 
+
 @st.cache_resource(show_spinner=False)
-def validate_table_columns(table: str, columns_must_exist: Tuple[str]) -> bool:
+def validate_table_columns(table: str, columns_must_exist: Tuple[str,...]) -> bool:
     """
     Fetches the available stages from the Snowflake account.
 
@@ -212,8 +213,9 @@ def validate_table_columns(table: str, columns_must_exist: Tuple[str]) -> bool:
             return False
     return True
 
+
 @st.cache_resource(show_spinner=False)
-def validate_table_exist(schema: str, table_name) -> bool:
+def validate_table_exist(schema: str, table_name:str) -> bool:
     """
     Validate table exist in the Snowflake account.
 
@@ -225,9 +227,11 @@ def validate_table_exist(schema: str, table_name) -> bool:
     if table_name.upper() in table_names:
         return True
     return False
-    
 
-def schema_selector_container(db_selector:Dict[str,str], schema_selector:Dict[str,str]) -> Optional[str]:
+
+def schema_selector_container(
+    db_selector: Dict[str, str], schema_selector: Dict[str, str]
+) -> List[str]:
     """
     Common component that encapsulates db/schema/table selection for the admin app.
     When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
@@ -268,7 +272,12 @@ def schema_selector_container(db_selector:Dict[str,str], schema_selector:Dict[st
 
     return available_tables
 
-def table_selector_container(db_selector:Dict[str,str], schema_selector:Dict[str,str],table_selector:Dict[str,str]) -> Optional[str]:
+
+def table_selector_container(
+    db_selector: Dict[str, str],
+    schema_selector: Dict[str, str],
+    table_selector: Dict[str, str],
+) -> Optional[str]:
     """
     Common component that encapsulates db/schema/table selection for the admin app.
     When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
@@ -1402,6 +1411,7 @@ class SnowflakeStage:
             "Schema": self.stage_schema,
             "Stage": self.stage_name,
         }
+
 
 @dataclass
 class SnowflakeTable:
