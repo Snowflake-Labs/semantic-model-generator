@@ -201,8 +201,9 @@ def get_available_stages(schema: str) -> List[str]:
     """
     return fetch_stages_in_schema(get_snowflake_connection(), schema)
 
+
 @st.cache_resource(show_spinner=False)
-def validate_table_columns(table: str, columns_must_exist: Tuple[str]) -> bool:
+def validate_table_columns(table: str, columns_must_exist: Tuple[str,...]) -> bool:
     """
     Fetches the available stages from the Snowflake account.
 
@@ -215,8 +216,9 @@ def validate_table_columns(table: str, columns_must_exist: Tuple[str]) -> bool:
             return False
     return True
 
+
 @st.cache_resource(show_spinner=False)
-def validate_table_exist(schema: str, table_name) -> bool:
+def validate_table_exist(schema: str, table_name:str) -> bool:
     """
     Validate table exist in the Snowflake account.
 
@@ -228,9 +230,11 @@ def validate_table_exist(schema: str, table_name) -> bool:
     if table_name.upper() in table_names:
         return True
     return False
-    
 
-def schema_selector_container(db_selector:Dict[str,str], schema_selector:Dict[str,str]) -> Optional[str]:
+
+def schema_selector_container(
+    db_selector: Dict[str, str], schema_selector: Dict[str, str]
+) -> List[str]:
     """
     Common component that encapsulates db/schema/table selection for the admin app.
     When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
@@ -271,7 +275,12 @@ def schema_selector_container(db_selector:Dict[str,str], schema_selector:Dict[st
 
     return available_tables
 
-def table_selector_container(db_selector:Dict[str,str], schema_selector:Dict[str,str],table_selector:Dict[str,str]) -> Optional[str]:
+
+def table_selector_container(
+    db_selector: Dict[str, str],
+    schema_selector: Dict[str, str],
+    table_selector: Dict[str, str],
+) -> Optional[str]:
     """
     Common component that encapsulates db/schema/table selection for the admin app.
     When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
@@ -1112,7 +1121,7 @@ def upload_yaml(file_name: str) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         tmp_file_path = os.path.join(temp_dir, f"{file_name}.yaml")
 
-        with open(tmp_file_path, "w", encoding='utf-8') as temp_file:
+        with open(tmp_file_path, "w", encoding="utf-8") as temp_file:
             temp_file.write(yaml)
 
         st.session_state.session.file.put(
@@ -1168,12 +1177,10 @@ def download_yaml(file_name: str, stage_name: str) -> str:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Downloads the YAML to {temp_dir}/{file_name}.
-        st.session_state.session.file.get(
-            f"@{stage_name}/{file_name}", temp_dir
-        )
+        st.session_state.session.file.get(f"@{stage_name}/{file_name}", temp_dir)
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")
-        with open(tmp_file_path, "r", encoding='utf-8') as temp_file:
+        with open(tmp_file_path, "r", encoding="utf-8") as temp_file:
             # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
             yaml_str = temp_file.read()
             return yaml_str
@@ -1379,7 +1386,7 @@ class AppMetadata:
             return st.session_state.semantic_model.name  # type: ignore
         return None
 
-    def to_dict(self) -> dict[str, Union[str,None]]:
+    def to_dict(self) -> dict[str, Union[str, None]]:
         return {
             "User": self.user,
             "Stage": self.stage,
@@ -1407,6 +1414,7 @@ class SnowflakeStage:
             "Schema": self.stage_schema,
             "Stage": self.stage_name,
         }
+
 
 @dataclass
 class SnowflakeTable:
