@@ -1,7 +1,9 @@
 import concurrent.futures
 from collections import defaultdict
 from contextlib import contextmanager
+from textwrap import dedent
 from typing import Any, Dict, Generator, List, Optional, TypeVar
+from typing import Union
 
 import pandas as pd
 from loguru import logger
@@ -388,6 +390,23 @@ def fetch_yaml_names_in_stage(
     return [result[0].split("/")[-1] for result in yaml_files]
 
 
+def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
+    """
+
+    Args:
+        conn:
+        table_fqn:
+
+    Returns:
+
+    """
+    query = f"SELECT * FROM {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    query_result = cursor.fetch_pandas_all()
+    return query_result
+
+
 def create_table_in_schema(
     conn: SnowflakeConnection,
     table_name: str,
@@ -437,10 +456,14 @@ def get_valid_schemas_tables_columns_df(
         if table_names:
             table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
             where_clause += f"AND LOWER(t.table_name) in ({table_names_str}) "
-    query = f"""select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
-from {db_name}.information_schema.tables as t
-join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
-order by 1, 2, c.ordinal_position"""
+    query = dedent(
+        f"""
+        select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
+        from {db_name}.information_schema.tables as t
+        join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
+        order by 1, 2, c.ordinal_position
+        """
+    )
     cursor_execute = conn.cursor().execute(query)
     assert cursor_execute, "cursor_execute should not be None here"
     schemas_tables_columns_df = cursor_execute.fetch_pandas_all()
@@ -453,6 +476,37 @@ order by 1, 2, c.ordinal_position"""
         schemas_tables_columns_df, how="inner", on=(_TABLE_SCHEMA_COL, _TABLE_NAME_COL)
     )
     return valid_schemas_tables_columns_df
+
+
+def get_table_hash(conn: SnowflakeConnection, table_fqn: str) -> str:
+    """
+
+    Args:
+        conn:
+        table_fqn:
+
+    Returns:
+
+    """
+    query = f"SELECT HASH_AGG(*)::VARCHAR AS TABLE_HASH FROM {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    query_result = cursor.fetch_pandas_all()
+    return query_result["TABLE_HASH"].item()
+
+
+def execute_query(conn: SnowflakeConnection, query: str) -> Union[pd.DataFrame, str]:
+    try:
+        if query == "":
+            raise ValueError("Query string is empty")
+        cursor = conn.cursor()
+        cursor.execute(query)
+        query_result = cursor.fetch_pandas_all()
+        return query_result
+    except Exception as e:
+        logger.info(f"Query execution failed: {e}")
+        return str(e)
+
 
 
 class SnowflakeConnector:

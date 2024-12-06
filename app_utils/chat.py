@@ -9,7 +9,7 @@ from snowflake.connector import SnowflakeConnection
 API_ENDPOINT = "https://{HOST}/api/v2/cortex/analyst/message"
 
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def send_message(
     _conn: SnowflakeConnection, semantic_model: str, messages: list[dict[str, str]]
 ) -> Dict[str, Any]:
