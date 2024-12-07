@@ -22,7 +22,7 @@ from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
 )
 
 
-@st.experimental_dialog(title="Connection Error")
+@st.dialog(title="Connection Error")
 def failed_connection_popup() -> None:
     """
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.

@@ -424,13 +424,17 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
 
 
 def clear_evaluation_data() -> None:
-    # TODO(kschmaus) should this all be stored in one object
-    st.session_state["selected_eval_database"] = None
-    st.session_state["selected_eval_schema"] = None
-    st.session_state["selected_eval_table"] = None
-    st.session_state["eval_table"] = None
-    st.session_state["eval_table_hash"] = None
-    st.session_state["eval_table_frame"] = None
+    session_states = (
+        "selected_eval_database",
+        "selected_eval_schema",
+        "selected_eval_table",
+        "eval_table",
+        "eval_table_hash",
+        "eval_table_frame",
+    )
+    for feature in session_states:
+        if feature in st.session_state:
+            del st.session_state[feature]
 
 
 @st.dialog("Evaluation Data", width="large")
@@ -468,12 +472,24 @@ def evaluation_data_dialog() -> None:
             conn=get_snowflake_connection(), table_fqn=st.session_state.eval_table.table_name
         )
         st.session_state["eval_table_frame"] = eval_table_frame.set_index("ID")
-        # TODO(kschmaus): remove
-        st.session_state["eval_table_frame"] = st.session_state["eval_table_frame"]
 
         st.rerun()
 
-@st.dialog("Evaluation Data", width="large")
+
+def clear_results_data() -> None:
+    session_states = (
+        "eval_results_table",
+        "selected_eval_results_table_name",
+        "selected_results_eval_database",
+        "selected_results_eval_schema",
+        "selected_results_eval_table",
+    )
+    for feature in session_states:
+        if feature in st.session_state:
+            del st.session_state[feature]
+
+
+@st.dialog("Results Data", width="large")
 def evaluation_results_data_dialog() -> None:
     results_table_columns = {
         "ID": "VARCHAR",
@@ -676,7 +692,7 @@ def update_container(
     container.markdown(content)
 
 
-@st.experimental_dialog("Error", width="small")
+@st.dialog("Error", width="small")
 def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
@@ -702,15 +718,10 @@ def yaml_editor(yaml_str: str) -> None:
         background-color: #fbfbfb;
     }
     """
-    checkbox_row = row(2)
 
-    st.session_state.preview_yaml_mode = checkbox_row.checkbox(
-        "Preview YAML",
-    )
-
-    # Evaluation Mode checkbox
-    st.session_state.eval_mode = checkbox_row.checkbox(
-        "Evaluation Mode",
+    st.session_state["app_mode"] = st.selectbox(
+        label="App Mode",
+        options=["Chat", "Evaluation", "Preview YAML"],
     )
 
     # Style text_area to mirror st.code
@@ -808,7 +819,7 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "editing", prefix=status_container_title)
 
 
-@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
+@st.dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
@@ -859,7 +870,7 @@ def set_up_requirements() -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Chat Settings", width="small")
+@st.dialog("Chat Settings", width="small")
 def chat_settings_dialog() -> None:
     """
     Dialog that allows user to toggle on/off certain settings about the chat experience.
@@ -900,11 +911,9 @@ Note that the Cortex Analyst semantic model must be validated before integrating
 
 
 def evaluation_mode_show() -> None:
-    header_row = row([0.7, 0.3, 0.3], vertical_align="center")
-    header_row.markdown("**Evaluation**")
-    if header_row.button("Select Eval Table", on_click=clear_evaluation_data):
+    if st.button("Select Eval Table", on_click=clear_evaluation_data):
         evaluation_data_dialog()
-    if header_row.button("Select Result Table"):
+    if st.button("Select Result Table", on_click=clear_results_data):
         evaluation_results_data_dialog()
 
     if "validated" in st.session_state and not st.session_state["validated"]:
@@ -919,20 +928,17 @@ def evaluation_mode_show() -> None:
         st.error("Please select evaluation results tables.")
         return
 
-    if st.session_state.get("eval_table"):
-        summary_stats = dedent(
-            f"""\
-            * Evaluation Query Table: {st.session_state["eval_table"].table_name}
-            * Evaluation Result Table: {st.session_state["eval_results_table"].table_name}
-            * Evaluation Table Hash: {st.session_state["eval_table_hash"]}
-            * Semantic Model YAML Hash: {hash(st.session_state["working_yml"])}
-            * Query Count: {len(st.session_state["eval_table_frame"])}
-            """
-        )
-        st.write(summary_stats)
-
-    if st.session_state.validated:
-        st.write("Model validated")
+    summary_stats = pd.DataFrame(
+        [
+            ["Evaluation Query Table", st.session_state["eval_table"].table_name],
+            ["Evaluation Result Table", st.session_state["eval_results_table"].table_name],
+            ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
+            ["Semantic Model YAML Hash", hash(st.session_state["working_yml"])],
+            ["Query Count", len(st.session_state["eval_table_frame"])]
+        ],
+        columns=["Summary Statistic", "Value"]
+    )
+    st.dataframe(summary_stats, hide_index=True)
 
 
 def show() -> None:
@@ -971,17 +977,17 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            if st.session_state.preview_yaml_mode:
-                st.code(
-                    st.session_state.working_yml, language="yaml", line_numbers=True
-                )
-            elif st.session_state.eval_mode:
-
-                evaluation_mode_show()
-            else:
-                header_row = row([0.85, 0.15], vertical_align="center")
-                header_row.markdown("**Chat**")
-                if header_row.button("Settings"):
-                    chat_settings_dialog()
-                # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
-                chat_and_edit_vqr(get_snowflake_connection())
+            match app_mode := st.session_state["app_mode"]:
+                case "Preview YAML":
+                    st.code(
+                        st.session_state.working_yml, language="yaml", line_numbers=True
+                    )
+                case "Evaluation":
+                    evaluation_mode_show()
+                case "Chat":
+                    if st.button("Settings"):
+                        chat_settings_dialog()
+                    # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
+                    chat_and_edit_vqr(get_snowflake_connection())
+                case _:
+                    st.error(f"Unknown App Mode: {app_mode}")
