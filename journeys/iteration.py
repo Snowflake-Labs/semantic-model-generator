@@ -46,9 +46,12 @@ from semantic_model_generator.data_processing.proto_utils import (
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.validate_model import validate
 from semantic_model_generator.snowflake_utils.snowflake_connector import get_table_hash
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    create_table_in_schema,
+)
 
 EVALUATION_TABLE_COLUMNS = ["ID", "QUERY", "GOLD_SQL"]
-
+# TODO(kschmaus): Should I have more of these?
 
 LLM_JUDTE_PROMPT_TEMPLATE = """\
 [INST] Your task is to determine whether the two given dataframes are
@@ -398,6 +401,7 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
+# TODO(kschmaus): edit to have single input button
 def clear_evaluation_data() -> None:
     session_states = (
         "selected_eval_database",
@@ -878,6 +882,372 @@ def evaluation_mode_show() -> None:
         columns=["Summary Statistic", "Value"]
     )
     st.dataframe(summary_stats, hide_index=True)
+
+    send_analyst_requests()
+    run_sql_queries()
+    result_comparisons()
+
+
+def send_analyst_requests() -> None:
+    def _get_content(x: dict, item_type: str, key: str, default: str = "") -> str:
+        result = next(
+            (
+                item[key]
+                for item in x["message"]["content"]
+                if item["type"] == item_type
+            ),
+            default,
+        )
+        return result
+
+    eval_table_frame: pd.DataFrame = st.session_state["eval_table_frame"]
+
+    total_requests = len(eval_table_frame)
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    start_time = time.time()
+    analyst_results = []
+
+    for i, (id, row) in enumerate(eval_table_frame.iterrows(), start=1):
+        status_text.text(f"Sending request {i}/{total_requests} to Analyst...")
+        messages = [{"role": "user", "content": [{"type": "text", "text": row["QUERY"]}]}]
+        semantic_model = proto_to_yaml(st.session_state.semantic_model)
+        try:
+            response = send_message(
+                _conn=get_snowflake_connection(),
+                semantic_model=semantic_model,
+                messages=messages
+            )
+            response_text = _get_content(response, item_type="text", key="text")
+            response_sql = _get_content(response, item_type="sql", key="statement")
+            analyst_results.append(dict(ID=id, ANALYST_TEXT=response_text, ANALYST_SQL=response_sql))
+        except ValueError as e:
+            st.error(e)
+
+        progress_bar.progress(i / total_requests)
+        time.sleep(0.1)
+
+    elapsed_time = time.time() - start_time
+    status_text.text(
+        f"All analyst requests received ✅ (Time taken: {elapsed_time:.2f} seconds)"
+    )
+
+    analyst_results_frame = pd.DataFrame(analyst_results).set_index("ID")
+    st.session_state["analyst_results_frame"] = analyst_results_frame
+
+
+def run_sql_queries() -> None:
+    eval_table_frame: pd.DataFrame = st.session_state["eval_table_frame"]
+    analyst_results_frame = st.session_state["analyst_results_frame"]
+
+    total_requests = len(eval_table_frame)
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    start_time = time.time()
+
+    analyst_results = []
+    gold_results = []
+
+    for i, (id, row) in enumerate(eval_table_frame.iterrows(), start=1):
+        status_text.text(f"Evaluating Analyst query {i}/{total_requests}...")
+
+        analyst_query = analyst_results_frame.loc[id, "ANALYST_SQL"]
+        analyst_result = execute_query(conn=get_snowflake_connection(), query=analyst_query)
+        analyst_results.append(analyst_result)
+
+        gold_query = eval_table_frame.loc[id, "GOLD_SQL"]
+        gold_result = execute_query(conn=get_snowflake_connection(), query=gold_query)
+        gold_results.append(gold_result)
+
+        progress_bar.progress(i / total_requests)
+        time.sleep(0.1)
+
+    st.session_state["query_results_frame"] = pd.DataFrame(
+        data=dict(
+            ANALYST_RESULT=analyst_results,
+            GOLD_RESULT=gold_results
+        ),
+        index=eval_table_frame.index
+    )
+
+    elapsed_time = time.time() - start_time
+    status_text.text(
+        f"All analyst and gold queries run ✅ (Time taken: {elapsed_time:.2f} seconds)"
+    )
+
+
+def _match_series(analyst_frame: pd.DataFrame, gold_series: pd.Series) -> str | None:
+    """Determine which result frame column name matches the gold series.
+
+    Args:
+        analyst_frame: the data generated from the LLM constructed user query
+        gold_series: a column from the data generated from the gold sql
+
+    Returns:
+        if there is a match, the results column name, if not, None
+    """
+    for analyst_col in analyst_frame:
+        assert isinstance(analyst_col, str)
+        try:
+            pd.testing.assert_series_equal(
+                left=analyst_frame[analyst_col],
+                right=gold_series,
+                check_names=False,
+            )
+            return analyst_col
+        except AssertionError:
+            pass
+
+    return None
+
+
+def _results_contain_gold_data(
+    analyst_frame: pd.DataFrame,
+    gold_frame: pd.DataFrame,
+) -> bool:
+    """Determine if result frame contains all the same values as a gold frame.
+
+    Args:
+        analyst_frame: the data generated from the LLM constructed user query
+        gold_frame: the data generated from a gold sql query
+
+    Returns:
+        a boolean indicating if the results contain the gold data
+    """
+    if analyst_frame.shape[0] != gold_frame.shape[0]:
+        return False
+
+    unmatched_result_cols = analyst_frame.columns
+    for gold_col in gold_frame:
+        matching_col = _match_series(
+            analyst_frame=analyst_frame[unmatched_result_cols],
+            gold_series=gold_frame[gold_col],
+        )
+        if matching_col is None:
+            return False
+        else:
+            unmatched_result_cols = unmatched_result_cols.drop(matching_col)
+
+    return True
+
+
+def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
+    # create prompt frame series
+    table_name = "__LLM_JUDGE_TEMP_TABLE"
+    col_name = "LLM_JUDGE_PROMPT"
+
+    prompt_frame = frame.apply(
+        axis=1,
+        func=lambda row: LLM_JUDTE_PROMPT_TEMPLATE.format(
+            input_question=row["QUERY"],
+            frame1_str=row["ANALYST_RESULT"].to_string(index=False),
+            frame2_str=row["GOLD_RESULT"].to_string(index=False),
+        )
+    ).to_frame(name=col_name)
+    conn = get_snowflake_connection()
+    _ = write_pandas(
+        conn=conn,
+        df=prompt_frame,
+        table_name=table_name,
+        auto_create_table=True,
+        table_type='temporary',
+        overwrite=True,
+    )
+
+    query = f"""
+    SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2', {col_name}) AS LLM_JUDGE
+    FROM {conn.database}.{conn.schema}.{table_name}
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    llm_judge_frame = cursor.fetch_pandas_all()
+    llm_judge_frame.index = frame.index
+
+    reason_filter = re.compile(r"REASON\:([\S\s]*?)ANSWER\:")
+    answer_filter = re.compile(r"ANSWER\:([\S\s]*?)$")
+
+    def _safe_re_search(x, filter):
+        try:
+            return re.search(filter, x).group(1).strip()
+        except Exception as e:
+            return f"Could Not Parse LLM Judge Response: {x}"
+
+    llm_judge_frame["EXPLANATION"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(reason_filter,))
+    llm_judge_frame["MATCH"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(answer_filter,)).str.lower().eq("true")
+    return llm_judge_frame
+
+
+def visualize_eval_results(frame: pd.DataFrame) -> None:
+    n_questions = len(frame)
+    n_correct = frame["MATCH"].sum()
+    accuracy = (n_correct / n_questions) * 100
+    st.markdown(
+        f"###### Results: {n_correct} out of {n_questions} questions correct with accuracy {accuracy:.2f}%"
+    )
+    for id, row in frame.iterrows():
+        match_emoji = "✅" if row["MATCH"] else "❌"
+        with st.expander(f"Row ID: {id} {match_emoji}"):
+            st.write(f"Input Query: {row['QUERY']}")
+            st.write(row["ANALYST_TEXT"].replace("\n", " "))
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write("Analyst SQL")
+                st.code(row["ANALYST_SQL"], language="sql", wrap_lines=True)
+
+            with col2:
+                st.write("Golden SQL")
+                st.code(row["GOLD_SQL"], language="sql", wrap_lines=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if isinstance(row["ANALYST_RESULT"], str):
+                    st.error(row["ANALYST_RESULT"])
+                else:
+                    st.write(row["ANALYST_RESULT"])
+
+            with col2:
+                if isinstance(row["GOLD_RESULT"], str):
+                    st.error(row["GOLD_RESULT"])
+                else:
+                    st.write(row["GOLD_RESULT"])
+
+            st.write(f"**Explanation**: {row['EXPLANATION']}")
+
+
+def insert_eval_result_rows(frame: pd.DataFrame) -> None:
+    # for id, row in frame.iterrows():
+    #     model_response = st.session_state.model_responses[row_id]
+    #     gold_evaluation = _pick_gold_evaluation(
+    #         st.session_state.response_evaluations[row_id]
+    #     )
+    #
+    #     eval_data.append(
+    #         {
+    #             "TIMESTAMP": st.session_state.eval_timestamp,
+    #             "EVAL_NAME": st.session_state.eval_name,
+    #             "MODEL_NAME": st.session_state.semantic_model_path,
+    #             "MODEL_HASH": st.session_state.semantic_model_hash,
+    #             "QUESTIONS_HASH": st.session_state.question_set_hash,
+    #             "QUESTIONS_TABLE": st.session_state.query_set,
+    #             "ID": row_id,
+    #             "QUERY": data["query"],
+    #             "VQR_USED": not st.session_state.no_vqr,
+    #             "GOLD_MESSAGES": json.dumps(data["gold_messages"]),
+    #             "ANALYST_RESPONSE_TEXT": model_response["text"],
+    #             "ANALYST_SQL": model_response["sql"],
+    #             "MATCH": gold_evaluation["match"],
+    #             "EXPLANATION": gold_evaluation["reason"],
+    #         }
+    #     )
+
+    # eval_df = pd.DataFrame(eval_data)
+    db, schema, table_name = st.session_state.eval_results_table.split(".")
+    try:
+        st.session_state.session.write_pandas(
+            df=eval_df,
+            database=db,
+            schema=schema,
+            table_name=table_name,
+            overwrite=False,
+            quote_identifiers=False,
+        )
+        st.write("Evaluation results stored in the database ✅")
+    except Exception as e:
+        st.error(
+            f"Failed to insert evaluation results into {st.session_state.eval_results_table}: {e}"
+        )
+
+
+def result_comparisons() -> None:
+    eval_table_frame: pd.DataFrame = st.session_state["eval_table_frame"]
+    analyst_results_frame = st.session_state["analyst_results_frame"]
+    query_results_frame = st.session_state["query_results_frame"]
+
+    frame = pd.concat(
+        [eval_table_frame, analyst_results_frame, query_results_frame],
+        axis=1
+    )
+
+    start_time = time.time()
+    status_text = st.empty()
+
+    matches = pd.Series(False, index=frame.index)
+    explanations = pd.Series("", index=frame.index)
+    use_llm_judge = "<use llm judge>"
+
+    status_text.text(f"Checking for exact matches...")
+    for id, row in frame.iterrows():
+        analyst_is_frame = isinstance(row["ANALYST_RESULT"], pd.DataFrame)
+        gold_is_frame = isinstance(row["GOLD_RESULT"], pd.DataFrame)
+        if (not analyst_is_frame) and (not gold_is_frame):
+            matches[id] = False
+            explanations[id] = dedent(
+                f"""
+                analyst sql had an error: {row["ANALYST_RESULT"]}
+                gold sql had an error: {row["GOLD_RESULT"]}
+                """
+            )
+        elif (not analyst_is_frame) and gold_is_frame:
+            matches[id] = False
+            explanations[id] = dedent(
+                f"""
+                analyst sql had an error: {row["ANALYST_RESULT"]}
+                """
+            )
+        elif analyst_is_frame and (not gold_is_frame):
+            matches[id] = False
+            explanations[id] = dedent(
+                f"""
+                gold sql had an error: {row["GOLD_RESULT"]}
+                """
+            )
+        else:
+            exact_match = _results_contain_gold_data(
+                analyst_frame=row["ANALYST_RESULT"], gold_frame=row["GOLD_RESULT"]
+            )
+            matches[id] = exact_match
+            explanations[id] = "Data matches exactly" if exact_match else use_llm_judge
+
+    frame["MATCH"] = matches
+    frame["EXPLANATION"] = explanations
+    st.table(frame)
+
+    filtered_frame = frame[explanations == use_llm_judge]
+
+    status_text.text(f"Calling LLM Judge...")
+    llm_judge_frame = _llm_judge(frame=filtered_frame)
+
+    for col in ("MATCH", "EXPLANATION"):
+        frame[col] = llm_judge_frame[col].combine_first(frame[col])
+
+    elapsed_time = time.time() - start_time
+    status_text.text(
+        f"Analyst and Gold Results Compared ✅ (Time taken: {elapsed_time:.2f} seconds)"
+    )
+
+    visualize_eval_results(frame)
+
+    #     conn = get_snowflake_connection()
+    #     _ = write_pandas(
+    #         conn=conn,
+    #         df=prompt_frame,
+    #         table_name=table_name,
+    #         auto_create_table=True,
+    #         table_type='temporary',
+    #         overwrite=True,
+    #     )
+    # write_pandas(
+    #     df=frame,
+    #     database=,
+    #     schema=schema,
+    #     table_name=table_name,
+    #     overwrite=False,
+    #     quote_identifiers=False,
+    # )
+    # st.write("Evaluation results stored in the database ✅")
+
 
 
 
