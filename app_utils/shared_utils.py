@@ -5,6 +5,7 @@ import os
 import tempfile
 import time
 import tempfile
+import time
 from dataclasses import dataclass
 from enum import Enum
 from io import StringIO
@@ -17,14 +18,10 @@ from snowflake.connector import ProgrammingError
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.snowpark import Session
 
-from semantic_model_generator.data_processing.proto_utils import (
-    proto_to_yaml,
-    yaml_to_semantic_model,
-)
-from semantic_model_generator.generate_model import (
-    generate_model_str_from_snowflake,
-    raw_schema_to_semantic_context,
-)
+from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
+from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
+from semantic_model_generator.generate_model import generate_model_str_from_snowflake
+from semantic_model_generator.generate_model import raw_schema_to_semantic_context
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
@@ -76,7 +73,7 @@ def set_streamlit_location() -> bool:
     return sis
 
 
-@st.experimental_dialog(title="Setup")
+@st.dialog(title="Setup")
 def env_setup_popup(missing_env_vars: list[str]) -> None:
     """
     Renders a dialog box to prompt the user to set the required connection setup.
@@ -125,7 +122,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
                 return get_connector().open_connection(db_name="")
 
 
-@st.cache_resource(show_spinner=False)
+# @st.cache_resource(show_spinner=False)
 def set_snowpark_session(_conn: Optional[SnowflakeConnection] = None) -> None:
     """
     Creates a snowpark for python session.
@@ -646,7 +643,7 @@ def init_session_states() -> None:
         st.session_state.confirmed_edits = False
 
 
-@st.experimental_dialog("Edit Dimension")  # type: ignore[misc]
+@st.dialog("Edit Dimension")  # type: ignore[misc]
 def edit_dimension(table_name: str, dim: semantic_model_pb2.Dimension) -> None:
     """
     Renders a dialog box to edit an existing dimension.
@@ -696,7 +693,7 @@ def edit_dimension(table_name: str, dim: semantic_model_pb2.Dimension) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Add Dimension")  # type: ignore[misc]
+@st.dialog("Add Dimension")  # type: ignore[misc]
 def add_dimension(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new dimension.
@@ -735,7 +732,7 @@ def add_dimension(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Edit Measure")  # type: ignore[misc]
+@st.dialog("Edit Measure")  # type: ignore[misc]
 def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
     """
     Renders a dialog box to edit an existing measure.
@@ -808,7 +805,7 @@ def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Add Measure")  # type: ignore[misc]
+@st.dialog("Add Measure")  # type: ignore[misc]
 def add_measure(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new measure.
@@ -868,7 +865,7 @@ def add_measure(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Edit Time Dimension")  # type: ignore[misc]
+@st.dialog("Edit Time Dimension")  # type: ignore[misc]
 def edit_time_dimension(
     table_name: str, tdim: semantic_model_pb2.TimeDimension
 ) -> None:
@@ -913,7 +910,7 @@ def edit_time_dimension(
         st.rerun()
 
 
-@st.experimental_dialog("Add Time Dimension")  # type: ignore[misc]
+@st.dialog("Add Time Dimension")  # type: ignore[misc]
 def add_time_dimension(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new time dimension.
@@ -1111,7 +1108,7 @@ def display_table(table_name: str) -> None:
         add_time_dimension(table)
 
 
-@st.experimental_dialog("Add Table")  # type: ignore[misc]
+@st.dialog("Add Table")  # type: ignore[misc]
 def add_new_table() -> None:
     """
     Renders a dialog box to add a new logical table.
@@ -1228,7 +1225,7 @@ def import_yaml() -> None:
             st.rerun()
 
 
-@st.experimental_dialog("Model YAML", width="large")  # type: ignore
+@st.dialog("Model YAML", width="large")  # type: ignore
 def show_yaml_in_dialog() -> None:
     yaml = proto_to_yaml(st.session_state.semantic_model)
     st.code(
