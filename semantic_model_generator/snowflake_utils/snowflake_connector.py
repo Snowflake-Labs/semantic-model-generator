@@ -1,4 +1,5 @@
 import concurrent.futures
+import json
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, TypeVar
@@ -146,7 +147,6 @@ def get_table_representation(
     table_index: int,
     ndv_per_column: int,
     columns_df: pd.DataFrame,
-    max_workers: int,
 ) -> Table:
     table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
 
@@ -160,7 +160,7 @@ def get_table_representation(
             ndv=ndv_per_column,
         )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_col_index = {
             executor.submit(_get_col, col_index, column_row): col_index
             for col_index, (_, column_row) in enumerate(columns_df.iterrows())
@@ -196,9 +196,15 @@ def _get_column_representation(
         try:
             cursor = conn.cursor(DictCursor)
             assert cursor is not None, "Cursor is unexpectedly None"
-            cursor_execute = cursor.execute(
-                f'select distinct "{column_name}" from {schema_name}.{table_name} limit {ndv}'
-            )
+            query = f"""
+                SELECT ARRAY_SLICE(ARRAY_UNIQUE_AGG("{column_name}"), 0, {ndv}) AS unique_values
+                FROM (
+                    SELECT "{column_name}"
+                    FROM {schema_name}.{table_name}
+                    SAMPLE (1000 ROWS)
+                )
+            """
+            cursor_execute = cursor.execute(query)
             assert cursor_execute is not None, "cursor_execute should not be none "
             res = cursor_execute.fetchall()
             # Cast all values to string to ensure the list is json serializable.
@@ -206,9 +212,9 @@ def _get_column_representation(
             # json serializable (e.g. datetime objects) and apply the appropriate casting
             # in just those cases.
             if len(res) > 0:
-                if isinstance(res[0], dict):
-                    col_key = [k for k in res[0].keys()][0]
-                    column_values = [str(r[col_key]) for r in res]
+                if res and isinstance(res[0], dict) and "UNIQUE_VALUES" in res[0]:
+                    unique_values_list = json.loads(res[0]["UNIQUE_VALUES"])
+                    column_values = [str(value) for value in unique_values_list]
                 else:
                     raise ValueError(
                         f"Expected the first item of res to be a dict. Instead passed {res}"
