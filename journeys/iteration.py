@@ -62,14 +62,20 @@ EVALUATION_TABLE_SCHEMA = {
     "GOLD_SQL": "VARCHAR",
 }
 RESULTS_TABLE_SCHEMA = {
+    "TIMESTAMP": "DATETIME",
     "ID": "VARCHAR",
+    "QUERY": "VARCHAR",
     "ANALYST_TEXT": "VARCHAR",
     "ANALYST_SQL": "VARCHAR",
+    "ANALYST_RESULT": "VARCHAR",
+    "GOLD_SQL": "VARCHAR",
+    "GOLD_RESULT": "VARCHAR",
     "CORRECT": "BOOLEAN",
     "EXPLANATION": "VARCHAR",
+    "MODEL_HASH": "VARCHAR",
 }
 
-LLM_JUDTE_PROMPT_TEMPLATE = """\
+LLM_JUDGE_PROMPT_TEMPLATE = """\
 [INST] Your task is to determine whether the two given dataframes are
 equivalent semantically in the context of a question. You should attempt to
 answer the given question by using the data in each dataframe. If the two
@@ -426,6 +432,7 @@ def clear_evaluation_data() -> None:
         "selected_results_eval_old_table",
         "selected_results_eval_schema",
         "use_existing_table",
+        "eval_timestamp",
     )
     for feature in session_states:
         if feature in st.session_state:
@@ -878,8 +885,10 @@ def evaluation_mode_show() -> None:
         results_table = st.session_state.get(
             "selected_results_eval_old_table"
         ) or st.session_state.get("selected_results_eval_new_table")
+        st.session_state["eval_timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
         summary_stats = pd.DataFrame(
             [
+                ["Evaluation Timestamp", st.session_state["eval_timestamp"]],
                 ["Evaluation Table", st.session_state["selected_eval_table"]],
                 ["Evaluation Result Table", results_table],
                 ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
@@ -889,6 +898,7 @@ def evaluation_mode_show() -> None:
             columns=["Summary Statistic", "Value"],
         )
         st.dataframe(summary_stats, hide_index=True)
+        
 
         send_analyst_requests()
         run_sql_queries()
@@ -963,16 +973,16 @@ def run_sql_queries() -> None:
     analyst_results = []
     gold_results = []
 
-    for i, (id, row) in enumerate(eval_table_frame.iterrows(), start=1):
+    for i, (row_id, eval_row) in enumerate(eval_table_frame.iterrows(), start=1):
         status_text.text(f"Evaluating Analyst query {i}/{total_requests}...")
 
-        analyst_query = analyst_results_frame.loc[id, "ANALYST_SQL"]
+        analyst_query = analyst_results_frame.loc[row_id, "ANALYST_SQL"]
         analyst_result = execute_query(
             conn=get_snowflake_connection(), query=analyst_query
         )
         analyst_results.append(analyst_result)
 
-        gold_query = eval_table_frame.loc[id, "GOLD_SQL"]
+        gold_query = eval_table_frame.loc[row_id, "GOLD_SQL"]
         gold_result = execute_query(conn=get_snowflake_connection(), query=gold_query)
         gold_results.append(gold_result)
 
@@ -1046,16 +1056,20 @@ def _results_contain_gold_data(
 
 
 def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
+
+    if frame.empty:
+        return pd.DataFrame({"EXPLANATION": [], "CORRECT": []})
+
     # create prompt frame series
     table_name = "__LLM_JUDGE_TEMP_TABLE"
     col_name = "LLM_JUDGE_PROMPT"
 
     prompt_frame = frame.apply(
         axis=1,
-        func=lambda row: LLM_JUDTE_PROMPT_TEMPLATE.format(
-            input_question=row["QUERY"],
-            frame1_str=row["ANALYST_RESULT"].to_string(index=False),
-            frame2_str=row["GOLD_RESULT"].to_string(index=False),
+        func=lambda x: LLM_JUDGE_PROMPT_TEMPLATE.format(
+            input_question=x["QUERY"],
+            frame1_str=x["ANALYST_RESULT"].to_string(index=False),
+            frame2_str=x["GOLD_RESULT"].to_string(index=False),
         ),
     ).to_frame(name=col_name)
     conn = get_snowflake_connection()
@@ -1115,11 +1129,11 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
 
             with col1:
                 st.write("Analyst SQL")
-                st.code(row["ANALYST_SQL"], language="sql", wrap_lines=True)
+                st.code(row["ANALYST_SQL"], language="sql")
 
             with col2:
                 st.write("Golden SQL")
-                st.code(row["GOLD_SQL"], language="sql", wrap_lines=True)
+                st.code(row["GOLD_SQL"], language="sql")
 
             col1, col2 = st.columns(2)
             with col1:
@@ -1145,7 +1159,6 @@ def result_comparisons() -> None:
     frame = pd.concat(
         [eval_table_frame, analyst_results_frame, query_results_frame], axis=1
     )
-
     start_time = time.time()
     status_text = st.empty()
 
@@ -1154,46 +1167,46 @@ def result_comparisons() -> None:
     use_llm_judge = "<use llm judge>"
 
     status_text.text("Checking for exact matches...")
-    for id, row in frame.iterrows():
-        analyst_is_frame = isinstance(row["ANALYST_RESULT"], pd.DataFrame)
-        gold_is_frame = isinstance(row["GOLD_RESULT"], pd.DataFrame)
+    for row_id, res_row in frame.iterrows():
+        analyst_is_frame = isinstance(res_row["ANALYST_RESULT"], pd.DataFrame)
+        gold_is_frame = isinstance(res_row["GOLD_RESULT"], pd.DataFrame)
         if (not analyst_is_frame) and (not gold_is_frame):
-            matches[id] = False
-            explanations[id] = dedent(
+            matches[row_id] = False
+            explanations[row_id] = dedent(
                 f"""
-                analyst sql had an error: {row["ANALYST_RESULT"]}
-                gold sql had an error: {row["GOLD_RESULT"]}
+                analyst sql had an error: {res_row["ANALYST_RESULT"]}
+                gold sql had an error: {res_row["GOLD_RESULT"]}
                 """
             )
         elif (not analyst_is_frame) and gold_is_frame:
-            matches[id] = False
-            explanations[id] = dedent(
+            matches[row_id] = False
+            explanations[row_id] = dedent(
                 f"""
-                analyst sql had an error: {row["ANALYST_RESULT"]}
+                analyst sql had an error: {res_row["ANALYST_RESULT"]}
                 """
             )
         elif analyst_is_frame and (not gold_is_frame):
-            matches[id] = False
-            explanations[id] = dedent(
+            matches[row_id] = False
+            explanations[row_id] = dedent(
                 f"""
-                gold sql had an error: {row["GOLD_RESULT"]}
+                gold sql had an error: {res_row["GOLD_RESULT"]}
                 """
             )
         else:
             exact_match = _results_contain_gold_data(
-                analyst_frame=row["ANALYST_RESULT"], gold_frame=row["GOLD_RESULT"]
+                analyst_frame=res_row["ANALYST_RESULT"], gold_frame=res_row["GOLD_RESULT"]
             )
-            matches[id] = exact_match
-            explanations[id] = "Data matches exactly" if exact_match else use_llm_judge
+            matches[row_id] = exact_match
+            explanations[row_id] = "Data matches exactly" if exact_match else use_llm_judge
 
     frame["CORRECT"] = matches
     frame["EXPLANATION"] = explanations
 
     filtered_frame = frame[explanations == use_llm_judge]
 
-    status_text.text(f"Calling LLM Judge...")
+    status_text.text("Calling LLM Judge...")
     llm_judge_frame = _llm_judge(frame=filtered_frame)
-
+    
     for col in ("CORRECT", "EXPLANATION"):
         frame[col] = llm_judge_frame[col].combine_first(frame[col])
 
@@ -1204,10 +1217,14 @@ def result_comparisons() -> None:
 
     visualize_eval_results(frame)
 
-    frame["TIMESTAMP"] = pd.Timestamp.now()
+    frame["TIMESTAMP"] = st.session_state["eval_timestamp"]
     frame["EVAL_TABLE"] = st.session_state["selected_eval_table"]
     frame["EVAL_TABLE_HASH"] = st.session_state["eval_table_hash"]
     frame["MODEL_HASH"] = hash(st.session_state["working_yml"])
+
+    # Save results to frame as string
+    frame["ANALYST_RESULT"] = frame["ANALYST_RESULT"].apply(lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x)
+    frame["GOLD_RESULT"] = frame["GOLD_RESULT"].apply(lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x)
 
     frame = frame.reset_index()[list(RESULTS_TABLE_SCHEMA)]
     write_pandas(
@@ -1216,7 +1233,7 @@ def result_comparisons() -> None:
         table_name=st.session_state["selected_results_eval_table"],
         overwrite=False,
         quote_identifiers=False,
-        auto_create_table=not st.session_state["use_existing_table"],
+        auto_create_table=False,
     )
     st.write("Evaluation results stored in the database ✅")
 
@@ -1257,7 +1274,8 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            if app_mode := st.session_state["app_mode"] == "Preview YAML":
+            app_mode = st.session_state["app_mode"]
+            if app_mode == "Preview YAML":
                 st.code(
                     st.session_state.working_yml, language="yaml", line_numbers=True
                 )
