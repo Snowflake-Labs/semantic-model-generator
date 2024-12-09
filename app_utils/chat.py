@@ -32,7 +32,7 @@ def send_message(
 
         resp = _snowflake.send_snow_api_request(  # type: ignore
             "POST",
-            f"/api/v2/cortex/analyst/message",
+            "/api/v2/cortex/analyst/message",
             {},
             {},
             request_body,

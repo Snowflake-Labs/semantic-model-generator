@@ -28,7 +28,7 @@ def failed_connection_popup() -> None:
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.
     """
     st.markdown(
-        f"""It looks like the credentials provided could not be used to connect to the account."""
+        """It looks like the credentials provided could not be used to connect to the account."""
     )
     st.stop()
 

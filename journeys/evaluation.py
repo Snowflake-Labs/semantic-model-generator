@@ -603,5 +603,5 @@ def generate_hash(input_object: Any) -> str:
         output_hash = hashlib.md5(text.encode()).hexdigest()
     except Exception as e:
         logger.error(f"Error generating hash: {e}")
-        output_hash = hash(input_object)
+        output_hash = str(hash(input_object))
     return output_hash
