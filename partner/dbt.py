@@ -6,6 +6,7 @@ import yaml
 from snowflake.connector import ProgrammingError
 
 from app_utils.shared_utils import (
+    SnowflakeStage,
     download_yaml,
     get_snowflake_connection,
     get_yamls_from_stage,
