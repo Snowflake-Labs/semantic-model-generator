@@ -960,7 +960,6 @@ def evaluation_mode_show() -> None:
             columns=["Summary Statistic", "Value"],
         )
         st.dataframe(summary_stats, hide_index=True)
-        
 
         send_analyst_requests()
         run_sql_queries()
@@ -989,10 +988,10 @@ def send_analyst_requests() -> None:
     start_time = time.time()
     analyst_results = []
 
-    for i, (id, row) in enumerate(eval_table_frame.iterrows(), start=1):
+    for i, (row_id, row_id) in enumerate(eval_table_frame.iterrows(), start=1):
         status_text.text(f"Sending request {i}/{total_requests} to Analyst...")
         messages = [
-            {"role": "user", "content": [{"type": "text", "text": row["QUERY"]}]}
+            {"role": "user", "content": [{"type": "text", "text": row_id["QUERY"]}]}
         ]
         semantic_model = proto_to_yaml(st.session_state.semantic_model)
         try:
@@ -1004,12 +1003,12 @@ def send_analyst_requests() -> None:
             response_text = _get_content(response, item_type="text", key="text")
             response_sql = _get_content(response, item_type="sql", key="statement")
             analyst_results.append(
-                dict(ID=id, ANALYST_TEXT=response_text, ANALYST_SQL=response_sql)
+                dict(ID=row_id, ANALYST_TEXT=response_text, ANALYST_SQL=response_sql)
             )
         except Exception as e:
             import traceback
 
-            st.error(f"Problem with {id}: {e} \n{traceback.format_exc()}")
+            st.error(f"Problem with {row_id}: {e} \n{traceback.format_exc()}")
 
         progress_bar.progress(i / total_requests)
         time.sleep(0.1)
@@ -1160,7 +1159,7 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
         try:
             return re.search(filter, x).group(1).strip()  # type: ignore[union-attr]
         except Exception as e:
-            return f"Could Not Parse LLM Judge Response: {x}"
+            return f"Could Not Parse LLM Judge Response: {x} with error: {e}"
 
     llm_judge_frame["EXPLANATION"] = llm_judge_frame["LLM_JUDGE"].apply(
         _safe_re_search, args=(reason_filter,)
@@ -1181,36 +1180,36 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
     st.markdown(
         f"###### Results: {n_correct} out of {n_questions} questions correct with accuracy {accuracy:.2f}%"
     )
-    for id, row in frame.iterrows():
+    for id, frame_row in frame.iterrows():
         match_emoji = "✅" if row["CORRECT"] else "❌"
         with st.expander(f"Row ID: {id} {match_emoji}"):
-            st.write(f"Input Query: {row['QUERY']}")
-            st.write(row["ANALYST_TEXT"].replace("\n", " "))
+            st.write(f"Input Query: {frame_row['QUERY']}")
+            st.write(frame_row["ANALYST_TEXT"].replace("\n", " "))
 
             col1, col2 = st.columns(2)
 
             with col1:
                 st.write("Analyst SQL")
-                st.code(row["ANALYST_SQL"], language="sql")
+                st.code(frame_row["ANALYST_SQL"], language="sql")
 
             with col2:
                 st.write("Golden SQL")
-                st.code(row["GOLD_SQL"], language="sql")
+                st.code(frame_row["GOLD_SQL"], language="sql")
 
             col1, col2 = st.columns(2)
             with col1:
-                if isinstance(row["ANALYST_RESULT"], str):
-                    st.error(row["ANALYST_RESULT"])
+                if isinstance(frame_row["ANALYST_RESULT"], str):
+                    st.error(frame_row["ANALYST_RESULT"])
                 else:
-                    st.write(row["ANALYST_RESULT"])
+                    st.write(frame_row["ANALYST_RESULT"])
 
             with col2:
-                if isinstance(row["GOLD_RESULT"], str):
-                    st.error(row["GOLD_RESULT"])
+                if isinstance(frame_row["GOLD_RESULT"], str):
+                    st.error(frame_row["GOLD_RESULT"])
                 else:
-                    st.write(row["GOLD_RESULT"])
+                    st.write(frame_row["GOLD_RESULT"])
 
-            st.write(f"**Explanation**: {row['EXPLANATION']}")
+            st.write(f"**Explanation**: {frame_row['EXPLANATION']}")
 
 
 def result_comparisons() -> None:
@@ -1256,10 +1255,13 @@ def result_comparisons() -> None:
             )
         else:
             exact_match = _results_contain_gold_data(
-                analyst_frame=res_row["ANALYST_RESULT"], gold_frame=res_row["GOLD_RESULT"]
+                analyst_frame=res_row["ANALYST_RESULT"],
+                gold_frame=res_row["GOLD_RESULT"],
             )
             matches[row_id] = exact_match
-            explanations[row_id] = "Data matches exactly" if exact_match else use_llm_judge
+            explanations[row_id] = (
+                "Data matches exactly" if exact_match else use_llm_judge
+            )
 
     frame["CORRECT"] = matches
     frame["EXPLANATION"] = explanations
@@ -1268,7 +1270,7 @@ def result_comparisons() -> None:
 
     status_text.text("Calling LLM Judge...")
     llm_judge_frame = _llm_judge(frame=filtered_frame)
-    
+
     for col in ("CORRECT", "EXPLANATION"):
         frame[col] = llm_judge_frame[col].combine_first(frame[col])
 
@@ -1285,8 +1287,12 @@ def result_comparisons() -> None:
     frame["MODEL_HASH"] = hash(st.session_state["working_yml"])
 
     # Save results to frame as string
-    frame["ANALYST_RESULT"] = frame["ANALYST_RESULT"].apply(lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x)
-    frame["GOLD_RESULT"] = frame["GOLD_RESULT"].apply(lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x)
+    frame["ANALYST_RESULT"] = frame["ANALYST_RESULT"].apply(
+        lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x
+    )
+    frame["GOLD_RESULT"] = frame["GOLD_RESULT"].apply(
+        lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x
+    )
 
     frame = frame.reset_index()[list(RESULTS_TABLE_SCHEMA)]
     write_pandas(
