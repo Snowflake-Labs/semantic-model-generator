@@ -172,7 +172,7 @@ def relationship_builder(
             st.rerun()
 
 
-@st.dialog("Join Builder", width="large")
+@st.experimental_dialog("Join Builder", width="large")
 def joins_dialog() -> None:
     if "builder_joins" not in st.session_state:
         # Making a copy of the original relationships list so we can modify freely without affecting the original.
