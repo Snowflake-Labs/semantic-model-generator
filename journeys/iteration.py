@@ -26,7 +26,6 @@ from app_utils.chat import send_message
 from app_utils.shared_utils import (
     GeneratorAppScreen,
     SnowflakeStage,
-    SnowflakeTable,
     changed_from_last_validated_model,
     download_yaml,
     get_snowflake_connection,
@@ -36,7 +35,7 @@ from app_utils.shared_utils import (
     stage_selector_container,
     table_selector_container,
     schema_selector_container,
-    validate_table_columns,
+    validate_table_schema,
     validate_table_exist,
     upload_yaml,
     validate_and_upload_tmp_yaml,
@@ -59,8 +58,18 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     create_table_in_schema,
 )
 
-EVALUATION_TABLE_COLUMNS = ["ID", "QUERY", "GOLD_SQL"]
-# TODO(kschmaus): Should I have more of these?
+EVALUATION_TABLE_SCHEMA = {
+    "ID": "VARCHAR",
+    "QUERY": "VARCHAR",
+    "GOLD_SQL": "VARCHAR",
+}
+RESULTS_TABLE_SCHEMA = {
+    "ID": "VARCHAR",
+    "ANALYST_TEXT": "VARCHAR",
+    "ANALYST_SQL": "VARCHAR",
+    "CORRECT": "BOOLEAN",
+    "EXPLANATION": "VARCHAR",
+}
 
 LLM_JUDTE_PROMPT_TEMPLATE = """\
 [INST] Your task is to determine whether the two given dataframes are
@@ -409,83 +418,38 @@ def chat_and_edit_vqr(_conn: SnowflakeConnection) -> None:
         st.session_state.active_suggestion = None
 
 
-# TODO(kschmaus): edit to have single input button
 def clear_evaluation_data() -> None:
     session_states = (
+        "eval_table_frame",
+        "eval_table_hash",
         "selected_eval_database",
         "selected_eval_schema",
         "selected_eval_table",
-        "eval_table",
-        "eval_table_hash",
-        "eval_table_frame",
-    )
-    for feature in session_states:
-        if feature in st.session_state:
-            del st.session_state[feature]
-
-
-@st.dialog("Evaluation Data", width="large")
-def evaluation_data_dialog() -> None:
-    st.markdown("Please select evaluation table")
-    table_selector_container(
-        db_selector={"key": "selected_eval_database", "label": "Eval database"},
-        schema_selector={"key": "selected_eval_schema", "label": "Eval schema"},
-        table_selector={"key": "selected_eval_table", "label": "Eval table"},
-    )
-    if st.button("Use Table"):
-        if (
-            not st.session_state["selected_eval_database"]
-            or not st.session_state["selected_eval_schema"]
-            or not st.session_state["selected_eval_table"]
-        ):
-            st.error("Please fill in all fields.")
-            return
-
-        if not validate_table_columns(
-            st.session_state["selected_eval_table"], tuple(EVALUATION_TABLE_COLUMNS)
-        ):
-            st.error(f"Table must have columns {EVALUATION_TABLE_COLUMNS}.")
-            return
-
-        st.session_state["eval_table"] = SnowflakeTable(
-            table_database=st.session_state["selected_eval_database"],
-            table_schema=st.session_state["selected_eval_schema"],
-            table_name=st.session_state["selected_eval_table"],
-        )
-        st.session_state["eval_table_hash"] = get_table_hash(
-            conn=get_snowflake_connection(), table_fqn=st.session_state.eval_table.table_name
-        )
-        eval_table_frame = fetch_table(
-            conn=get_snowflake_connection(), table_fqn=st.session_state.eval_table.table_name
-        )
-        st.session_state["eval_table_frame"] = eval_table_frame.set_index("ID")
-
-        st.rerun()
-
-
-def clear_results_data() -> None:
-    session_states = (
-        "eval_results_table",
-        "selected_eval_results_table_name",
         "selected_results_eval_database",
+        "selected_results_eval_new_table",
+        "selected_results_eval_new_table_no_schema",
+        "selected_results_eval_old_table",
         "selected_results_eval_schema",
-        "selected_results_eval_table",
+        "use_existing_table",
     )
     for feature in session_states:
         if feature in st.session_state:
             del st.session_state[feature]
 
 
-@st.dialog("Results Data", width="large")
-def evaluation_results_data_dialog() -> None:
-    results_table_columns = {
-        "ID": "VARCHAR",
-        "QUERY": "VARCHAR",
-        "GOLD_SQL": "VARCHAR",
-        "PREDICTED_SQL": "VARCHAR",
-    }
-    st.markdown("Please select results table")
-    eval_results_existing_table = st.checkbox("Use existing table")
+@st.dialog("Evaluation Tables", width="large")
+def evaluation_data_dialog() -> None:
+    st.markdown("Please select an evaluation table")
+    table_selector_container(
+        db_selector={"key": "selected_eval_database", "label": "Evaluation database"},
+        schema_selector={"key": "selected_eval_schema", "label": "Evaluation schema"},
+        table_selector={"key": "selected_eval_table", "label": "Evaluation table"},
+    )
+
+    st.divider()
+
+    st.markdown("Please select a results table")
+    eval_results_existing_table = st.checkbox("Use existing table", key="use_existing_table")
 
     if not eval_results_existing_table:
         schema_selector_container(
@@ -499,59 +463,14 @@ def evaluation_results_data_dialog() -> None:
             },
         )
 
-        new_table_name = st.text_input(
-            key="selected_eval_results_table_name",
+        original_new_table_name = st.text_input(
+            key="selected_results_eval_new_table_no_schema",
             label="Enter the table name to upload evaluation results",
         )
-        if st.button("Create Table"):
-            if (
-                not st.session_state["selected_results_eval_database"]
-                or not st.session_state["selected_results_eval_schema"]
-                or not new_table_name
-            ):
-                st.error("Please fill in all fields.")
-                return
-
-            if (
-                st.session_state["selected_results_eval_database"]
-                and st.session_state["selected_results_eval_schema"]
-                and validate_table_exist(
-                    st.session_state["selected_results_eval_schema"], new_table_name
-                )
-            ):
-                st.error("Table already exists")
-                return
-
-            with st.spinner("Creating table..."):
-                success = create_table_in_schema(
-                    conn=get_snowflake_connection(),
-                    schema_name=st.session_state["selected_results_eval_schema"],
-                    table_name=new_table_name,
-                    columns_schema=[
-                        f"{k} {v}" for k, v in results_table_columns.items()
-                    ],
-                )
-                if success:
-                    st.success(f"Table {new_table_name} created successfully!")
-                else:
-                    st.error(f"Failed to create table {new_table_name}")
-                    return
-
-            fqn_table_name = ".".join(
-                [
-                    st.session_state["selected_results_eval_schema"],
-                    new_table_name.upper(),
-                ]
-            )
-
-            st.session_state["eval_results_table"] = SnowflakeTable(
-                table_database=st.session_state["selected_results_eval_database"],
-                table_schema=st.session_state["selected_results_eval_schema"],
-                table_name=fqn_table_name,
-            )
-
-            st.rerun()
-
+        if original_new_table_name:
+            schema_name = st.session_state.get("selected_results_eval_schema")
+            updated_new_table_name = f"{schema_name}.{original_new_table_name}".upper()
+            st.session_state["selected_results_eval_new_table"] = updated_new_table_name
     else:
         table_selector_container(
             db_selector={
@@ -563,34 +482,72 @@ def evaluation_results_data_dialog() -> None:
                 "label": "Results schema",
             },
             table_selector={
-                "key": "selected_results_eval_table",
+                "key": "selected_results_eval_old_table",
                 "label": "Results table",
             },
         )
-        if st.button("Use Table"):
-            if (
-                not st.session_state["selected_results_eval_database"]
-                or not st.session_state["selected_results_eval_schema"]
-                or not st.session_state["selected_results_eval_table"]
+
+
+    st.divider()
+
+    if st.button("Use Tables"):
+        st.session_state["selected_results_eval_table"] = (
+            st.session_state.get("selected_results_eval_new_table")
+            or st.session_state.get("selected_results_eval_old_table")
+        )
+
+        if (
+            not st.session_state["selected_eval_database"]
+            or not st.session_state["selected_eval_schema"]
+            or not st.session_state["selected_eval_table"]
+            or not st.session_state["selected_results_eval_database"]
+            or not st.session_state["selected_results_eval_schema"]
+            or not st.session_state["selected_results_eval_table"]
+        ):
+            st.error("Please fill in all fields.")
+            return
+
+        if not validate_table_schema(
+            table=st.session_state["selected_eval_table"], schema=EVALUATION_TABLE_SCHEMA
+        ):
+            st.error(f"Evaluation table must have schema {EVALUATION_TABLE_SCHEMA}.")
+            return
+
+        if eval_results_existing_table:
+            if not validate_table_schema(
+                table=st.session_state["selected_results_eval_old_table"], schema=RESULTS_TABLE_SCHEMA
             ):
-                st.error("Please fill in all fields.")
+                st.error(f"Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}.")
                 return
 
-            if not validate_table_columns(
-                st.session_state["selected_results_eval_table"],
-                tuple(results_table_columns.keys()),
+        else:
+            if validate_table_exist(
+                schema=st.session_state["selected_results_eval_schema"],
+                table_name=st.session_state["selected_results_eval_new_table_no_schema"],
             ):
-                st.error(
-                    f"Table must have columns {list(results_table_columns.keys())}."
+                st.error("Results table already exists")
+                return
+
+            with st.spinner("Creating table..."):
+                success = create_table_in_schema(
+                    conn=get_snowflake_connection(),
+                    table_fqn=st.session_state["selected_results_eval_new_table"],
+                    columns_schema=RESULTS_TABLE_SCHEMA,
                 )
-                return
+                if success:
+                    st.success(f'Table {st.session_state["selected_results_eval_new_table"]} created successfully!')
+                else:
+                    st.error(f'Failed to create table {st.session_state["selected_results_eval_new_table"]}')
+                    return
 
-            st.session_state["eval_results_table"] = SnowflakeTable(
-                table_database=st.session_state["selected_results_eval_database"],
-                table_schema=st.session_state["selected_results_eval_schema"],
-                table_name=st.session_state["selected_results_eval_table"],
-            )
-            st.rerun()
+        st.session_state["eval_table_hash"] = get_table_hash(
+            conn=get_snowflake_connection(), table_fqn=st.session_state["selected_eval_table"]
+        )
+        st.session_state["eval_table_frame"] = fetch_table(
+            conn=get_snowflake_connection(), table_fqn=st.session_state["selected_eval_table"]
+        ).set_index("ID")
+
+        st.rerun()
 
 
 @st.dialog("Upload", width="small")
@@ -693,9 +650,6 @@ def yaml_editor(yaml_str: str) -> None:
 
     Args:
         yaml_str (str): YAML content to be edited.
-        status_container (DeltaGenerator): Container in
-            which we will write the edition status (validated, editing
-            or failed).
     """
     css_yaml_editor = """
     textarea{
@@ -898,38 +852,38 @@ Note that the Cortex Analyst semantic model must be validated before integrating
 
 
 def evaluation_mode_show() -> None:
-    if st.button("Select Eval Table", on_click=clear_evaluation_data):
+    if st.button("Set Evaluation Tables", on_click=clear_evaluation_data):
         evaluation_data_dialog()
-    if st.button("Select Result Table", on_click=clear_results_data):
-        evaluation_results_data_dialog()
 
     if "validated" in st.session_state and not st.session_state["validated"]:
         st.error("Please validate your semantic model before evaluating.")
         return
 
-    if "eval_table" not in st.session_state:
-        st.error("Please select evaluation tables.")
+    # TODO: find a less awkward way of specifying this.
+    if any(key not in st.session_state for key in ("selected_eval_table", "eval_table_hash", "eval_table_frame")):
+        st.error("Please set evaluation tables.")
         return
 
-    if "eval_results_table" not in st.session_state:
-        st.error("Please select evaluation results tables.")
-        return
+    else:
+        results_table = (
+            st.session_state.get("selected_results_eval_old_table") or
+            st.session_state.get("selected_results_eval_new_table")
+        )
+        summary_stats = pd.DataFrame(
+            [
+                ["Evaluation Table", st.session_state["selected_eval_table"]],
+                ["Evaluation Result Table", results_table],
+                ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
+                ["Semantic Model YAML Hash", hash(st.session_state["working_yml"])],
+                ["Query Count", len(st.session_state["eval_table_frame"])]
+            ],
+            columns=["Summary Statistic", "Value"]
+        )
+        st.dataframe(summary_stats, hide_index=True)
 
-    summary_stats = pd.DataFrame(
-        [
-            ["Evaluation Query Table", st.session_state["eval_table"].table_name],
-            ["Evaluation Result Table", st.session_state["eval_results_table"].table_name],
-            ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
-            ["Semantic Model YAML Hash", hash(st.session_state["working_yml"])],
-            ["Query Count", len(st.session_state["eval_table_frame"])]
-        ],
-        columns=["Summary Statistic", "Value"]
-    )
-    st.dataframe(summary_stats, hide_index=True)
-
-    send_analyst_requests()
-    run_sql_queries()
-    result_comparisons()
+        send_analyst_requests()
+        run_sql_queries()
+        result_comparisons()
 
 
 def send_analyst_requests() -> None:
@@ -965,8 +919,10 @@ def send_analyst_requests() -> None:
             response_text = _get_content(response, item_type="text", key="text")
             response_sql = _get_content(response, item_type="sql", key="statement")
             analyst_results.append(dict(ID=id, ANALYST_TEXT=response_text, ANALYST_SQL=response_sql))
-        except ValueError as e:
-            st.error(e)
+        except Exception as e:
+            import traceback
+
+            st.error(f"Problem with {id}: {e} \n{traceback.format_exc()}")
 
         progress_bar.progress(i / total_requests)
         time.sleep(0.1)
@@ -1117,19 +1073,19 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
             return f"Could Not Parse LLM Judge Response: {x}"
 
     llm_judge_frame["EXPLANATION"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(reason_filter,))
-    llm_judge_frame["MATCH"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(answer_filter,)).str.lower().eq("true")
+    llm_judge_frame["CORRECT"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(answer_filter,)).str.lower().eq("true")
     return llm_judge_frame
 
 
 def visualize_eval_results(frame: pd.DataFrame) -> None:
     n_questions = len(frame)
-    n_correct = frame["MATCH"].sum()
+    n_correct = frame["CORRECT"].sum()
     accuracy = (n_correct / n_questions) * 100
     st.markdown(
         f"###### Results: {n_correct} out of {n_questions} questions correct with accuracy {accuracy:.2f}%"
     )
     for id, row in frame.iterrows():
-        match_emoji = "✅" if row["MATCH"] else "❌"
+        match_emoji = "✅" if row["CORRECT"] else "❌"
         with st.expander(f"Row ID: {id} {match_emoji}"):
             st.write(f"Input Query: {row['QUERY']}")
             st.write(row["ANALYST_TEXT"].replace("\n", " "))
@@ -1158,50 +1114,6 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
                     st.write(row["GOLD_RESULT"])
 
             st.write(f"**Explanation**: {row['EXPLANATION']}")
-
-
-def insert_eval_result_rows(frame: pd.DataFrame) -> None:
-    # for id, row in frame.iterrows():
-    #     model_response = st.session_state.model_responses[row_id]
-    #     gold_evaluation = _pick_gold_evaluation(
-    #         st.session_state.response_evaluations[row_id]
-    #     )
-    #
-    #     eval_data.append(
-    #         {
-    #             "TIMESTAMP": st.session_state.eval_timestamp,
-    #             "EVAL_NAME": st.session_state.eval_name,
-    #             "MODEL_NAME": st.session_state.semantic_model_path,
-    #             "MODEL_HASH": st.session_state.semantic_model_hash,
-    #             "QUESTIONS_HASH": st.session_state.question_set_hash,
-    #             "QUESTIONS_TABLE": st.session_state.query_set,
-    #             "ID": row_id,
-    #             "QUERY": data["query"],
-    #             "VQR_USED": not st.session_state.no_vqr,
-    #             "GOLD_MESSAGES": json.dumps(data["gold_messages"]),
-    #             "ANALYST_RESPONSE_TEXT": model_response["text"],
-    #             "ANALYST_SQL": model_response["sql"],
-    #             "MATCH": gold_evaluation["match"],
-    #             "EXPLANATION": gold_evaluation["reason"],
-    #         }
-    #     )
-
-    # eval_df = pd.DataFrame(eval_data)
-    db, schema, table_name = st.session_state.eval_results_table.split(".")
-    try:
-        st.session_state.session.write_pandas(
-            df=eval_df,
-            database=db,
-            schema=schema,
-            table_name=table_name,
-            overwrite=False,
-            quote_identifiers=False,
-        )
-        st.write("Evaluation results stored in the database ✅")
-    except Exception as e:
-        st.error(
-            f"Failed to insert evaluation results into {st.session_state.eval_results_table}: {e}"
-        )
 
 
 def result_comparisons() -> None:
@@ -1254,16 +1166,15 @@ def result_comparisons() -> None:
             matches[id] = exact_match
             explanations[id] = "Data matches exactly" if exact_match else use_llm_judge
 
-    frame["MATCH"] = matches
+    frame["CORRECT"] = matches
     frame["EXPLANATION"] = explanations
-    st.table(frame)
 
     filtered_frame = frame[explanations == use_llm_judge]
 
     status_text.text(f"Calling LLM Judge...")
     llm_judge_frame = _llm_judge(frame=filtered_frame)
 
-    for col in ("MATCH", "EXPLANATION"):
+    for col in ("CORRECT", "EXPLANATION"):
         frame[col] = llm_judge_frame[col].combine_first(frame[col])
 
     elapsed_time = time.time() - start_time
@@ -1273,24 +1184,21 @@ def result_comparisons() -> None:
 
     visualize_eval_results(frame)
 
-    #     conn = get_snowflake_connection()
-    #     _ = write_pandas(
-    #         conn=conn,
-    #         df=prompt_frame,
-    #         table_name=table_name,
-    #         auto_create_table=True,
-    #         table_type='temporary',
-    #         overwrite=True,
-    #     )
-    # write_pandas(
-    #     df=frame,
-    #     database=,
-    #     schema=schema,
-    #     table_name=table_name,
-    #     overwrite=False,
-    #     quote_identifiers=False,
-    # )
-    # st.write("Evaluation results stored in the database ✅")
+    frame["TIMESTAMP"] = pd.Timestamp.now()
+    frame["EVAL_TABLE"] = st.session_state["selected_eval_table"]
+    frame["EVAL_TABLE_HASH"] = st.session_state["eval_table_hash"]
+    frame["MODEL_HASH"] = hash(st.session_state["working_yml"])
+
+    frame = frame.reset_index()[list(RESULTS_TABLE_SCHEMA)]
+    write_pandas(
+        conn=get_snowflake_connection(),
+        df=frame,
+        table_name=st.session_state["selected_results_eval_table"],
+        overwrite=False,
+        quote_identifiers=False,
+        auto_create_table=not st.session_state["use_existing_table"]
+    )
+    st.write("Evaluation results stored in the database ✅")
 
 
 

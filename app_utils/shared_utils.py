@@ -32,18 +32,16 @@ from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     assert_required_env_vars,
 )
-from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    SnowflakeConnector,
-    fetch_databases,
-    fetch_schemas_in_database,
-    fetch_stages_in_schema,
-    fetch_tables_views_in_schema,
-    fetch_warehouses,
-    fetch_yaml_names_in_stage,
-    fetch_columns_names_in_table,
-)
 
 
+from semantic_model_generator.snowflake_utils.snowflake_connector import SnowflakeConnector
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_table_schema
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_databases
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_schemas_in_database
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_stages_in_schema
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_tables_views_in_schema
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_warehouses
+from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_yaml_names_in_stage
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 
 # Add a logo on the top-left corner of the app
@@ -203,16 +201,12 @@ def get_available_stages(schema: str) -> List[str]:
 
 
 @st.cache_resource(show_spinner=False)
-def validate_table_columns(table: str, columns_must_exist: Tuple[str,...]) -> bool:
-    """
-    Fetches the available stages from the Snowflake account.
-
-    Returns:
-        List[str]: A list of available stages.
-    """
-    columns_names = fetch_columns_names_in_table(get_snowflake_connection(), table)
-    for col in columns_must_exist:
-        if col not in columns_names:
+def validate_table_schema(table: str, schema: Dict[str, str]) -> bool:
+    table_schema = fetch_table_schema(get_snowflake_connection(), table)
+    if set(schema) != set(table_schema):
+        return False
+    for col_name, col_type in table_schema.items():
+        if not (schema[col_name] in col_type):
             return False
     return True
 
@@ -1413,17 +1407,4 @@ class SnowflakeStage:
             "Database": self.stage_database,
             "Schema": self.stage_schema,
             "Stage": self.stage_name,
-        }
-
-@dataclass(frozen=True)
-class SnowflakeTable:
-    table_database: str
-    table_schema: str
-    table_name: str
-
-    def to_dict(self) -> dict[str, str]:
-        return {
-            "Database": self.table_database,
-            "Schema": self.table_schema,
-            "Table": self.table_name,
         }
