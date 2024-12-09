@@ -1,20 +1,10 @@
 
+
 from streamlit import config
 
 
-import re
-from textwrap import dedent
-
-from snowflake.connector.pandas_tools import write_pandas
-
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_table
-from semantic_model_generator.snowflake_utils.snowflake_connector import execute_query
-
-
 import json
-import re
 import time
-from textwrap import dedent
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -22,8 +12,10 @@ import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 
+
 from streamlit import config
 
+from streamlit import config
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
 from streamlit_extras.stylable_container import stylable_container
