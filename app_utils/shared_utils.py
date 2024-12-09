@@ -18,10 +18,14 @@ from snowflake.connector import ProgrammingError
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.snowpark import Session
 
-from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
-from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
-from semantic_model_generator.generate_model import generate_model_str_from_snowflake
-from semantic_model_generator.generate_model import raw_schema_to_semantic_context
+from semantic_model_generator.data_processing.proto_utils import (
+    proto_to_yaml,
+    yaml_to_semantic_model,
+)
+from semantic_model_generator.generate_model import (
+    generate_model_str_from_snowflake,
+    raw_schema_to_semantic_context,
+)
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402

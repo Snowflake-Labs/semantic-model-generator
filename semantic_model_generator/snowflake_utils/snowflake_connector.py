@@ -346,9 +346,7 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_table_schema(
-    conn: SnowflakeConnection, table_fqn: str
-) -> dict[str, str]:
+def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
     """
     Fetches the table schema the current user has access
     Args:
@@ -425,13 +423,11 @@ def create_table_in_schema(
 
     Returns: True if the table was created successfully, False otherwise
     """
-    columns_schema = [
-        f"{k} {v}" for k, v in columns_schema.items()
-    ]
+    field_type_list = [f"{k} {v}" for k, v in columns_schema.items()]
     # Construct the create table query
     create_table_query = f"""
     CREATE TABLE IF NOT EXISTS {table_fqn} (
-        {', '.join(columns_schema)}
+        {', '.join(field_type_list)}
     )
     """
 

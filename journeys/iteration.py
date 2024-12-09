@@ -7,6 +7,7 @@ import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 from streamlit import config
+from snowflake.connector.pandas_tools import write_pandas
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
 from streamlit_extras.stylable_container import stylable_container
@@ -22,13 +23,13 @@ from app_utils.shared_utils import (
     get_yamls_from_stage,
     init_session_states,
     return_home_button,
+    schema_selector_container,
     stage_selector_container,
     table_selector_container,
-    schema_selector_container,
-    validate_table_schema,
-    validate_table_exist,
     upload_yaml,
     validate_and_upload_tmp_yaml,
+    validate_table_exist,
+    validate_table_schema,
 )
 from journeys.evaluation import evaluation_mode_show
 from journeys.joins import joins_dialog
@@ -43,11 +44,13 @@ from semantic_model_generator.data_processing.proto_utils import (
     yaml_to_semantic_model,
 )
 from semantic_model_generator.protos import semantic_model_pb2
-from semantic_model_generator.validate_model import validate
-from semantic_model_generator.snowflake_utils.snowflake_connector import get_table_hash
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     create_table_in_schema,
+    execute_query,
+    fetch_table,
+    get_table_hash,
 )
+from semantic_model_generator.validate_model import validate
 
 EVALUATION_TABLE_SCHEMA = {
     "ID": "VARCHAR",
@@ -541,14 +544,12 @@ def evaluation_data_dialog() -> None:
             },
         )
 
-
     st.divider()
 
     if st.button("Use Tables"):
-        st.session_state["selected_results_eval_table"] = (
-            st.session_state.get("selected_results_eval_new_table")
-            or st.session_state.get("selected_results_eval_old_table")
-        )
+        st.session_state["selected_results_eval_table"] = st.session_state.get(
+            "selected_results_eval_new_table"
+        ) or st.session_state.get("selected_results_eval_old_table")
 
         if (
             not st.session_state["selected_eval_database"]
@@ -562,16 +563,20 @@ def evaluation_data_dialog() -> None:
             return
 
         if not validate_table_schema(
-            table=st.session_state["selected_eval_table"], schema=EVALUATION_TABLE_SCHEMA
+            table=st.session_state["selected_eval_table"],
+            schema=EVALUATION_TABLE_SCHEMA,
         ):
             st.error(f"Evaluation table must have schema {EVALUATION_TABLE_SCHEMA}.")
             return
 
         if eval_results_existing_table:
             if not validate_table_schema(
-                table=st.session_state["selected_results_eval_old_table"], schema=RESULTS_TABLE_SCHEMA
+                table=st.session_state["selected_results_eval_old_table"],
+                schema=RESULTS_TABLE_SCHEMA,
             ):
-                st.error(f"Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}.")
+                st.error(
+                    f"Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}."
+                )
                 return
 
             if not validate_table_columns(st.session_state["selected_results_eval_table"], tuple(results_table_columns.keys())):
@@ -585,16 +590,22 @@ def evaluation_data_dialog() -> None:
                     columns_schema=RESULTS_TABLE_SCHEMA,
                 )
                 if success:
-                    st.success(f'Table {st.session_state["selected_results_eval_new_table"]} created successfully!')
+                    st.success(
+                        f'Table {st.session_state["selected_results_eval_new_table"]} created successfully!'
+                    )
                 else:
-                    st.error(f'Failed to create table {st.session_state["selected_results_eval_new_table"]}')
+                    st.error(
+                        f'Failed to create table {st.session_state["selected_results_eval_new_table"]}'
+                    )
                     return
 
         st.session_state["eval_table_hash"] = get_table_hash(
-            conn=get_snowflake_connection(), table_fqn=st.session_state["selected_eval_table"]
+            conn=get_snowflake_connection(),
+            table_fqn=st.session_state["selected_eval_table"],
         )
         st.session_state["eval_table_frame"] = fetch_table(
-            conn=get_snowflake_connection(), table_fqn=st.session_state["selected_eval_table"]
+            conn=get_snowflake_connection(),
+            table_fqn=st.session_state["selected_eval_table"],
         ).set_index("ID")
 
         st.rerun()
@@ -918,24 +929,26 @@ def evaluation_mode_show() -> None:
         return
 
     # TODO: find a less awkward way of specifying this.
-    if any(key not in st.session_state for key in ("selected_eval_table", "eval_table_hash", "eval_table_frame")):
+    if any(
+        key not in st.session_state
+        for key in ("selected_eval_table", "eval_table_hash", "eval_table_frame")
+    ):
         st.error("Please set evaluation tables.")
         return
 
     else:
-        results_table = (
-            st.session_state.get("selected_results_eval_old_table") or
-            st.session_state.get("selected_results_eval_new_table")
-        )
+        results_table = st.session_state.get(
+            "selected_results_eval_old_table"
+        ) or st.session_state.get("selected_results_eval_new_table")
         summary_stats = pd.DataFrame(
             [
                 ["Evaluation Table", st.session_state["selected_eval_table"]],
                 ["Evaluation Result Table", results_table],
                 ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
                 ["Semantic Model YAML Hash", hash(st.session_state["working_yml"])],
-                ["Query Count", len(st.session_state["eval_table_frame"])]
+                ["Query Count", len(st.session_state["eval_table_frame"])],
             ],
-            columns=["Summary Statistic", "Value"]
+            columns=["Summary Statistic", "Value"],
         )
         st.dataframe(summary_stats, hide_index=True)
 
@@ -945,7 +958,9 @@ def evaluation_mode_show() -> None:
 
 
 def send_analyst_requests() -> None:
-    def _get_content(x: dict, item_type: str, key: str, default: str = "") -> str:
+    def _get_content(
+        x: dict, item_type: str, key: str, default: str = ""  # type: ignore[type-arg]
+    ) -> str:
         result = next(
             (
                 item[key]
@@ -966,17 +981,21 @@ def send_analyst_requests() -> None:
 
     for i, (id, row) in enumerate(eval_table_frame.iterrows(), start=1):
         status_text.text(f"Sending request {i}/{total_requests} to Analyst...")
-        messages = [{"role": "user", "content": [{"type": "text", "text": row["QUERY"]}]}]
+        messages = [
+            {"role": "user", "content": [{"type": "text", "text": row["QUERY"]}]}
+        ]
         semantic_model = proto_to_yaml(st.session_state.semantic_model)
         try:
             response = send_message(
                 _conn=get_snowflake_connection(),
                 semantic_model=semantic_model,
-                messages=messages
+                messages=messages,  # type: ignore[arg-type]
             )
             response_text = _get_content(response, item_type="text", key="text")
             response_sql = _get_content(response, item_type="sql", key="statement")
-            analyst_results.append(dict(ID=id, ANALYST_TEXT=response_text, ANALYST_SQL=response_sql))
+            analyst_results.append(
+                dict(ID=id, ANALYST_TEXT=response_text, ANALYST_SQL=response_sql)
+            )
         except Exception as e:
             import traceback
 
@@ -1010,7 +1029,9 @@ def run_sql_queries() -> None:
         status_text.text(f"Evaluating Analyst query {i}/{total_requests}...")
 
         analyst_query = analyst_results_frame.loc[id, "ANALYST_SQL"]
-        analyst_result = execute_query(conn=get_snowflake_connection(), query=analyst_query)
+        analyst_result = execute_query(
+            conn=get_snowflake_connection(), query=analyst_query
+        )
         analyst_results.append(analyst_result)
 
         gold_query = eval_table_frame.loc[id, "GOLD_SQL"]
@@ -1021,11 +1042,8 @@ def run_sql_queries() -> None:
         time.sleep(0.1)
 
     st.session_state["query_results_frame"] = pd.DataFrame(
-        data=dict(
-            ANALYST_RESULT=analyst_results,
-            GOLD_RESULT=gold_results
-        ),
-        index=eval_table_frame.index
+        data=dict(ANALYST_RESULT=analyst_results, GOLD_RESULT=gold_results),
+        index=eval_table_frame.index,
     )
 
     elapsed_time = time.time() - start_time
@@ -1100,7 +1118,7 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
             input_question=row["QUERY"],
             frame1_str=row["ANALYST_RESULT"].to_string(index=False),
             frame2_str=row["GOLD_RESULT"].to_string(index=False),
-        )
+        ),
     ).to_frame(name=col_name)
     conn = get_snowflake_connection()
     _ = write_pandas(
@@ -1108,7 +1126,7 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
         df=prompt_frame,
         table_name=table_name,
         auto_create_table=True,
-        table_type='temporary',
+        table_type="temporary",
         overwrite=True,
     )
 
@@ -1124,14 +1142,21 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
     reason_filter = re.compile(r"REASON\:([\S\s]*?)ANSWER\:")
     answer_filter = re.compile(r"ANSWER\:([\S\s]*?)$")
 
-    def _safe_re_search(x, filter):
+    def _safe_re_search(x, filter):  # type: ignore[no-untyped-def]
         try:
-            return re.search(filter, x).group(1).strip()
+            return re.search(filter, x).group(1).strip()  # type: ignore[union-attr]
         except Exception as e:
             return f"Could Not Parse LLM Judge Response: {x}"
 
-    llm_judge_frame["EXPLANATION"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(reason_filter,))
-    llm_judge_frame["CORRECT"] = llm_judge_frame["LLM_JUDGE"].apply(_safe_re_search, args=(answer_filter,)).str.lower().eq("true")
+    llm_judge_frame["EXPLANATION"] = llm_judge_frame["LLM_JUDGE"].apply(
+        _safe_re_search, args=(reason_filter,)
+    )
+    llm_judge_frame["CORRECT"] = (
+        llm_judge_frame["LLM_JUDGE"]
+        .apply(_safe_re_search, args=(answer_filter,))
+        .str.lower()
+        .eq("true")
+    )
     return llm_judge_frame
 
 
@@ -1180,8 +1205,7 @@ def result_comparisons() -> None:
     query_results_frame = st.session_state["query_results_frame"]
 
     frame = pd.concat(
-        [eval_table_frame, analyst_results_frame, query_results_frame],
-        axis=1
+        [eval_table_frame, analyst_results_frame, query_results_frame], axis=1
     )
 
     start_time = time.time()
@@ -1191,7 +1215,7 @@ def result_comparisons() -> None:
     explanations = pd.Series("", index=frame.index)
     use_llm_judge = "<use llm judge>"
 
-    status_text.text(f"Checking for exact matches...")
+    status_text.text("Checking for exact matches...")
     for id, row in frame.iterrows():
         analyst_is_frame = isinstance(row["ANALYST_RESULT"], pd.DataFrame)
         gold_is_frame = isinstance(row["GOLD_RESULT"], pd.DataFrame)
@@ -1254,7 +1278,7 @@ def result_comparisons() -> None:
         table_name=st.session_state["selected_results_eval_table"],
         overwrite=False,
         quote_identifiers=False,
-        auto_create_table=not st.session_state["use_existing_table"]
+        auto_create_table=not st.session_state["use_existing_table"],
     )
     st.write("Evaluation results stored in the database ✅")
 
