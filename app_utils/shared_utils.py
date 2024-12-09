@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from io import StringIO
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 import pandas as pd
