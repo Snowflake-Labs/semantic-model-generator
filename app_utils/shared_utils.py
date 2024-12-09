@@ -198,16 +198,12 @@ def get_available_stages(schema: str) -> List[str]:
 
 
 @st.cache_resource(show_spinner=False)
-def validate_table_columns(table: str, columns_must_exist: Tuple[str,...]) -> bool:
-    """
-    Fetches the available stages from the Snowflake account.
-
-    Returns:
-        List[str]: A list of available stages.
-    """
-    columns_names = fetch_columns_names_in_table(get_snowflake_connection(), table)
-    for col in columns_must_exist:
-        if col not in columns_names:
+def validate_table_schema(table: str, schema: Dict[str, str]) -> bool:
+    table_schema = fetch_table_schema(get_snowflake_connection(), table)
+    if set(schema) != set(table_schema):
+        return False
+    for col_name, col_type in table_schema.items():
+        if not (schema[col_name] in col_type):
             return False
     return True
 
@@ -1534,17 +1530,4 @@ class SnowflakeStage:
             "Database": self.stage_database,
             "Schema": self.stage_schema,
             "Stage": self.stage_name,
-        }
-
-@dataclass(frozen=True)
-class SnowflakeTable:
-    table_database: str
-    table_schema: str
-    table_name: str
-
-    def to_dict(self) -> dict[str, str]:
-        return {
-            "Database": self.table_database,
-            "Schema": self.table_schema,
-            "Table": self.table_name,
         }

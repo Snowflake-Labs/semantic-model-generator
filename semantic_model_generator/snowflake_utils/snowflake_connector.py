@@ -346,11 +346,11 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_columns_names_in_table(
+def fetch_table_schema(
     conn: SnowflakeConnection, table_fqn: str
-) -> list[str]:
+) -> dict[str, str]:
     """
-    Fetches all columns that the current user has access to in the current table
+    Fetches the table schema the current user has access
     Args:
         conn: SnowflakeConnection to run the query
         table_fqn: The fully qualified name of the table to connect to.
@@ -360,8 +360,8 @@ def fetch_columns_names_in_table(
     query = f"DESCRIBE TABLE {table_fqn};"
     cursor = conn.cursor()
     cursor.execute(query)
-    columns = cursor.fetchall()
-    return [result[0] for result in columns]
+    result = cursor.fetchall()
+    return dict([x[:2] for x in result])
 
 def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
     """
@@ -404,15 +404,6 @@ def fetch_yaml_names_in_stage(
 
 
 def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
-    """
-
-    Args:
-        conn:
-        table_fqn:
-
-    Returns:
-
-    """
     query = f"SELECT * FROM {table_fqn};"
     cursor = conn.cursor()
     cursor.execute(query)
@@ -422,23 +413,24 @@ def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
 
 def create_table_in_schema(
     conn: SnowflakeConnection,
-    table_name: str,
-    schema_name: str,
-    columns_schema: List[str],
+    table_fqn: str,
+    columns_schema: Dict[str, str],
 ) -> bool:
     """
     Creates a table in the specified schema with the specified columns
     Args:
         conn: SnowflakeConnection to run the query
-        table_name: The name of the table to create
-        schema_name: The name of the schema to create the table in
-        columns: A list of Column objects representing the columns of the table
+        table_fqn: The fully qualified name of the table to create
+        columns_schema: A list of Column objects representing the columns of the table
 
     Returns: True if the table was created successfully, False otherwise
     """
+    columns_schema = [
+        f"{k} {v}" for k, v in columns_schema.items()
+    ]
     # Construct the create table query
     create_table_query = f"""
-    CREATE TABLE IF NOT EXISTS {schema_name}.{table_name} (
+    CREATE TABLE IF NOT EXISTS {table_fqn} (
         {', '.join(columns_schema)}
     )
     """
