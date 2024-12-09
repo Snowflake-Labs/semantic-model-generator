@@ -7,12 +7,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from io import StringIO
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import streamlit as st
@@ -21,24 +16,29 @@ from snowflake.connector import ProgrammingError
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.snowpark import Session
 
-from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
-from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
-from semantic_model_generator.generate_model import generate_model_str_from_snowflake
-from semantic_model_generator.generate_model import raw_schema_to_semantic_context
+from semantic_model_generator.data_processing.proto_utils import (
+    proto_to_yaml,
+    yaml_to_semantic_model,
+)
+from semantic_model_generator.generate_model import (
+    generate_model_str_from_snowflake,
+    raw_schema_to_semantic_context,
+)
 from semantic_model_generator.protos import semantic_model_pb2
-from semantic_model_generator.protos.semantic_model_pb2 import Dimension
-from semantic_model_generator.protos.semantic_model_pb2 import Table
+from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     assert_required_env_vars,
 )
-from semantic_model_generator.snowflake_utils.snowflake_connector import SnowflakeConnector
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_table_schema
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_databases
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_schemas_in_database
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_stages_in_schema
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_tables_views_in_schema
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_warehouses
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_yaml_names_in_stage
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    SnowflakeConnector,
+    fetch_databases,
+    fetch_schemas_in_database,
+    fetch_stages_in_schema,
+    fetch_table_schema,
+    fetch_tables_views_in_schema,
+    fetch_warehouses,
+    fetch_yaml_names_in_stage,
+)
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 
@@ -100,6 +100,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
     if st.session_state["sis"]:
         # Import SiS-required modules
         import sys
+
         from snowflake.snowpark.context import get_active_session
 
         # Non-Anaconda supported packages must be added to path to import from stage
@@ -209,7 +210,7 @@ def validate_table_schema(table: str, schema: Dict[str, str]) -> bool:
 
 
 @st.cache_resource(show_spinner=False)
-def validate_table_exist(schema: str, table_name:str) -> bool:
+def validate_table_exist(schema: str, table_name: str) -> bool:
     """
     Validate table exist in the Snowflake account.
 

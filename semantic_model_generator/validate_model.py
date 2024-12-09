@@ -2,6 +2,7 @@ import json
 import re
 
 from snowflake.connector import SnowflakeConnection
+
 from app_utils.chat import send_message
 
 

@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Dict, Any
+from typing import Any, Dict
 
 import requests
 import streamlit as st
