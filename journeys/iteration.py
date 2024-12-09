@@ -161,7 +161,7 @@ def show_expr_for_ref(message_index: int) -> None:
         st.table(col_df.set_index(col_df.columns[1]))
 
 
-@st.dialog("Edit", width="large")
+@st.experimental_dialog("Edit", width="large")
 def edit_verified_query(
     conn: SnowflakeConnection, sql: str, question: str, message_index: int
 ) -> None:
@@ -432,7 +432,7 @@ def clear_evaluation_data() -> None:
             del st.session_state[feature]
 
 
-@st.dialog("Evaluation Tables", width="large")
+@st.experimental_dialog("Evaluation Tables", width="large")
 def evaluation_data_dialog() -> None:
     st.markdown("Please select an evaluation table")
     table_selector_container(
@@ -557,7 +557,7 @@ def evaluation_data_dialog() -> None:
         st.rerun()
 
 
-@st.dialog("Upload", width="small")
+@st.experimental_dialog("Upload", width="small")
 def upload_dialog(content: str) -> None:
     def upload_handler(file_name: str) -> None:
         if not st.session_state.validated and changed_from_last_validated_model():
@@ -643,7 +643,7 @@ def update_container(
     container.markdown(content)
 
 
-@st.dialog("Error", width="small")
+@st.experimental_dialog("Error", width="small")
 def exception_as_dialog(e: Exception) -> None:
     st.error(f"An error occurred: {e}")
 
@@ -767,7 +767,7 @@ def yaml_editor(yaml_str: str) -> None:
         update_container(status_container, "editing", prefix=status_container_title)
 
 
-@st.dialog("Welcome to the Iteration app! 💬", width="large")
+@st.experimental_dialog("Welcome to the Iteration app! 💬", width="large")
 def set_up_requirements() -> None:
     """
     Collects existing YAML location from the user so that we can download it.
@@ -818,7 +818,7 @@ def set_up_requirements() -> None:
         st.rerun()
 
 
-@st.dialog("Chat Settings", width="small")
+@st.experimental_dialog("Chat Settings", width="small")
 def chat_settings_dialog() -> None:
     """
     Dialog that allows user to toggle on/off certain settings about the chat experience.

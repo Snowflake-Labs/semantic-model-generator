@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-@st.dialog("Partner Semantic Support", width="large")
+@st.experimental_dialog("Partner Semantic Support", width="large")
 def partner_semantic_setup() -> None:
     """
     Renders the partner semantic setup dialog with instructions.
