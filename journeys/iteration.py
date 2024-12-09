@@ -23,13 +23,9 @@ from app_utils.shared_utils import (
     get_yamls_from_stage,
     init_session_states,
     return_home_button,
-    schema_selector_container,
     stage_selector_container,
-    table_selector_container,
     upload_yaml,
     validate_and_upload_tmp_yaml,
-    validate_table_exist,
-    validate_table_schema,
 )
 from journeys.evaluation import evaluation_mode_show
 from journeys.joins import joins_dialog
@@ -44,12 +40,6 @@ from semantic_model_generator.data_processing.proto_utils import (
     yaml_to_semantic_model,
 )
 from semantic_model_generator.protos import semantic_model_pb2
-from semantic_model_generator.snowflake_utils.snowflake_connector import (
-    create_table_in_schema,
-    execute_query,
-    fetch_table,
-    get_table_hash,
-)
 from semantic_model_generator.validate_model import validate
 
 EVALUATION_TABLE_SCHEMA = {
