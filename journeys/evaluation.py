@@ -417,6 +417,16 @@ def send_analyst_requests() -> None:
 @st.experimental_dialog("Evaluation Tables", width="large")
 def evaluation_data_dialog() -> None:
     st.markdown("Please select an evaluation table.")
+    st.markdown("The evaluation table should have the following schema:")
+    eval_table_schema_explained = pd.DataFrame(
+        [
+            ["ID", "VARCHAR", "Unique identifier for each row"],
+            ["QUERY", "VARCHAR", "The query to be evaluated"],
+            ["GOLD_SQL", "VARCHAR", "The expected SQL for the query"],
+        ],
+        columns=["Column", "Type", "Description"],
+    )
+    st.dataframe(eval_table_schema_explained, hide_index=True)
     table_selector_container(
         db_selector={"key": "selected_eval_database", "label": "Evaluation database"},
         schema_selector={"key": "selected_eval_schema", "label": "Evaluation schema"},
@@ -481,14 +491,14 @@ def evaluation_data_dialog() -> None:
             or not st.session_state["selected_results_eval_schema"]
             or not st.session_state["selected_results_eval_table"]
         ):
-            st.error("Please fill in all fields.")
+            st.error("🚨 Please fill in all fields.")
             return
 
         if not validate_table_schema(
             table=st.session_state["selected_eval_table"],
             schema=EVALUATION_TABLE_SCHEMA,
         ):
-            st.error(f"Evaluation table must have schema {EVALUATION_TABLE_SCHEMA}.")
+            st.error(f"🚨 Evaluation table must have schema {EVALUATION_TABLE_SCHEMA}.")
             return
 
         if eval_results_existing_table:
@@ -497,7 +507,7 @@ def evaluation_data_dialog() -> None:
                 schema=RESULTS_TABLE_SCHEMA,
             ):
                 st.error(
-                    f"Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}."
+                    f"🚨 Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}."
                 )
                 return
 
@@ -508,7 +518,7 @@ def evaluation_data_dialog() -> None:
                     "selected_results_eval_new_table_no_schema"
                 ],
             ):
-                st.error("Results table already exists")
+                st.error("🚨 Results table already exists")
                 return
 
             with st.spinner("Creating table..."):
@@ -566,8 +576,12 @@ def clear_evaluation_data() -> None:
 
 def evaluation_mode_show() -> None:
 
-    if st.button("Set Evaluation Tables", on_click=clear_evaluation_data):
+    if st.button("Select Evaluation Tables", on_click=clear_evaluation_data):
         evaluation_data_dialog()
+
+    st.write(
+        "Welcome!🧪 In the evaluation mode you can evaluate your semantic model against multiple golden queries where the expected SQL is known from **Evaluation Table**  and compute accuracy metric. The results of the evaluation run will be stored in **Evaluation Results Table**."
+    )
 
     # TODO: find a less awkward way of specifying this.
     if any(key not in st.session_state for key in ("eval_table", "results_eval_table")):
