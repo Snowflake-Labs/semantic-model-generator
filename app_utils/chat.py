@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Dict, Any
+from typing import Any, Dict
 
 import requests
 import streamlit as st
@@ -32,7 +32,7 @@ def send_message(
 
         resp = _snowflake.send_snow_api_request(  # type: ignore
             "POST",
-            f"/api/v2/cortex/analyst/message",
+            "/api/v2/cortex/analyst/message",
             {},
             {},
             request_body,

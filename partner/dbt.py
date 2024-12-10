@@ -6,12 +6,11 @@ import yaml
 from snowflake.connector import ProgrammingError
 
 from app_utils.shared_utils import (
+    download_yaml,
     get_snowflake_connection,
+    get_yamls_from_stage,
     set_sit_query_tag,
     stage_selector_container,
-    get_yamls_from_stage,
-    download_yaml,
-    SnowflakeStage,
 )
 
 # Partner semantic support instructions
