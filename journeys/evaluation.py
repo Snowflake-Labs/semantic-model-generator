@@ -491,14 +491,14 @@ def evaluation_data_dialog() -> None:
             or not st.session_state["selected_results_eval_schema"]
             or not st.session_state["selected_results_eval_table"]
         ):
-            st.error("🚨 Please fill in all fields.")
+            st.error("Please fill in all fields.")
             return
 
         if not validate_table_schema(
             table=st.session_state["selected_eval_table"],
             schema=EVALUATION_TABLE_SCHEMA,
         ):
-            st.error(f"🚨 Evaluation table must have schema {EVALUATION_TABLE_SCHEMA}.")
+            st.error(f"Evaluation table must have schema {EVALUATION_TABLE_SCHEMA}.")
             return
 
         if eval_results_existing_table:
@@ -507,7 +507,7 @@ def evaluation_data_dialog() -> None:
                 schema=RESULTS_TABLE_SCHEMA,
             ):
                 st.error(
-                    f"🚨 Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}."
+                    f"Evaluation result table must have schema {RESULTS_TABLE_SCHEMA}."
                 )
                 return
 
@@ -518,7 +518,7 @@ def evaluation_data_dialog() -> None:
                     "selected_results_eval_new_table_no_schema"
                 ],
             ):
-                st.error("🚨 Results table already exists")
+                st.error("Results table already exists")
                 return
 
             with st.spinner("Creating table..."):
