@@ -21,6 +21,7 @@ pyvenv
 .vscode/settings.json
 .vscode/.ropeproject
 .vscode/*.log
+.vscode/*.json
 
 # Jetbrains
 .idea/*

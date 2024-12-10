@@ -6,12 +6,6 @@ import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError, SnowflakeConnection
 
-from partner.cortex import (
-    CortexDimension,
-    CortexMeasure,
-    CortexSemanticTable,
-    CortexTimeDimension,
-)
 from app_utils.shared_utils import (
     GeneratorAppScreen,
     check_valid_session_state_values,
@@ -26,6 +20,12 @@ from app_utils.shared_utils import (
     run_generate_model_str_from_snowflake,
     set_sit_query_tag,
     set_table_comment,
+)
+from partner.cortex import (
+    CortexDimension,
+    CortexMeasure,
+    CortexSemanticTable,
+    CortexTimeDimension,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_dict
 
@@ -523,7 +523,7 @@ def render_looker_explore_as_table(
     target_lag: Optional[int] = 20,
     target_lag_unit: Optional[str] = "minutes",
     warehouse: Optional[str] = None,
-) -> Union[None,dict[str, dict[str, str]]]:
+) -> Union[None, dict[str, dict[str, str]]]:
     """
     Creates materialized table corresponding to Looker Explore.
     Args:
