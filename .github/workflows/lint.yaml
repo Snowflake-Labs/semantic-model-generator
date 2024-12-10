@@ -21,39 +21,57 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Caching dependencies using Poetry
       - name: Cache Poetry virtualenv
         uses: actions/cache@v2
         with:
           path: ~/.cache/pypoetry/virtualenvs
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-poetry-
 
       - name: Install Poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
+          pipx install poetry
 
       - name: Configure Poetry
         run: |
-          $HOME/.local/bin/poetry config virtualenvs.create false
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry config virtualenvs.create false
 
       - name: Install dependencies using Poetry
         run: |
-          $HOME/.local/bin/poetry install --no-interaction
+          poetry install --no-interaction
 
       - name: Run mypy
+        id: mypy
         run: |
           make run_mypy
+        continue-on-error: true
 
       - name: Check with black
+        id: black
         run: |
           make check_black
+        continue-on-error: true
 
       - name: Check with isort
+        id: isort
         run: |
           make check_isort
+        continue-on-error: true
 
       - name: Run flake8
+        id: flake8
         run: |
           make run_flake8
+        continue-on-error: true
+
+      - name: Report failures
+        run: |
+          if [ "${{ steps.mypy.outcome }}" != "success" ]; then echo "mypy failed"; FAIL=1; fi
+          if [ "${{ steps.black.outcome }}" != "success" ]; then echo "black failed"; FAIL=1; fi
+          if [ "${{ steps.isort.outcome }}" != "success" ]; then echo "isort failed"; FAIL=1; fi
+          if [ "${{ steps.flake8.outcome }}" != "success" ]; then echo "flake8 failed"; FAIL=1; fi
+          if [ "$FAIL" == "1" ]; then exit 1; fi
