@@ -580,7 +580,7 @@ def evaluation_mode_show() -> None:
         evaluation_data_dialog()
 
     st.write(
-        "Welcome to evaluation mode 🧪! Here you can evaluate your semantic model against multiple golden queries where the expected SQL is known from the **Evaluation Table**. The accuracy metric will be computed, and the results of the evaluation run will be stored in the **Evaluation Results Table**."
+        "Welcome!🧪 In the evaluation mode you can evaluate your semantic model using pairs of golden queries/questions and their expected SQL statements. These pairs should be captured in an **Evaluation Table**. Accuracy metrics will be shown and the results will be stored in an **Evaluation Results Table**."
     )
 
     # TODO: find a less awkward way of specifying this.
