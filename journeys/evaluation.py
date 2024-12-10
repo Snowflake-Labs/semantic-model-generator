@@ -5,6 +5,7 @@ from textwrap import dedent
 from typing import Any
 
 import pandas as pd
+import snowflake.snowpark._internal.utils as snowpark_utils
 import streamlit as st
 from loguru import logger
 from snowflake.connector.pandas_tools import write_pandas
@@ -114,7 +115,6 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame({"EXPLANATION": [], "CORRECT": []})
 
     # create prompt frame series
-    table_name = "__LLM_JUDGE_TEMP_TABLE"
     col_name = "LLM_JUDGE_PROMPT"
 
     prompt_frame = frame.apply(
@@ -126,6 +126,9 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
         ),
     ).to_frame(name=col_name)
     conn = get_snowflake_connection()
+    table_name = snowpark_utils.random_name_for_temp_object(
+        snowpark_utils.TempObjectType.TABLE
+    )
     _ = write_pandas(
         conn=conn,
         df=prompt_frame,
