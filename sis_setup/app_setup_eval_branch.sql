@@ -41,7 +41,7 @@ PUT file://app_utils/*.py @CORTEX_ANALYST_SEMANTICS_EVAL.SEMANTIC_MODEL_GENERATO
 CREATE OR REPLACE STREAMLIT CORTEX_ANALYST_SEMANTICS_EVAL.SEMANTIC_MODEL_GENERATOR.SEMANTIC_MODEL_GENERATOR
 ROOT_LOCATION = '@CORTEX_ANALYST_SEMANTICS_EVAL.SEMANTIC_MODEL_GENERATOR.STREAMLIT_STAGE/semantic_model_generator'
 MAIN_FILE = 'app.py'
-TITLE = "Semantic Model Generator (Eval)"
+TITLE = "Semantic Model Generator (with Eval)"
 IMPORTS = ('@cortex_analyst_semantics_eval.semantic_model_generator.streamlit_stage/looker_sdk.zip',
 '@cortex_analyst_semantics_eval.semantic_model_generator.streamlit_stage/strictyaml.zip')
 QUERY_WAREHOUSE = $streamlit_warehouse
