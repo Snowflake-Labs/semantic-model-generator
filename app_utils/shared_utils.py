@@ -219,8 +219,10 @@ def get_available_stages(schema: str) -> List[str]:
 @st.cache_resource(show_spinner=False)
 def validate_table_schema(table: str, schema: Dict[str, str]) -> bool:
     table_schema = fetch_table_schema(get_snowflake_connection(), table)
-    if set(schema) != set(table_schema):
+    # validate columns names
+    if set(schema.keys()) != set(table_schema.keys()):
         return False
+    # validate column types
     for col_name, col_type in table_schema.items():
         if not (schema[col_name] in col_type):
             return False

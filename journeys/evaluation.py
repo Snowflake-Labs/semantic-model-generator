@@ -31,7 +31,7 @@ EVALUATION_TABLE_SCHEMA = {
     "GOLD_SQL": "VARCHAR",
 }
 RESULTS_TABLE_SCHEMA = {
-    "TIMESTAMP": "DATETIME",
+    "TIMESTAMP": "TIMESTAMP_NTZ",
     "ID": "VARCHAR",
     "QUERY": "VARCHAR",
     "ANALYST_TEXT": "VARCHAR",
@@ -42,6 +42,7 @@ RESULTS_TABLE_SCHEMA = {
     "CORRECT": "BOOLEAN",
     "EXPLANATION": "VARCHAR",
     "MODEL_HASH": "VARCHAR",
+    "SEMANTIC_MODEL_STRING": "VARCHAR",
     "EVAL_TABLE": "VARCHAR",
 }
 
@@ -263,9 +264,9 @@ def result_comparisons() -> None:
     visualize_eval_results(frame)
 
     frame["TIMESTAMP"] = st.session_state["eval_timestamp"]
-    frame["EVAL_TABLE"] = st.session_state["selected_eval_table"]
+    frame["EVAL_TABLE"] = st.session_state["eval_table"]
     frame["EVAL_TABLE_HASH"] = st.session_state["eval_table_hash"]
-    frame["MODEL_HASH"] = generate_hash(st.session_state["working_yml"])
+    frame["MODEL_HASH"] = st.session_state["semantic_model_hash"]
 
     # Save results to frame as string
     frame["ANALYST_RESULT"] = frame["ANALYST_RESULT"].apply(
@@ -274,6 +275,7 @@ def result_comparisons() -> None:
     frame["GOLD_RESULT"] = frame["GOLD_RESULT"].apply(
         lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x
     )
+    frame["SEMANTIC_MODEL_STRING"] = st.session_state["working_yml"]
 
     frame = frame.reset_index()[list(RESULTS_TABLE_SCHEMA)]
     write_pandas(
@@ -420,7 +422,7 @@ def evaluation_data_dialog() -> None:
 
     st.markdown("Please select a results table")
     eval_results_existing_table = st.checkbox(
-        "Use existing table", key="use_existing_table"
+        "Use existing table", key="use_existing_eval_results_table"
     )
 
     if not eval_results_existing_table:
@@ -529,13 +531,16 @@ def evaluation_data_dialog() -> None:
             table_fqn=st.session_state["selected_eval_table"],
         ).set_index("ID")
 
+        st.session_state["eval_table"] = st.session_state["selected_eval_table"]
+        st.session_state["results_eval_table"] = st.session_state[
+            "selected_results_eval_table"
+        ]
+
         st.rerun()
 
 
 def clear_evaluation_data() -> None:
     session_states = (
-        "eval_table_frame",
-        "eval_table_hash",
         "selected_eval_database",
         "selected_eval_schema",
         "selected_eval_table",
@@ -544,8 +549,7 @@ def clear_evaluation_data() -> None:
         "selected_results_eval_new_table_no_schema",
         "selected_results_eval_old_table",
         "selected_results_eval_schema",
-        "use_existing_table",
-        "eval_timestamp",
+        "use_existing_eval_results_table",
     )
     for feature in session_states:
         if feature in st.session_state:
@@ -554,41 +558,48 @@ def clear_evaluation_data() -> None:
 
 def evaluation_mode_show() -> None:
 
-    if "validated" in st.session_state and not st.session_state["validated"]:
-        st.error("Please validate your semantic model before evaluating.")
-        return
-
     if st.button("Set Evaluation Tables", on_click=clear_evaluation_data):
         evaluation_data_dialog()
 
     # TODO: find a less awkward way of specifying this.
-    if any(
-        key not in st.session_state
-        for key in ("selected_eval_table", "eval_table_hash", "eval_table_frame")
-    ):
+    if any(key not in st.session_state for key in ("eval_table", "results_eval_table")):
         st.error("Please set evaluation tables.")
         return
 
-    else:
-        results_table = st.session_state.get(
-            "selected_results_eval_old_table"
-        ) or st.session_state.get("selected_results_eval_new_table")
+    summary_stats = pd.DataFrame(
+        [
+            ["Evaluation Table", st.session_state["eval_table"]],
+            ["Evaluation Result Table", st.session_state["results_eval_table"]],
+            ["Query Count", len(st.session_state["eval_table_frame"])],
+        ],
+        columns=["Summary Statistic", "Value"],
+    )
+    st.markdown("#### Evaluation Data Summary")
+    st.dataframe(summary_stats, hide_index=True)
+
+    if st.button("Run Evaluation"):
+        current_hash = generate_hash(st.session_state["working_yml"])
+        model_changed_test = ("semantic_model_hash" in st.session_state) and (
+            current_hash != st.session_state["semantic_model_hash"]
+        )
+        if (
+            "validated" in st.session_state and not st.session_state["validated"]
+        ) or model_changed_test:
+            st.error("Please validate your semantic model before evaluating.")
+            return
+        st.session_state["semantic_model_hash"] = current_hash
+        st.write("Running evaluation...")
         st.session_state["eval_timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        summary_stats = pd.DataFrame(
+        evolution_run_summary = pd.DataFrame(
             [
-                ["Evaluation Timestamp", st.session_state["eval_timestamp"]],
-                ["Evaluation Table", st.session_state["selected_eval_table"]],
-                ["Evaluation Result Table", results_table],
                 ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
-                [
-                    "Semantic Model YAML Hash",
-                    generate_hash(st.session_state["working_yml"]),
-                ],
-                ["Query Count", len(st.session_state["eval_table_frame"])],
+                ["Semantic Model Hash", st.session_state["semantic_model_hash"]],
+                ["Timestamp", st.session_state["eval_timestamp"]],
             ],
             columns=["Summary Statistic", "Value"],
         )
-        st.dataframe(summary_stats, hide_index=True)
+        st.markdown("#### Evaluation Run Summary")
+        st.dataframe(evolution_run_summary, hide_index=True)
 
         send_analyst_requests()
         run_sql_queries()
