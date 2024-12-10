@@ -1,7 +1,8 @@
 import concurrent.futures
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List, Optional, TypeVar
+from textwrap import dedent
+from typing import Any, Dict, Generator, List, Optional, TypeVar, Union
 
 import pandas as pd
 from loguru import logger
@@ -346,11 +347,9 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_columns_names_in_table(
-    conn: SnowflakeConnection, table_fqn: str
-) -> list[str]:
+def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
     """
-    Fetches all columns that the current user has access to in the current table
+    Fetches the table schema the current user has access
     Args:
         conn: SnowflakeConnection to run the query
         table_fqn: The fully qualified name of the table to connect to.
@@ -360,8 +359,8 @@ def fetch_columns_names_in_table(
     query = f"DESCRIBE TABLE {table_fqn};"
     cursor = conn.cursor()
     cursor.execute(query)
-    columns = cursor.fetchall()
-    return [result[0] for result in columns]
+    result = cursor.fetchall()
+    return dict([x[:2] for x in result])
 
 
 def fetch_yaml_names_in_stage(
@@ -388,26 +387,33 @@ def fetch_yaml_names_in_stage(
     return [result[0].split("/")[-1] for result in yaml_files]
 
 
+def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
+    query = f"SELECT * FROM {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    query_result = cursor.fetch_pandas_all()
+    return query_result
+
+
 def create_table_in_schema(
     conn: SnowflakeConnection,
-    table_name: str,
-    schema_name: str,
-    columns_schema: List[str],
+    table_fqn: str,
+    columns_schema: Dict[str, str],
 ) -> bool:
     """
     Creates a table in the specified schema with the specified columns
     Args:
         conn: SnowflakeConnection to run the query
-        table_name: The name of the table to create
-        schema_name: The name of the schema to create the table in
-        columns: A list of Column objects representing the columns of the table
+        table_fqn: The fully qualified name of the table to create
+        columns_schema: A list of Column objects representing the columns of the table
 
     Returns: True if the table was created successfully, False otherwise
     """
+    field_type_list = [f"{k} {v}" for k, v in columns_schema.items()]
     # Construct the create table query
     create_table_query = f"""
-    CREATE TABLE IF NOT EXISTS {schema_name}.{table_name} (
-        {', '.join(columns_schema)}
+    CREATE TABLE IF NOT EXISTS {table_fqn} (
+        {', '.join(field_type_list)}
     )
     """
 
@@ -453,6 +459,27 @@ order by 1, 2, c.ordinal_position"""
         schemas_tables_columns_df, how="inner", on=(_TABLE_SCHEMA_COL, _TABLE_NAME_COL)
     )
     return valid_schemas_tables_columns_df
+
+
+def get_table_hash(conn: SnowflakeConnection, table_fqn: str) -> str:
+    query = f"SELECT HASH_AGG(*)::VARCHAR AS TABLE_HASH FROM {table_fqn};"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    query_result = cursor.fetch_pandas_all()
+    return query_result["TABLE_HASH"].item()  # type: ignore[no-any-return]
+
+
+def execute_query(conn: SnowflakeConnection, query: str) -> Union[pd.DataFrame, str]:
+    try:
+        if query == "":
+            raise ValueError("Query string is empty")
+        cursor = conn.cursor()
+        cursor.execute(query)
+        query_result = cursor.fetch_pandas_all()
+        return query_result
+    except Exception as e:
+        logger.info(f"Query execution failed: {e}")
+        return str(e)
 
 
 class SnowflakeConnector:

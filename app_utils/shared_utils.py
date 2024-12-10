@@ -2,20 +2,19 @@ from __future__ import annotations
 
 import json
 import os
-import time
 import tempfile
+import time
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from io import StringIO
-from typing import Any, Optional, List, Union, Dict, Tuple
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import streamlit as st
-from snowflake.snowpark import Session
 from PIL import Image
 from snowflake.connector import ProgrammingError
 from snowflake.connector.connection import SnowflakeConnection
+from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
@@ -27,22 +26,18 @@ from semantic_model_generator.generate_model import (
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
+from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
+    assert_required_env_vars,
+)
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     fetch_databases,
     fetch_schemas_in_database,
+    fetch_stages_in_schema,
+    fetch_table_schema,
     fetch_tables_views_in_schema,
     fetch_warehouses,
-    fetch_stages_in_schema,
     fetch_yaml_names_in_stage,
-    fetch_columns_names_in_table,
-)
-
-from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
-    SNOWFLAKE_ACCOUNT_LOCATOR,
-    SNOWFLAKE_HOST,
-    SNOWFLAKE_USER,
-    assert_required_env_vars,
 )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
@@ -105,6 +100,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
     if st.session_state["sis"]:
         # Import SiS-required modules
         import sys
+
         from snowflake.snowpark.context import get_active_session
 
         # Non-Anaconda supported packages must be added to path to import from stage
@@ -203,22 +199,20 @@ def get_available_stages(schema: str) -> List[str]:
 
 
 @st.cache_resource(show_spinner=False)
-def validate_table_columns(table: str, columns_must_exist: Tuple[str,...]) -> bool:
-    """
-    Fetches the available stages from the Snowflake account.
-
-    Returns:
-        List[str]: A list of available stages.
-    """
-    columns_names = fetch_columns_names_in_table(get_snowflake_connection(), table)
-    for col in columns_must_exist:
-        if col not in columns_names:
+def validate_table_schema(table: str, schema: Dict[str, str]) -> bool:
+    table_schema = fetch_table_schema(get_snowflake_connection(), table)
+    # validate columns names
+    if set(schema.keys()) != set(table_schema.keys()):
+        return False
+    # validate column types
+    for col_name, col_type in table_schema.items():
+        if not (schema[col_name] in col_type):
             return False
     return True
 
 
 @st.cache_resource(show_spinner=False)
-def validate_table_exist(schema: str, table_name:str) -> bool:
+def validate_table_exist(schema: str, table_name: str) -> bool:
     """
     Validate table exist in the Snowflake account.
 
@@ -1413,18 +1407,4 @@ class SnowflakeStage:
             "Database": self.stage_database,
             "Schema": self.stage_schema,
             "Stage": self.stage_name,
-        }
-
-
-@dataclass
-class SnowflakeTable:
-    table_database: str
-    table_schema: str
-    table_name: str
-
-    def to_dict(self) -> dict[str, str]:
-        return {
-            "Database": self.table_database,
-            "Schema": self.table_schema,
-            "Table": self.table_name,
         }

@@ -19,6 +19,7 @@ pyvenv
 
 # VSCode
 .vscode/settings.json
+.vscode/launch.json
 .vscode/.ropeproject
 .vscode/*.log
 
