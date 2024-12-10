@@ -125,17 +125,14 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
             frame2_str=x["GOLD_RESULT"].to_string(index=False),
         ),
     ).to_frame(name=col_name)
-    conn = get_snowflake_connection()
+    session = st.session_state["session"]
     table_name = snowpark_utils.random_name_for_temp_object(
         snowpark_utils.TempObjectType.TABLE
     )
-    _ = write_pandas(
-        conn=conn,
-        df=prompt_frame,
-        table_name=table_name,
-        auto_create_table=True,
-        table_type="temporary",
-        overwrite=True,
+    conn = get_snowflake_connection()
+    snowpark_df = session.create_dataframe(prompt_frame)
+    snowpark_df.write.mode("overwrite").save_as_table(
+        table_name, table_type="temporary"
     )
 
     query = f"""
