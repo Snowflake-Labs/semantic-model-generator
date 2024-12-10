@@ -13,10 +13,10 @@ from app_utils.chat import send_message
 from app_utils.shared_utils import (
     get_snowflake_connection,
     schema_selector_container,
+    set_sit_query_tag,
     table_selector_container,
     validate_table_exist,
     validate_table_schema,
-    set_sit_query_tag,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
@@ -261,7 +261,7 @@ def result_comparisons() -> None:
     status_text.text(
         f"Analyst and Gold Results Compared ✅ (Time taken: {elapsed_time:.2f} seconds)"
     )
-    #compute accuracy 
+    # compute accuracy
     st.session_state["eval_accuracy"] = (frame["CORRECT"].sum() / len(frame)) * 100
     st.session_state["total_eval_frame"] = frame
 
@@ -292,6 +292,7 @@ def write_eval_results(frame: pd.DataFrame) -> None:
         auto_create_table=False,
     )
     st.write("Evaluation results stored in the database ✅")
+
 
 def _match_series(analyst_frame: pd.DataFrame, gold_series: pd.Series) -> str | None:
     """Determine which result frame column name matches the gold series.
@@ -608,13 +609,12 @@ def evaluation_mode_show() -> None:
         visualize_eval_results(st.session_state["total_eval_frame"])
 
 
-
 def run_evaluation() -> None:
     set_sit_query_tag(
-                get_snowflake_connection(),
-                vendor="",
-                action="evaluation_run",
-            )
+        get_snowflake_connection(),
+        vendor="",
+        action="evaluation_run",
+    )
     current_hash = generate_hash(st.session_state["working_yml"])
     model_changed_test = ("semantic_model_hash" in st.session_state) and (
         current_hash != st.session_state["semantic_model_hash"]
@@ -634,7 +634,6 @@ def run_evaluation() -> None:
     result_comparisons()
     write_eval_results(st.session_state["total_eval_frame"])
     st.write("Evaluation complete ✅")
-
 
 
 @st.cache_resource(show_spinner=False)

@@ -686,10 +686,10 @@ def show() -> None:
             return_home_button()
         with mode:
             st.session_state["app_mode"] = st.selectbox(
-            label="App Mode",
-            label_visibility="collapsed",
-            options=["Chat", "Evaluation", "Preview YAML"],
-        )
+                label="App Mode",
+                label_visibility="collapsed",
+                options=["Chat", "Evaluation", "Preview YAML"],
+            )
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
             yaml = download_yaml(
