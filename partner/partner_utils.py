@@ -8,13 +8,13 @@ import pandas as pd
 import streamlit as st
 import yaml
 
-from partner.cortex import CortexSemanticTable
-from partner.dbt import DBTSemanticModel, upload_dbt_semantic
 from app_utils.shared_utils import (
     get_snowflake_connection,
     render_image,
     set_sit_query_tag,
 )
+from partner.cortex import CortexSemanticTable
+from partner.dbt import DBTSemanticModel, upload_dbt_semantic
 from semantic_model_generator.data_processing.proto_utils import yaml_to_semantic_model
 
 
@@ -306,9 +306,7 @@ def integrate_partner_semantics() -> None:
             index=0,
             help=COMPARE_SEMANTICS_HELP,
         )
-        orphan_label, orphan_col1, orphan_col2 = st.columns(
-            3, gap="small"
-        )
+        orphan_label, orphan_col1, orphan_col2 = st.columns(3, gap="small")
         with orphan_label:
             st.write("Retain unmatched fields:")
         with orphan_col1:

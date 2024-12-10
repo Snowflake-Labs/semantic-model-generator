@@ -1,8 +1,3 @@
-from streamlit import config 
-# Set minCachedMessageSize to 500 MB to disable forward message cache:
-# st.set_config would trigger an error, only the set_config from config module works
-config.set_option("global.minCachedMessageSize", 500 * 1e6)
-
 import json
 import time
 from typing import Any, Dict, List, Optional
@@ -11,6 +6,7 @@ import pandas as pd
 import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
+from streamlit import config
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row
 from streamlit_extras.stylable_container import stylable_container
@@ -42,6 +38,10 @@ from semantic_model_generator.data_processing.proto_utils import (
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.validate_model import validate
+
+# Set minCachedMessageSize to 500 MB to disable forward message cache:
+# st.set_config would trigger an error, only the set_config from config module works
+config.set_option("global.minCachedMessageSize", 500 * 1e6)
 
 
 def get_file_name() -> str:
@@ -179,9 +179,9 @@ def edit_verified_query(
                     st.session_state["successful_sql"] = True
 
                 except Exception as e:
-                    st.session_state[
-                        "error_state"
-                    ] = f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    st.session_state["error_state"] = (
+                        f"Edited SQL not compatible with semantic model provided, please double check: {e}"
+                    )
 
             if st.session_state["error_state"] is not None:
                 st.error(st.session_state["error_state"])
