@@ -486,11 +486,6 @@ def yaml_editor(yaml_str: str) -> None:
     }
     """
 
-    st.session_state["app_mode"] = st.selectbox(
-        label="App Mode",
-        options=["Chat", "Evaluation", "Preview YAML"],
-    )
-
     # Style text_area to mirror st.code
     with stylable_container(key="customized_text_area", css_styles=css_yaml_editor):
         content = st.text_area(
@@ -686,7 +681,15 @@ def show() -> None:
         # If coming from the builder flow, there's no need to collect this information until the user wants to upload.
         set_up_requirements()
     else:
-        return_home_button()
+        home, mode = st.columns(2)
+        with home:
+            return_home_button()
+        with mode:
+            st.session_state["app_mode"] = st.selectbox(
+            label="App Mode",
+            label_visibility="collapsed",
+            options=["Chat", "Evaluation", "Preview YAML"],
+        )
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
             yaml = download_yaml(

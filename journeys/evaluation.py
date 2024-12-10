@@ -16,6 +16,7 @@ from app_utils.shared_utils import (
     table_selector_container,
     validate_table_exist,
     validate_table_schema,
+    set_sit_query_tag,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
@@ -411,7 +412,7 @@ def send_analyst_requests() -> None:
 
 @st.experimental_dialog("Evaluation Tables", width="large")
 def evaluation_data_dialog() -> None:
-    st.markdown("Please select an evaluation table")
+    st.markdown("Please select an evaluation table.")
     table_selector_container(
         db_selector={"key": "selected_eval_database", "label": "Evaluation database"},
         schema_selector={"key": "selected_eval_schema", "label": "Evaluation schema"},
@@ -420,7 +421,7 @@ def evaluation_data_dialog() -> None:
 
     st.divider()
 
-    st.markdown("Please select a results table")
+    st.markdown("Please select a results table.")
     eval_results_existing_table = st.checkbox(
         "Use existing table", key="use_existing_eval_results_table"
     )
@@ -439,7 +440,7 @@ def evaluation_data_dialog() -> None:
 
         original_new_table_name = st.text_input(
             key="selected_results_eval_new_table_no_schema",
-            label="Enter the table name to upload evaluation results",
+            label="Enter the table name to upload evaluation results.",
         )
         if original_new_table_name:
             schema_name = st.session_state.get("selected_results_eval_schema")
@@ -563,7 +564,7 @@ def evaluation_mode_show() -> None:
 
     # TODO: find a less awkward way of specifying this.
     if any(key not in st.session_state for key in ("eval_table", "results_eval_table")):
-        st.error("Please set evaluation tables.")
+        st.error("Please select evaluation tables.")
         return
 
     summary_stats = pd.DataFrame(
@@ -578,6 +579,11 @@ def evaluation_mode_show() -> None:
     st.dataframe(summary_stats, hide_index=True)
 
     if st.button("Run Evaluation"):
+        set_sit_query_tag(
+                    get_snowflake_connection(),
+                    vendor="",
+                    action="evaluation_run",
+                )
         current_hash = generate_hash(st.session_state["working_yml"])
         model_changed_test = ("semantic_model_hash" in st.session_state) and (
             current_hash != st.session_state["semantic_model_hash"]
