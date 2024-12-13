@@ -275,10 +275,10 @@ def write_eval_results(frame: pd.DataFrame) -> None:
 
     # Save results to frame as string
     frame_to_write["ANALYST_RESULT"] = frame["ANALYST_RESULT"].apply(
-        lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x
+        lambda x: x.to_json(orient="records") if isinstance(x, pd.DataFrame) else x
     )
     frame_to_write["GOLD_RESULT"] = frame["GOLD_RESULT"].apply(
-        lambda x: x.to_string(index=False) if isinstance(x, pd.DataFrame) else x
+        lambda x: x.to_json(orient="records") if isinstance(x, pd.DataFrame) else x
     )
     frame_to_write["SEMANTIC_MODEL_STRING"] = st.session_state["working_yml"]
 
