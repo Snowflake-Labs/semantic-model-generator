@@ -8,12 +8,12 @@ st.set_page_config(layout="wide", page_icon="💬", page_title="Semantic Model G
 from app_utils.shared_utils import (  # noqa: E402
     GeneratorAppScreen,
     get_snowflake_connection,
-    set_sit_query_tag,
     set_account_name,
     set_host_name,
-    set_user_name,
-    set_streamlit_location,
+    set_sit_query_tag,
     set_snowpark_session,
+    set_streamlit_location,
+    set_user_name,
 )
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     SNOWFLAKE_ACCOUNT_LOCATOR,
@@ -28,7 +28,7 @@ def failed_connection_popup() -> None:
     Renders a dialog box detailing that the credentials provided could not be used to connect to Snowflake.
     """
     st.markdown(
-        f"""It looks like the credentials provided could not be used to connect to the account."""
+        """It looks like the credentials provided could not be used to connect to the account."""
     )
     st.stop()
 

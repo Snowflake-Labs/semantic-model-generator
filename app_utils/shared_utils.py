@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from io import StringIO
-from typing import Any, Optional, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import streamlit as st
-from snowflake.snowpark import Session
 from PIL import Image
 from snowflake.connector import ProgrammingError
 from snowflake.connector.connection import SnowflakeConnection
+from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing.proto_utils import (
     proto_to_yaml,
@@ -26,21 +26,18 @@ from semantic_model_generator.generate_model import (
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
+from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
+    assert_required_env_vars,
+)
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     fetch_databases,
     fetch_schemas_in_database,
+    fetch_stages_in_schema,
+    fetch_table_schema,
     fetch_tables_views_in_schema,
     fetch_warehouses,
-    fetch_stages_in_schema,
     fetch_yaml_names_in_stage,
-)
-
-from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
-    SNOWFLAKE_ACCOUNT_LOCATOR,
-    SNOWFLAKE_HOST,
-    SNOWFLAKE_USER,
-    assert_required_env_vars,
 )
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
@@ -103,6 +100,7 @@ def get_snowflake_connection() -> SnowflakeConnection:
     if st.session_state["sis"]:
         # Import SiS-required modules
         import sys
+
         from snowflake.snowpark.context import get_active_session
 
         # Non-Anaconda supported packages must be added to path to import from stage
@@ -198,6 +196,132 @@ def get_available_stages(schema: str) -> List[str]:
         List[str]: A list of available stages.
     """
     return fetch_stages_in_schema(get_snowflake_connection(), schema)
+
+
+@st.cache_resource(show_spinner=False)
+def validate_table_schema(table: str, schema: Dict[str, str]) -> bool:
+    table_schema = fetch_table_schema(get_snowflake_connection(), table)
+    # validate columns names
+    if set(schema.keys()) != set(table_schema.keys()):
+        return False
+    # validate column types
+    for col_name, col_type in table_schema.items():
+        if not (schema[col_name] in col_type):
+            return False
+    return True
+
+
+@st.cache_resource(show_spinner=False)
+def validate_table_exist(schema: str, table_name: str) -> bool:
+    """
+    Validate table exist in the Snowflake account.
+
+    Returns:
+        List[str]: A list of available stages.
+    """
+    table_names = fetch_tables_views_in_schema(get_snowflake_connection(), schema)
+    table_names = [table.split(".")[2] for table in table_names]
+    if table_name.upper() in table_names:
+        return True
+    return False
+
+
+def schema_selector_container(
+    db_selector: Dict[str, str], schema_selector: Dict[str, str]
+) -> List[str]:
+    """
+    Common component that encapsulates db/schema/table selection for the admin app.
+    When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_tables = []
+
+    # First, retrieve all databases that the user has access to.
+    eval_database = st.selectbox(
+        db_selector["label"],
+        options=get_available_databases(),
+        index=None,
+        key=db_selector["key"],
+    )
+    if eval_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            available_schemas = get_available_schemas(eval_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    eval_schema = st.selectbox(
+        schema_selector["label"],
+        options=available_schemas,
+        index=None,
+        key=schema_selector["key"],
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    if eval_schema:
+        # When a valid schema is selected, fetch the available tables in that schema.
+        try:
+            available_tables = get_available_tables(eval_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    return available_tables
+
+
+def table_selector_container(
+    db_selector: Dict[str, str],
+    schema_selector: Dict[str, str],
+    table_selector: Dict[str, str],
+) -> Optional[str]:
+    """
+    Common component that encapsulates db/schema/table selection for the admin app.
+    When a db/schema/table is selected, it is saved to the session state for reading elsewhere.
+    Returns: None
+    """
+    available_schemas = []
+    available_tables = []
+
+    # First, retrieve all databases that the user has access to.
+    eval_database = st.selectbox(
+        db_selector["label"],
+        options=get_available_databases(),
+        index=None,
+        key=db_selector["key"],
+    )
+    if eval_database:
+        # When a valid database is selected, fetch the available schemas in that database.
+        try:
+            available_schemas = get_available_schemas(eval_database)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected database.")
+            st.stop()
+
+    eval_schema = st.selectbox(
+        schema_selector["label"],
+        options=available_schemas,
+        index=None,
+        key=schema_selector["key"],
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+    if eval_schema:
+        # When a valid schema is selected, fetch the available tables in that schema.
+        try:
+            available_tables = get_available_tables(eval_schema)
+        except (ValueError, ProgrammingError):
+            st.error("Insufficient permissions to read from the selected schema.")
+            st.stop()
+
+    tables = st.selectbox(
+        table_selector["label"],
+        options=available_tables,
+        index=None,
+        key=table_selector["key"],
+        format_func=lambda x: format_snowflake_context(x, -1),
+    )
+
+    return tables
 
 
 def stage_selector_container() -> Optional[List[str]]:
@@ -986,15 +1110,12 @@ def show_yaml_in_dialog() -> None:
 
 def upload_yaml(file_name: str) -> None:
     """util to upload the semantic model."""
-    import os
-    import tempfile
-
     yaml = proto_to_yaml(st.session_state.semantic_model)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         tmp_file_path = os.path.join(temp_dir, f"{file_name}.yaml")
 
-        with open(tmp_file_path, "w", encoding='utf-8') as temp_file:
+        with open(tmp_file_path, "w", encoding="utf-8") as temp_file:
             temp_file.write(yaml)
 
         st.session_state.session.file.put(
@@ -1047,17 +1168,13 @@ def model_is_validated() -> bool:
 
 def download_yaml(file_name: str, stage_name: str) -> str:
     """util to download a semantic YAML from a stage."""
-    import os
-    import tempfile
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Downloads the YAML to {temp_dir}/{file_name}.
-        st.session_state.session.file.get(
-            f"@{stage_name}/{file_name}", temp_dir
-        )
+        st.session_state.session.file.get(f"@{stage_name}/{file_name}", temp_dir)
 
         tmp_file_path = os.path.join(temp_dir, f"{file_name}")
-        with open(tmp_file_path, "r", encoding='utf-8') as temp_file:
+        with open(tmp_file_path, "r", encoding="utf-8") as temp_file:
             # Read the raw contents from {temp_dir}/{file_name} and return it as a string.
             yaml_str = temp_file.read()
             return yaml_str
@@ -1263,7 +1380,7 @@ class AppMetadata:
             return st.session_state.semantic_model.name  # type: ignore
         return None
 
-    def to_dict(self) -> dict[str, Union[str,None]]:
+    def to_dict(self) -> dict[str, Union[str, None]]:
         return {
             "User": self.user,
             "Stage": self.stage,
