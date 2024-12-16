@@ -51,6 +51,7 @@ RESULTS_TABLE_SCHEMA = {
     "SEMANTIC_MODEL_STRING": "VARCHAR",
     "EVAL_TABLE": "VARCHAR",
     "EVAL_HASH": "VARCHAR",
+    "EVAL_RUN_NAME": "VARCHAR",
 }
 
 LLM_JUDGE_PROMPT_TEMPLATE = """\
@@ -289,6 +290,7 @@ def write_eval_results(frame: pd.DataFrame) -> None:
     frame_to_write = frame.copy()
     frame_to_write["TIMESTAMP"] = st.session_state["eval_timestamp"]
     frame_to_write["EVAL_HASH"] = st.session_state["eval_hash"]
+    frame_to_write["EVAL_RUN_NAME"] = st.session_state["eval_run_name"]
     frame_to_write["EVAL_TABLE"] = st.session_state["eval_table"]
     frame_to_write["EVAL_TABLE_HASH"] = st.session_state["eval_table_hash"]
     frame_to_write["MODEL_HASH"] = st.session_state["semantic_model_hash"]
@@ -612,6 +614,7 @@ def evaluation_mode_show() -> None:
     st.write(
         "Welcome!🧪 In the evaluation mode you can evaluate your semantic model using pairs of golden queries/questions and their expected SQL statements. These pairs should be captured in an **Evaluation Table**. Accuracy metrics will be shown and the results will be stored in an **Evaluation Results Table**."
     )
+    st.text_input("Evaluation Run Name", key="eval_run_name")
 
     # TODO: find a less awkward way of specifying this.
     if any(key not in st.session_state for key in ("eval_table", "results_eval_table")):
@@ -637,6 +640,7 @@ def evaluation_mode_show() -> None:
 
         evolution_run_summary = pd.DataFrame(
             [
+                ["Evaluation Run Name", st.session_state["eval_run_name"]],
                 ["Evaluation Table Hash", st.session_state["eval_table_hash"]],
                 ["Semantic Model Hash", st.session_state["semantic_model_hash"]],
                 ["Evaluation Run Hash", st.session_state["eval_hash"]],
