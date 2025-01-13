@@ -236,7 +236,7 @@ def compare_data_types(
         return "TEXT"
 
 
-@st.experimental_dialog("Integrate partner tool semantic specs", width="large")
+@st.dialog("Integrate partner tool semantic specs", width="large")
 def integrate_partner_semantics() -> None:
     """
     Runs UI module for comparing Cortex and Partner fields for integration.
