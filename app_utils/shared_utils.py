@@ -24,7 +24,6 @@ from semantic_model_generator.data_processing.proto_utils import (
 )
 from semantic_model_generator.generate_model import (
     generate_model_str_from_snowflake,
-    raw_schema_to_semantic_context,
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
@@ -732,8 +731,8 @@ def add_dimension(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.dialog("Edit Measure")  # type: ignore[misc]
-def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
+@st.experimental_dialog("Edit Measure")  # type: ignore[misc]
+def edit_measure(table_name: str, measure: semantic_model_pb2.Fact) -> None:
     """
     Renders a dialog box to edit an existing measure.
     """
@@ -811,7 +810,7 @@ def add_measure(table: semantic_model_pb2.Table) -> None:
     Renders a dialog box to add a new measure.
     """
     with st.form(key="add-measure"):
-        measure = semantic_model_pb2.Measure()
+        measure = semantic_model_pb2.Fact()
         measure.name = st.text_input("Name", key=f"{table.name}-add-measure-name")
         measure.expr = st.text_input(
             "SQL Expression", key=f"{table.name}-add-measure-expr"
@@ -1186,15 +1185,6 @@ def display_semantic_model() -> None:
             st.rerun()
 
 
-def edit_semantic_model() -> None:
-    st.write("#### Tables")
-    for t in st.session_state.semantic_model.tables:
-        with st.expander(t.name):
-            display_table(t.name)
-    if st.button("Add Table"):
-        add_new_table()
-
-
 def import_yaml() -> None:
     """
     Renders a page to import an existing yaml file.
@@ -1429,7 +1419,11 @@ def input_semantic_file_name() -> str:
 
     model_name = st.text_input(
         "Semantic Model Name (no .yaml suffix)",
-        help="The name of the semantic model you are creating. This is separate from the filename, which we will set later.",
+        help=(
+            "The name of the semantic model you are creating. This is separate from "
+            "the filename, which we will set later."
+        ),
+        key="semantic_model_name",
     )
     return model_name
 
@@ -1462,6 +1456,7 @@ def run_generate_model_str_from_snowflake(
         model_name (str): Semantic file name (without .yaml suffix).
         sample_values (int): Number of sample values to provide for each table in generation.
         base_tables (list[str]): List of fully-qualified Snowflake tables to include in the semantic model.
+        allow_joins: whether to allow joins
 
     Returns: None
     """

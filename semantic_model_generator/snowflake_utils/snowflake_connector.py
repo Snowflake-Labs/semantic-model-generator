@@ -1,7 +1,10 @@
 import concurrent.futures
+import json
 from collections import defaultdict
 from contextlib import contextmanager
+from textwrap import dedent
 from typing import Any, Dict, Generator, List, Optional, TypeVar, Union
+from typing import Sequence
 
 import pandas as pd
 from loguru import logger
@@ -16,14 +19,12 @@ from semantic_model_generator.snowflake_utils.utils import snowflake_connection
 ConnectionType = TypeVar("ConnectionType")
 # Append this to the end of the auto-generated comments to indicate that the comment was auto-generated.
 AUTOGEN_TOKEN = "__"
-_autogen_model = "llama3-8b"
+_AUTOGEN_MODEL = "llama3-8b"
 
 # This is the raw column name from snowflake information schema or desc table
 _COMMENT_COL = "COMMENT"
 _COLUMN_NAME_COL = "COLUMN_NAME"
 _DATATYPE_COL = "DATA_TYPE"
-_TABLE_SCHEMA_COL = "TABLE_SCHEMA"
-_TABLE_NAME_COL = "TABLE_NAME"
 # Below are the renamed column names when we fetch into dataframe, to differentiate between table/column comments
 _COLUMN_COMMENT_ALIAS = "COLUMN_COMMENT"
 _TABLE_COMMENT_COL = "TABLE_COMMENT"
@@ -32,47 +33,48 @@ _TABLE_COMMENT_COL = "TABLE_COMMENT"
 TIME_MEASURE_DATATYPES = [
     "DATE",
     "DATETIME",
+    "TIME",
+    "TIMESTAMP",
     "TIMESTAMP_LTZ",
     "TIMESTAMP_NTZ",
     "TIMESTAMP_TZ",
-    "TIMESTAMP",
-    "TIME",
 ]
 # https://docs.snowflake.com/en/sql-reference/data-types-text
 DIMENSION_DATATYPES = [
-    "VARCHAR",
+    "BOOLEAN",
+    "BINARY",
+    "CHAR VARYING",
     "CHAR",
     "CHARACTER",
+    "NCHAR VARYING",
     "NCHAR",
-    "STRING",
-    "TEXT",
     "NVARCHAR",
     "NVARCHAR2",
-    "CHAR VARYING",
-    "NCHAR VARYING",
-    "BINARY",
+    "STRING",
+    "TEXT",
     "VARBINARY",
+    "VARCHAR",
 ]
 # https://docs.snowflake.com/en/sql-reference/data-types-numeric
 MEASURE_DATATYPES = [
-    "NUMBER",
-    "DECIMAL",
-    "DEC",
-    "NUMERIC",
-    "INT",
-    "INTEGER",
     "BIGINT",
-    "SMALLINT",
-    "TINYINT",
     "BYTEINT",
+    "DEC",
+    "DECIMAL",
+    "DOUBLE PRECISION",
+    "DOUBLE",
     "FLOAT",
     "FLOAT4",
     "FLOAT8",
-    "DOUBLE",
-    "DOUBLE PRECISION",
+    "INT",
+    "INTEGER",
+    "NUMBER",
+    "NUMERIC",
     "REAL",
+    "SMALLINT",
+    "TINYINT",
 ]
-OBJECT_DATATYPES = ["VARIANT", "ARRAY", "OBJECT", "GEOGRAPHY"]
+OBJECT_DATATYPES = ["ARRAY", "GEOGRAPHY", "OBJECT", "VARIANT"]
 
 
 _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
@@ -80,9 +82,9 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 def _get_table_comment(
     conn: SnowflakeConnection,
-    schema_name: str,
-    table_name: str,
+    table_fqn: str,
     columns_df: pd.DataFrame,
+    columns: Sequence[Column],
 ) -> str:
     if columns_df[_TABLE_COMMENT_COL].iloc[0]:
         return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
@@ -91,12 +93,36 @@ def _get_table_comment(
         try:
             tbl_ddl = (
                 conn.cursor()  # type: ignore[union-attr]
-                .execute(f"select get_ddl('table', '{schema_name}.{table_name}');")
+                .execute(f"select get_ddl('table', '{table_fqn}');")
                 .fetchall()[0][0]
                 .replace("'", "\\'")
             )
-            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
-            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
+            column_comments = json.dumps(
+                obj={col.column_name: col.comment for col in columns}, indent=2
+            )
+            comment_prompt_template = dedent(
+                """
+                Here is a table with below DDL:
+                ```sql 
+                {tbl_ddl}
+                ```
+
+                Here are the comments associated with each column of the table:
+                ```json
+                {column_comments}
+                ```
+
+                Please provide a business description for the table. Only return the description without any other text.
+                """
+            ).strip()
+            # TODO(kschmaus): write utility function for SNOWFLAKE.CORTEX.COMPLETE
+            comment_prompt = comment_prompt_template.format(
+                tbl_ddl=tbl_ddl, column_comments=column_comments
+            ).replace("'", "\\'")
+            complete_sql = (
+                f"select SNOWFLAKE.CORTEX.COMPLETE('{_AUTOGEN_MODEL}', "
+                f"'{comment_prompt}')"
+            )
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
@@ -105,20 +131,31 @@ def _get_table_comment(
 
 
 def _get_column_comment(
-    conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
+    conn: SnowflakeConnection,
+    table_fqn: str,
+    column_row: pd.Series,
+    column_values: Optional[List[str]],
 ) -> str:
     if column_row[_COLUMN_COMMENT_ALIAS]:
         return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
     else:
         # auto-generate column comment if it is not provided.
         try:
-            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}:
-name: {column_row['COLUMN_NAME']};
-type: {column_row['DATA_TYPE']};
-values: {';'.join(column_values) if column_values else ""};
-Please provide a business description for the column. Only return the description without any other text."""
+            values_insert = (
+                f"values: {json.dumps(column_values)};" if column_values else ""
+            )
+
+            comment_prompt = f"""\
+            Here is a column from the table named {table_fqn}:
+            name: {column_row['COLUMN_NAME']};
+            type: {column_row['DATA_TYPE']};
+            {values_insert}
+            Please provide a business description for the column. \
+            Only return the description without any other text.
+            """
+            comment_prompt = dedent(comment_prompt.strip())
             comment_prompt = comment_prompt.replace("'", "\\'")
-            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_AUTOGEN_MODEL}', '{comment_prompt}')"
             cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
@@ -127,8 +164,7 @@ Please provide a business description for the column. Only return the descriptio
 
 
 def get_table_primary_keys(
-    conn: SnowflakeConnection,
-    table_fqn: str,
+    conn: SnowflakeConnection, table_fqn: str
 ) -> Optional[list[str]]:
     query = f"show primary keys in table {table_fqn};"
     cursor = conn.cursor()
@@ -141,26 +177,24 @@ def get_table_primary_keys(
 
 def get_table_representation(
     conn: SnowflakeConnection,
-    schema_name: str,
-    table_name: str,
-    table_index: int,
-    ndv_per_column: int,
+    table_fqn: str,
+    max_string_sample_values: int,
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
             conn=conn,
-            schema_name=schema_name,
-            table_name=table_name,
+            table_fqn=table_fqn,
             column_row=column_row,
             column_index=col_index,
-            ndv=ndv_per_column,
+            max_string_sample_values=max_string_sample_values,
         )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=max_workers
+    ) as executor:
         future_to_col_index = {
             executor.submit(_get_col, col_index, column_row): col_index
             for col_index, (_, column_row) in enumerate(columns_df.iterrows())
@@ -172,52 +206,58 @@ def get_table_representation(
             index_and_column.append((col_index, column))
         columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
 
-    return Table(
-        id_=table_index,
-        name=table_name,
-        comment=table_comment,
-        columns=columns,
+    table_comment = _get_table_comment(
+        conn=conn, table_fqn=table_fqn, columns_df=columns_df, columns=columns
     )
+
+    return Table(name=table_fqn, comment=table_comment, columns=columns)
 
 
 def _get_column_representation(
     conn: SnowflakeConnection,
-    schema_name: str,
-    table_name: str,
+    table_fqn: str,
     column_row: pd.Series,
     column_index: int,
-    ndv: int,
+    max_string_sample_values: int,
 ) -> Column:
+    # TODO(kschmaus): we could look at MANY sample values for the description.
     column_name = column_row[_COLUMN_NAME_COL]
     column_datatype = column_row[_DATATYPE_COL]
+
     column_values = None
-    if ndv > 0:
-        # Pull sample values.
-        try:
-            cursor = conn.cursor(DictCursor)
-            assert cursor is not None, "Cursor is unexpectedly None"
-            cursor_execute = cursor.execute(
-                f'select distinct "{column_name}" from {schema_name}.{table_name} limit {ndv}'
-            )
-            assert cursor_execute is not None, "cursor_execute should not be none "
-            res = cursor_execute.fetchall()
-            # Cast all values to string to ensure the list is json serializable.
-            # A better solution would be to identify the possible types that are not
-            # json serializable (e.g. datetime objects) and apply the appropriate casting
-            # in just those cases.
-            if len(res) > 0:
-                if isinstance(res[0], dict):
-                    col_key = [k for k in res[0].keys()][0]
-                    column_values = [str(r[col_key]) for r in res]
-                else:
-                    raise ValueError(
-                        f"Expected the first item of res to be a dict. Instead passed {res}"
-                    )
-        except Exception as e:
-            logger.error(f"unable to get values: {e}")
+    cortex_search_service = None
+    if column_datatype in DIMENSION_DATATYPES:
+        cursor = conn.cursor(DictCursor)
+        assert cursor is not None, "Cursor is unexpectedly None"
+        cursor_execute = cursor.execute(
+            f"""
+            select distinct "{column_name}" from {table_fqn} 
+            where {column_name} is not null
+            limit {max_string_sample_values + 1}
+            """
+        )
+        assert cursor_execute is not None, "cursor_execute should not be none "
+        res = cursor_execute.fetchall()
+        if len(res) <= max_string_sample_values:
+            column_values = [x[column_name] for x in res]
+        else:
+            # Create cortex search service?
+            cortex_search_service = ...
 
-    column_comment = _get_column_comment(conn, column_row, column_values)
+    column_comment = _get_column_comment(
+        conn=conn,
+        table_fqn=table_fqn,
+        column_row=column_row,
+        column_values=column_values,
+    )
 
+    print(dict(
+        id_=column_index,
+        column_name=column_name,
+        comment=column_comment,
+        column_type=column_datatype,
+        values=column_values,
+    ))
     column = Column(
         id_=column_index,
         column_name=column_name,
@@ -226,29 +266,6 @@ def _get_column_representation(
         values=column_values,
     )
     return column
-
-
-def _fetch_valid_tables_and_views(
-    conn: SnowflakeConnection, db_name: str
-) -> pd.DataFrame:
-    def _get_df(query: str) -> pd.DataFrame:
-        cursor = conn.cursor().execute(query)
-        assert cursor is not None, "cursor should not be none here."
-
-        df = pd.DataFrame(
-            cursor.fetchall(), columns=[c.name for c in cursor.description]
-        )
-        return df[["name", "schema_name", "comment"]].rename(
-            columns=dict(
-                name=_TABLE_NAME_COL,
-                schema_name=_TABLE_SCHEMA_COL,
-                comment=_TABLE_COMMENT_COL,
-            )
-        )
-
-    tables = _get_df(f"show tables in database {db_name}")
-    views = _get_df(f"show views in database {db_name}")
-    return pd.concat([tables, views], axis=0)
 
 
 def fetch_databases(conn: SnowflakeConnection) -> List[str]:
@@ -283,7 +300,9 @@ def fetch_warehouses(conn: SnowflakeConnection) -> List[str]:
     return [result[0] for result in results]
 
 
-def fetch_schemas_in_database(conn: SnowflakeConnection, db_name: str) -> List[str]:
+def fetch_schemas_in_database(
+    conn: SnowflakeConnection, db_name: str
+) -> List[str]:
     """
     Fetches all schemas that the current user has access to in the current database
     Args:
@@ -328,7 +347,9 @@ def fetch_tables_views_in_schema(
     return results
 
 
-def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[str]:
+def fetch_stages_in_schema(
+    conn: SnowflakeConnection, schema_name: str
+) -> list[str]:
     """
     Fetches all stages that the current user has access to in the current schema
     Args:
@@ -346,7 +367,9 @@ def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
+def fetch_table_schema(
+    conn: SnowflakeConnection, table_fqn: str
+) -> dict[str, str]:
     """
     Fetches the table schema the current user has access
     Args:
@@ -450,9 +473,7 @@ def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
 
 
 def create_table_in_schema(
-    conn: SnowflakeConnection,
-    table_fqn: str,
-    columns_schema: Dict[str, str],
+    conn: SnowflakeConnection, table_fqn: str, columns_schema: Dict[str, str]
 ) -> bool:
     """
     Creates a table in the specified schema with the specified columns
@@ -482,10 +503,7 @@ def create_table_in_schema(
 
 
 def get_valid_schemas_tables_columns_df(
-    conn: SnowflakeConnection,
-    db_name: str,
-    table_schema: Optional[str] = None,
-    table_names: Optional[List[str]] = None,
+    conn: SnowflakeConnection, table_fqn: str
 ) -> pd.DataFrame:
     if table_names and not table_schema:
         logger.warning(
@@ -506,17 +524,8 @@ def get_valid_schemas_tables_columns_df(
         """
     )
     cursor_execute = conn.cursor().execute(query)
-    assert cursor_execute, "cursor_execute should not be None here"
-    schemas_tables_columns_df = cursor_execute.fetch_pandas_all()
-
-    valid_tables_and_views_df = _fetch_valid_tables_and_views(
-        conn=conn, db_name=db_name
-    )
-
-    valid_schemas_tables_columns_df = valid_tables_and_views_df.merge(
-        schemas_tables_columns_df, how="inner", on=(_TABLE_SCHEMA_COL, _TABLE_NAME_COL)
-    )
-    return valid_schemas_tables_columns_df
+    columns_df = cursor_execute.fetch_pandas_all()
+    return columns_df
 
 
 def get_table_hash(conn: SnowflakeConnection, table_fqn: str) -> str:
@@ -527,7 +536,9 @@ def get_table_hash(conn: SnowflakeConnection, table_fqn: str) -> str:
     return query_result["TABLE_HASH"].item()  # type: ignore[no-any-return]
 
 
-def execute_query(conn: SnowflakeConnection, query: str) -> Union[pd.DataFrame, str]:
+def execute_query(
+    conn: SnowflakeConnection, query: str
+) -> Union[pd.DataFrame, str]:
     try:
         if query == "":
             raise ValueError("Query string is empty")
@@ -541,11 +552,7 @@ def execute_query(conn: SnowflakeConnection, query: str) -> Union[pd.DataFrame, 
 
 
 class SnowflakeConnector:
-    def __init__(
-        self,
-        account_name: str,
-        max_workers: int = 1,
-    ):
+    def __init__(self, account_name: str, max_workers: int = 1):
         self.account_name: str = account_name
         self._max_workers = max_workers
 
@@ -644,7 +651,9 @@ class SnowflakeConnector:
         )
 
         if _QUERY_TAG:
-            connection.cursor().execute(f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'")
+            connection.cursor().execute(
+                f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'"
+            )
         connection.cursor().execute(
             f"ALTER SESSION SET STATEMENT_TIMEOUT_IN_SECONDS = {env_vars.DEFAULT_SESSION_TIMEOUT_SEC}"
         )
@@ -654,9 +663,7 @@ class SnowflakeConnector:
         connection.close()
 
     def execute(
-        self,
-        connection: SnowflakeConnection,
-        query: str,
+        self, connection: SnowflakeConnection, query: str
     ) -> Dict[str, List[Any]]:
         try:
             if connection.warehouse is None:

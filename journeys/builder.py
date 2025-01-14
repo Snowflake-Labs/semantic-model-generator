@@ -8,10 +8,10 @@ from app_utils.shared_utils import (
     get_available_databases,
     get_available_schemas,
     get_available_tables,
-    input_sample_value_num,
     input_semantic_file_name,
     run_generate_model_str_from_snowflake,
 )
+from app_utils.shared_utils import input_sample_value_num
 
 
 def update_schemas_and_tables() -> None:
@@ -120,8 +120,6 @@ def table_selector_dialog() -> None:
         "Enable joins (optional)",
         help="Checking this box will enable you to add/edit join paths in your semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Reach out to your account team for access.",
     )
-
-    st.session_state["experimental_features"] = experimental_features
 
     submit = st.button("Submit", use_container_width=True, type="primary")
     if submit:

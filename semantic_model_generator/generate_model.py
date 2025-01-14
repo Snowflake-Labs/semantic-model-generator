@@ -58,15 +58,11 @@ def _get_placeholder_joins() -> List[semantic_model_pb2.Relationship]:
     ]
 
 
-def _raw_table_to_semantic_context_table(
-    database: str, schema: str, raw_table: data_types.Table
-) -> semantic_model_pb2.Table:
+def _raw_table_to_semantic_context_table(raw_table: data_types.Table) -> semantic_model_pb2.Table:
     """
     Converts a raw table representation to a semantic model table in protobuf format.
 
     Args:
-        database (str): The name of the database containing the table.
-        schema (str): The name of the schema containing the table.
         raw_table (data_types.Table): The raw table object to be transformed.
 
     Returns:
@@ -113,7 +109,7 @@ def _raw_table_to_semantic_context_table(
 
         elif col.column_type.upper() in MEASURE_DATATYPES:
             measures.append(
-                semantic_model_pb2.Measure(
+                semantic_model_pb2.Fact(
                     name=col.column_name,
                     expr=col.column_name,
                     data_type=col.column_type,
@@ -146,10 +142,11 @@ def _raw_table_to_semantic_context_table(
             f"No valid columns found for table {raw_table.name}. Please verify that this table contains column's datatypes not in {OBJECT_DATATYPES}."
         )
 
+    database, schema, table = raw_table.name.split(".")
     return semantic_model_pb2.Table(
-        name=raw_table.name,
+        name=table,
         base_table=semantic_model_pb2.FullyQualifiedTable(
-            database=database, schema=schema, table=raw_table.name
+            database=database, schema=schema, table=table
         ),
         # For fields we can not automatically infer, leave a comment for the user to fill out.
         description=raw_table.comment if raw_table.comment else _PLACEHOLDER_COMMENT,
@@ -189,46 +186,25 @@ def raw_schema_to_semantic_context(
     """
 
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
-    table_objects = []
-    unique_database_schema: List[str] = []
-    for table in base_tables:
-        # Verify this is a valid FQN table. For now, we check that the table follows the following format.
-        # {database}.{schema}.{table}
-        fqn_table = create_fqn_table(table)
-        fqn_databse_schema = f"{fqn_table.database}.{fqn_table.schema_name}"
+    raw_tables = []
+    for table_fqn in base_tables:
+        columns_df = get_valid_schemas_tables_columns_df(conn=conn, table_fqn=table_fqn)
+        assert not columns_df.empty
 
-        if fqn_databse_schema not in unique_database_schema:
-            unique_database_schema.append(fqn_databse_schema)
-
-        logger.info(f"Pulling column information from {fqn_table}")
-        valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
-            conn=conn,
-            db_name=fqn_table.database,
-            table_schema=fqn_table.schema_name,
-            table_names=[fqn_table.table],
-        )
-        assert not valid_schemas_tables_columns_df.empty
-
-        # get the valid columns for this table.
-        valid_columns_df_this_table = valid_schemas_tables_columns_df[
-            valid_schemas_tables_columns_df["TABLE_NAME"] == fqn_table.table
-        ]
-
+        # TODO(kschmaus): clean this up, it's pretty awkward.
         raw_table = get_table_representation(
             conn=conn,
-            schema_name=fqn_databse_schema,  # Fully-qualified schema
-            table_name=fqn_table.table,  # Non-qualified table name
-            table_index=0,
-            ndv_per_column=n_sample_values,  # number of sample values to pull per column.
-            columns_df=valid_columns_df_this_table,
+            table_fqn=table_fqn,
+            max_string_sample_values=16,
+            columns_df=columns_df,
             max_workers=1,
         )
-        table_object = _raw_table_to_semantic_context_table(
-            database=fqn_table.database,
-            schema=fqn_table.schema_name,
-            raw_table=raw_table,
-        )
-        table_objects.append(table_object)
+        raw_tables.append(raw_table)
+
+
+        # # TODO(kschmaus): I should stop here, for user interaction // feedback!
+        # table_object = _raw_table_to_semantic_context_table(raw_table=raw_table)
+        # table_objects.append(table_object)
     # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
 
     placeholder_relationships = _get_placeholder_joins() if allow_joins else None
@@ -418,7 +394,7 @@ def generate_model_str_from_snowflake(
         str: The raw string of the semantic context.
     """
     context = raw_schema_to_semantic_context(
-        base_tables,
+        base_tables=base_tables,
         n_sample_values=n_sample_values if n_sample_values > 0 else 1,
         semantic_model_name=semantic_model_name,
         allow_joins=allow_joins,

@@ -549,7 +549,7 @@ def test_semantic_model_to_yaml() -> None:
                     )
                 ],
                 measures=[
-                    semantic_model_pb2.Measure(
+                    semantic_model_pb2.Fact(
                         name="amount",
                         description="The amount of this transaction.",
                         expr="amount",

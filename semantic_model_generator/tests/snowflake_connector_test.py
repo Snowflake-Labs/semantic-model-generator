@@ -211,34 +211,3 @@ def expected_df():
             ],
         }
     )
-
-
-def test_fetch_valid_tables_and_views(snowflake_data, expected_df):
-    # Mock SnowflakeConnection and cursor
-    mock_conn = mock.MagicMock()
-    mock_cursor = mock_conn.cursor.return_value
-    mock_cursor.execute.return_value = mock_cursor
-    # Set side effects for fetchall and description based on snowflake_data fixture
-    mock_cursor.fetchall.side_effect = [snowflake_data[0][0], snowflake_data[1][0]]
-
-    mock_name_one = MagicMock()
-    mock_name_one.name = "name"
-    mock_name_two = MagicMock()
-    mock_name_two.name = "schema_name"
-    mock_name_three = MagicMock()
-    mock_name_three.name = "comment"
-
-    mocked_descriptions = [mock_name_one, mock_name_two, mock_name_three]
-    mock_cursor.description = mocked_descriptions
-
-    # Call the function to test
-    result_df = snowflake_connector._fetch_valid_tables_and_views(mock_conn, "mock_db")
-
-    # Assert the result is as expected
-    pd.testing.assert_frame_equal(
-        result_df.reset_index(drop=True), expected_df.reset_index(drop=True)
-    )
-
-    # Verify execute was called with correct queries
-    mock_cursor.execute.assert_any_call("show tables in database mock_db")
-    mock_cursor.execute.assert_any_call("show views in database mock_db")

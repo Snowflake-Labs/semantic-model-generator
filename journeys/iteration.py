@@ -2,6 +2,7 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
+import loguru
 import pandas as pd
 import sqlglot
 import streamlit as st
@@ -732,19 +733,20 @@ def yaml_editor(yaml_str: str) -> None:
 
     def validate_and_update_session_state() -> None:
         # Validate new content
-        try:
-            validate(
-                content,
-                conn=get_snowflake_connection(),
-            )
-            st.session_state["validated"] = True
-            update_container(status_container, "success", prefix=status_container_title)
-            st.session_state.semantic_model = yaml_to_semantic_model(content)
-            st.session_state.last_saved_yaml = content
-        except Exception as e:
-            st.session_state["validated"] = False
-            update_container(status_container, "failed", prefix=status_container_title)
-            exception_as_dialog(e)
+        # try:
+        validate(
+            content,
+            conn=get_snowflake_connection(),
+        )
+        st.session_state["validated"] = True
+        update_container(status_container, "success", prefix=status_container_title)
+        st.session_state.semantic_model = yaml_to_semantic_model(content)
+        st.session_state.last_saved_yaml = content
+        # except Exception as e:
+        #     loguru.logger.error(e)
+        #     st.session_state["validated"] = False
+        #     update_container(status_container, "failed", prefix=status_container_title)
+        #     exception_as_dialog(e)
 
     button_row = row(5)
     if button_row.button("Validate", use_container_width=True, help=VALIDATE_HELP):
