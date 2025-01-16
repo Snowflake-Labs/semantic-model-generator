@@ -5,7 +5,6 @@ from textwrap import dedent
 from typing import Any
 
 import pandas as pd
-import snowflake.snowpark._internal.utils as snowpark_utils
 import sqlglot
 import streamlit as st
 import yaml
@@ -14,6 +13,7 @@ from snowflake.connector.pandas_tools import write_pandas
 
 from app_utils.chat import send_message
 from app_utils.shared_utils import (
+    batch_cortex_complete,
     get_snowflake_connection,
     schema_selector_container,
     set_sit_query_tag,
@@ -138,9 +138,7 @@ def _llm_judge(frame: pd.DataFrame, max_frame_size=200) -> pd.DataFrame:
     if frame.empty:
         return pd.DataFrame({"EXPLANATION": [], "CORRECT": []})
 
-    # create prompt frame series
-    col_name = "LLM_JUDGE_PROMPT"
-
+    # TODO(kschmaus): abstract batch complete call <----
     prompt_frame = frame.apply(
         axis=1,
         func=lambda x: LLM_JUDGE_PROMPT_TEMPLATE.format(
@@ -148,24 +146,13 @@ def _llm_judge(frame: pd.DataFrame, max_frame_size=200) -> pd.DataFrame:
             frame1_str=x["ANALYST_RESULT"][:max_frame_size].to_string(index=False),
             frame2_str=x["GOLD_RESULT"][:max_frame_size].to_string(index=False),
         ),
-    ).to_frame(name=col_name)
-    session = st.session_state["session"]
-    table_name = snowpark_utils.random_name_for_temp_object(
-        snowpark_utils.TempObjectType.TABLE
+    ).to_frame(name="LLM_JUDGE_PROMPT")
+    llm_judge_result = batch_cortex_complete(
+        session=st.session_state["session"],
+        queries=prompt_frame["LLM_JUDGE_PROMPT"],
+        model="mistral-large2",
     )
-    conn = get_snowflake_connection()
-    snowpark_df = session.create_dataframe(prompt_frame)
-    snowpark_df.write.mode("overwrite").save_as_table(
-        table_name, table_type="temporary"
-    )
-
-    query = f"""
-    SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2', {col_name}) AS LLM_JUDGE
-    FROM {conn.database}.{conn.schema}.{table_name}
-    """
-    cursor = conn.cursor()
-    cursor.execute(query)
-    llm_judge_frame = cursor.fetch_pandas_all()
+    llm_judge_frame = pd.DataFrame(dict(LLM_JUDGE=llm_judge_result))
     llm_judge_frame.index = frame.index
 
     reason_filter = re.compile(r"REASON\:([\S\s]*?)ANSWER\:")

@@ -2,7 +2,6 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
-import loguru
 import pandas as pd
 import sqlglot
 import streamlit as st

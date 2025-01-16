@@ -3,14 +3,14 @@ import json
 from collections import defaultdict
 from contextlib import contextmanager
 from textwrap import dedent
-from typing import Any, Dict, Generator, List, Optional, TypeVar, Union
-from typing import Sequence
+from typing import Any, Dict, Generator, List, Optional, Sequence, TypeVar, Union
 
 import pandas as pd
 from loguru import logger
 from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.connector.errors import ProgrammingError
+from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.snowflake_utils import env_vars
@@ -80,6 +80,32 @@ OBJECT_DATATYPES = ["ARRAY", "GEOGRAPHY", "OBJECT", "VARIANT"]
 _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
+def batch_cortex_complete(
+    session: Session, queries: Sequence[str], model: str
+) -> List[str]:
+    import snowflake.snowpark._internal.utils as snowpark_utils
+
+    query_frame = pd.DataFrame(dict(QUERY=queries))
+    table_name = snowpark_utils.random_name_for_temp_object(
+        snowpark_utils.TempObjectType.TABLE
+    )
+    snowpark_df = session.create_dataframe(query_frame)
+    snowpark_df.write.mode("overwrite").save_as_table(
+        table_name, table_type="temporary"
+    )
+
+    conn = session.connection
+    query = f"""
+    SELECT SNOWFLAKE.CORTEX.COMPLETE('{model}', QUERY) AS RESULT
+    FROM {conn.database}.{conn.schema}.{table_name}
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result_frame = cursor.fetch_pandas_all()
+
+    return result_frame["RESULT"].to_list()
+
+
 def _get_table_comment(
     conn: SnowflakeConnection,
     table_fqn: str,
@@ -103,7 +129,7 @@ def _get_table_comment(
             comment_prompt_template = dedent(
                 """
                 Here is a table with below DDL:
-                ```sql 
+                ```sql
                 {tbl_ddl}
                 ```
 
@@ -115,7 +141,6 @@ def _get_table_comment(
                 Please provide a business description for the table. Only return the description without any other text.
                 """
             ).strip()
-            # TODO(kschmaus): write utility function for SNOWFLAKE.CORTEX.COMPLETE
             comment_prompt = comment_prompt_template.format(
                 tbl_ddl=tbl_ddl, column_comments=column_comments
             ).replace("'", "\\'")
@@ -127,39 +152,6 @@ def _get_table_comment(
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
-            return ""
-
-
-def _get_column_comment(
-    conn: SnowflakeConnection,
-    table_fqn: str,
-    column_row: pd.Series,
-    column_values: Optional[List[str]],
-) -> str:
-    if column_row[_COLUMN_COMMENT_ALIAS]:
-        return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
-    else:
-        # auto-generate column comment if it is not provided.
-        try:
-            values_insert = (
-                f"values: {json.dumps(column_values)};" if column_values else ""
-            )
-
-            comment_prompt = f"""\
-            Here is a column from the table named {table_fqn}:
-            name: {column_row['COLUMN_NAME']};
-            type: {column_row['DATA_TYPE']};
-            {values_insert}
-            Please provide a business description for the column. \
-            Only return the description without any other text.
-            """
-            comment_prompt = dedent(comment_prompt.strip())
-            comment_prompt = comment_prompt.replace("'", "\\'")
-            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_AUTOGEN_MODEL}', '{comment_prompt}')"
-            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
-            return str(cmt + AUTOGEN_TOKEN)
-        except Exception as e:
-            logger.warning(f"Unable to auto generate column comment: {e}")
             return ""
 
 
@@ -176,7 +168,7 @@ def get_table_primary_keys(
 
 
 def get_table_representation(
-    conn: SnowflakeConnection,
+    session: Session,
     table_fqn: str,
     max_string_sample_values: int,
     columns_df: pd.DataFrame,
@@ -185,16 +177,14 @@ def get_table_representation(
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
-            conn=conn,
+            conn=session.connection,
             table_fqn=table_fqn,
             column_row=column_row,
             column_index=col_index,
             max_string_sample_values=max_string_sample_values,
         )
 
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=max_workers
-    ) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_col_index = {
             executor.submit(_get_col, col_index, column_row): col_index
             for col_index, (_, column_row) in enumerate(columns_df.iterrows())
@@ -206,11 +196,55 @@ def get_table_representation(
             index_and_column.append((col_index, column))
         columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
 
+    _add_column_comments(
+        session=session,
+        table_fqn=table_fqn,
+        columns=columns,
+    )
+
     table_comment = _get_table_comment(
-        conn=conn, table_fqn=table_fqn, columns_df=columns_df, columns=columns
+        conn=session.connection,
+        table_fqn=table_fqn,
+        columns_df=columns_df,
+        columns=columns,
     )
 
     return Table(name=table_fqn, comment=table_comment, columns=columns)
+
+
+def _add_column_comments(
+    session: Session, table_fqn: str, columns: List[Column]
+) -> None:
+    prompts = []
+    for column in columns:
+        if not column.comment:
+            values_insert = (
+                f"values: {json.dumps(column.values)};" if column.values else ""
+            )
+
+            comment_prompt = f"""\
+            Here is a column from the table named {table_fqn}:
+            name: {column.column_name};
+            type: {column.column_type};
+            {values_insert}
+            Please provide a business description for the column. \
+            Only return the description without any other text.
+            """
+            comment_prompt = dedent(comment_prompt.strip())
+            comment_prompt = comment_prompt.replace("'", "\\'")
+            prompts.append(comment_prompt)
+
+    comments = batch_cortex_complete(
+        session=session,
+        queries=prompts,
+        model="mistral-large2",
+    )
+    # Add updated comments.
+    i = 0
+    for column in columns:
+        if not column.comment:
+            column.comment = comments[i]
+            i += 1
 
 
 def _get_column_representation(
@@ -225,13 +259,12 @@ def _get_column_representation(
     column_datatype = column_row[_DATATYPE_COL]
 
     column_values = None
-    cortex_search_service = None
     if column_datatype in DIMENSION_DATATYPES:
         cursor = conn.cursor(DictCursor)
         assert cursor is not None, "Cursor is unexpectedly None"
         cursor_execute = cursor.execute(
             f"""
-            select distinct "{column_name}" from {table_fqn} 
+            select distinct "{column_name}" from {table_fqn}
             where {column_name} is not null
             limit {max_string_sample_values + 1}
             """
@@ -240,28 +273,11 @@ def _get_column_representation(
         res = cursor_execute.fetchall()
         if len(res) <= max_string_sample_values:
             column_values = [x[column_name] for x in res]
-        else:
-            # Create cortex search service?
-            cortex_search_service = ...
 
-    column_comment = _get_column_comment(
-        conn=conn,
-        table_fqn=table_fqn,
-        column_row=column_row,
-        column_values=column_values,
-    )
-
-    print(dict(
-        id_=column_index,
-        column_name=column_name,
-        comment=column_comment,
-        column_type=column_datatype,
-        values=column_values,
-    ))
     column = Column(
         id_=column_index,
         column_name=column_name,
-        comment=column_comment,
+        comment=column_row[_COLUMN_COMMENT_ALIAS],
         column_type=column_datatype,
         values=column_values,
     )
@@ -300,9 +316,7 @@ def fetch_warehouses(conn: SnowflakeConnection) -> List[str]:
     return [result[0] for result in results]
 
 
-def fetch_schemas_in_database(
-    conn: SnowflakeConnection, db_name: str
-) -> List[str]:
+def fetch_schemas_in_database(conn: SnowflakeConnection, db_name: str) -> List[str]:
     """
     Fetches all schemas that the current user has access to in the current database
     Args:
@@ -347,9 +361,7 @@ def fetch_tables_views_in_schema(
     return results
 
 
-def fetch_stages_in_schema(
-    conn: SnowflakeConnection, schema_name: str
-) -> list[str]:
+def fetch_stages_in_schema(conn: SnowflakeConnection, schema_name: str) -> list[str]:
     """
     Fetches all stages that the current user has access to in the current schema
     Args:
@@ -367,9 +379,7 @@ def fetch_stages_in_schema(
     return [f"{result[2]}.{result[3]}.{result[1]}" for result in stages]
 
 
-def fetch_table_schema(
-    conn: SnowflakeConnection, table_fqn: str
-) -> dict[str, str]:
+def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
     """
     Fetches the table schema the current user has access
     Args:
@@ -524,7 +534,7 @@ def get_valid_schemas_tables_columns_df(
         """
     )
     cursor_execute = conn.cursor().execute(query)
-    columns_df = cursor_execute.fetch_pandas_all()
+    columns_df = cursor_execute.fetch_pandas_all()  # type: ignore[union-attr]
     return columns_df
 
 
@@ -536,9 +546,7 @@ def get_table_hash(conn: SnowflakeConnection, table_fqn: str) -> str:
     return query_result["TABLE_HASH"].item()  # type: ignore[no-any-return]
 
 
-def execute_query(
-    conn: SnowflakeConnection, query: str
-) -> Union[pd.DataFrame, str]:
+def execute_query(conn: SnowflakeConnection, query: str) -> Union[pd.DataFrame, str]:
     try:
         if query == "":
             raise ValueError("Query string is empty")
@@ -651,9 +659,7 @@ class SnowflakeConnector:
         )
 
         if _QUERY_TAG:
-            connection.cursor().execute(
-                f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'"
-            )
+            connection.cursor().execute(f"ALTER SESSION SET QUERY_TAG = '{_QUERY_TAG}'")
         connection.cursor().execute(
             f"ALTER SESSION SET STATEMENT_TIMEOUT_IN_SECONDS = {env_vars.DEFAULT_SESSION_TIMEOUT_SEC}"
         )

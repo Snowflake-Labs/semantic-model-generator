@@ -1,5 +1,5 @@
 from unittest import mock
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import call, patch
 
 import pandas as pd
 import pytest
@@ -167,7 +167,7 @@ def test_get_valid_schema_table_columns_df(
     mock_valid_tables.return_value = valid_tables
 
     got = snowflake_connector.get_valid_schemas_tables_columns_df(
-        mock_conn, "TEST_DB", "TEST_SCHEMA_1", ["table_1"]
+        mock_conn, "TEST_DB.TEST_SCHEMA_1.table_1"
     )
 
     want_data = {

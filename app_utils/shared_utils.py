@@ -24,6 +24,7 @@ from semantic_model_generator.data_processing.proto_utils import (
 )
 from semantic_model_generator.generate_model import (
     generate_model_str_from_snowflake,
+    raw_schema_to_semantic_context,
 )
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
@@ -1185,6 +1186,15 @@ def display_semantic_model() -> None:
             st.rerun()
 
 
+def edit_semantic_model() -> None:
+    st.write("#### Tables")
+    for t in st.session_state.semantic_model.tables:
+        with st.expander(t.name):
+            display_table(t.name)
+    if st.button("Add Table"):
+        add_new_table()
+
+
 def import_yaml() -> None:
     """
     Renders a page to import an existing yaml file.
@@ -1419,11 +1429,7 @@ def input_semantic_file_name() -> str:
 
     model_name = st.text_input(
         "Semantic Model Name (no .yaml suffix)",
-        help=(
-            "The name of the semantic model you are creating. This is separate from "
-            "the filename, which we will set later."
-        ),
-        key="semantic_model_name",
+        help="The name of the semantic model you are creating. This is separate from the filename, which we will set later.",
     )
     return model_name
 
@@ -1476,6 +1482,27 @@ def run_generate_model_str_from_snowflake(
             )
 
             st.session_state["yaml"] = yaml_str
+
+
+# TODO(kschmaus): I still need to use this!
+def create_cortex_search_service(
+    conn: SnowflakeConnection,
+    service_name: str,
+    column_name: str,
+    table_fqn: str,
+    warehouse_name: str,
+    target_lag: str,
+):
+    query = f"""
+    CREATE OR REPLACE CORTEX SEARCH SERVICE {service_name}
+    ON {column_name}
+    WAREHOUSE = {warehouse_name}
+    TARGET_LAG = '{target_lag}'
+    AS (
+        SELECT DISTINCT {column_name} FROM {table_fqn}
+    );`
+    """
+    conn.cursor().execute(query)
 
 
 @dataclass

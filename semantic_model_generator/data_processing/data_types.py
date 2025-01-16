@@ -27,7 +27,7 @@ class Column:
     id_: int
     column_name: str
     column_type: str
-    values: Optional[List] = None
+    values: Optional[List[str]] = None
     # comment field's to save the column comment user specified on the column
     comment: Optional[str] = None
     # TODO(kschmaus): this probably doesn't belong here.
