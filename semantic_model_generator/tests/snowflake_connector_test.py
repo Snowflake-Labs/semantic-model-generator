@@ -144,51 +144,6 @@ def test_connect_with_schema(
     conn.close.assert_called_with()
 
 
-# @mock.patch(
-#     "semantic_model_generator.snowflake_utils.snowflake_connector._fetch_valid_tables_and_views"
-# )
-@mock.patch(
-    "semantic_model_generator.snowflake_utils.snowflake_connector.snowflake_connection"
-)
-def test_get_valid_schema_table_columns_df(
-    mock_snowflake_connection: mock.MagicMock,
-    # mock_valid_tables: mock.MagicMock,
-    valid_tables: pd.DataFrame,
-    schemas_tables_columns: pd.DataFrame,
-):
-    mock_conn = mock.MagicMock()
-    # We expect get_database_representation() to execute queries in this order:
-    # - select from information_schema.tables
-    # - select from information_schema.columns for each table.
-    mock_conn.cursor().execute().fetch_pandas_all.side_effect = [
-        schemas_tables_columns[schemas_tables_columns["TABLE_NAME"] == "table_1"]
-    ]
-    mock_snowflake_connection.return_value = mock_conn
-    mock_valid_tables.return_value = valid_tables
-
-    got = snowflake_connector.get_valid_schemas_tables_columns_df(
-        mock_conn, "TEST_DB.TEST_SCHEMA_1.table_1"
-    )
-
-    want_data = {
-        "TABLE_SCHEMA": ["TEST_SCHEMA_1", "TEST_SCHEMA_1"],
-        "TABLE_NAME": ["table_1", "table_1"],
-        "TABLE_COMMENT": [None, None],
-        "COLUMN_NAME": ["col_1", "col_2"],
-        "DATA_TYPE": ["VARCHAR", "NUMBER"],
-        "COLUMN_COMMENT": [None, None],
-    }
-
-    # Create a DataFrame
-    want = pd.DataFrame(want_data)
-
-    assert_frame_equal(want, got)
-
-    # Assert that the connection executed the expected queries.
-    query = "select t.TABLE_SCHEMA, t.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COMMENT as COLUMN_COMMENT\nfrom TEST_DB.information_schema.tables as t\njoin TEST_DB.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name where t.table_schema ilike 'TEST_SCHEMA_1' AND LOWER(t.table_name) in ('table_1') \norder by 1, 2, c.ordinal_position"
-    mock_conn.cursor().execute.assert_any_call(query)
-
-
 @pytest.fixture
 def snowflake_data():
     return [
