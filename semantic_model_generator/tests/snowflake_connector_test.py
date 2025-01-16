@@ -144,15 +144,15 @@ def test_connect_with_schema(
     conn.close.assert_called_with()
 
 
-@mock.patch(
-    "semantic_model_generator.snowflake_utils.snowflake_connector._fetch_valid_tables_and_views"
-)
+# @mock.patch(
+#     "semantic_model_generator.snowflake_utils.snowflake_connector._fetch_valid_tables_and_views"
+# )
 @mock.patch(
     "semantic_model_generator.snowflake_utils.snowflake_connector.snowflake_connection"
 )
 def test_get_valid_schema_table_columns_df(
     mock_snowflake_connection: mock.MagicMock,
-    mock_valid_tables: mock.MagicMock,
+    # mock_valid_tables: mock.MagicMock,
     valid_tables: pd.DataFrame,
     schemas_tables_columns: pd.DataFrame,
 ):

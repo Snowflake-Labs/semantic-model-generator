@@ -786,7 +786,7 @@ def yaml_editor(yaml_str: str) -> None:
         ):
             integrate_partner_semantics()
 
-    if st.session_state.experimental_features:
+    if st.session_state.get("experimental_features", False):
         # Preserve a session state variable that maintains whether the join dialog is open.
         # This is necessary because the join dialog calls `st.rerun()` from within, which closes the modal
         # unless its state is being tracked.

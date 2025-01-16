@@ -178,9 +178,8 @@ def get_table_representations(conn: SnowflakeConnection, base_tables: List[str])
         columns_df = get_valid_schemas_tables_columns_df(conn=conn, table_fqn=table_fqn)
         assert not columns_df.empty
 
-        session = Session.builder.configs({"connection": conn}).create()
         raw_table = get_table_representation(
-            session=session,
+            conn=conn,
             table_fqn=table_fqn,
             max_string_sample_values=16,
             columns_df=columns_df,

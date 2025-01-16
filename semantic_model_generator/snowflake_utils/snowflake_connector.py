@@ -10,6 +10,7 @@ from loguru import logger
 from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.connector.errors import ProgrammingError
+from snowflake.connector.pandas_tools import write_pandas
 from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing.data_types import Column, Table
@@ -81,7 +82,7 @@ _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 
 def batch_cortex_complete(
-    session: Session, queries: Sequence[str], model: str
+    conn: SnowflakeConnection, queries: Sequence[str], model: str
 ) -> List[str]:
     import snowflake.snowpark._internal.utils as snowpark_utils
 
@@ -89,12 +90,14 @@ def batch_cortex_complete(
     table_name = snowpark_utils.random_name_for_temp_object(
         snowpark_utils.TempObjectType.TABLE
     )
-    snowpark_df = session.create_dataframe(query_frame)
-    snowpark_df.write.mode("overwrite").save_as_table(
-        table_name, table_type="temporary"
+    write_pandas(
+        conn=conn,
+        df=query_frame,
+        table_name=table_name,
+        overwrite=True,
+        table_type="temporary",
     )
 
-    conn = session.connection
     query = f"""
     SELECT SNOWFLAKE.CORTEX.COMPLETE('{model}', QUERY) AS RESULT
     FROM {conn.database}.{conn.schema}.{table_name}
@@ -169,7 +172,7 @@ def get_table_primary_keys(
 
 
 def get_table_representation(
-    session: Session,
+    conn: SnowflakeConnection,
     table_fqn: str,
     max_string_sample_values: int,
     columns_df: pd.DataFrame,
@@ -178,7 +181,7 @@ def get_table_representation(
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return _get_column_representation(
-            conn=session.connection,
+            conn=conn,
             table_fqn=table_fqn,
             column_row=column_row,
             column_index=col_index,
@@ -198,13 +201,13 @@ def get_table_representation(
         columns = [c for _, c in sorted(index_and_column, key=lambda x: x[0])]
 
     _add_column_comments(
-        session=session,
+        conn=conn,
         table_fqn=table_fqn,
         columns=columns,
     )
 
     table_comment = _get_table_comment(
-        conn=session.connection,
+        conn=conn,
         table_fqn=table_fqn,
         columns_df=columns_df,
         columns=columns,
@@ -214,7 +217,7 @@ def get_table_representation(
 
 
 def _add_column_comments(
-    session: Session, table_fqn: str, columns: List[Column]
+    conn: SnowflakeConnection, table_fqn: str, columns: List[Column]
 ) -> None:
     prompts = []
     for column in columns:
@@ -236,7 +239,7 @@ def _add_column_comments(
             prompts.append(comment_prompt)
 
     comments = batch_cortex_complete(
-        session=session,
+        conn=conn,
         queries=prompts,
         model="mistral-large2",
     )
