@@ -102,8 +102,9 @@ def batch_cortex_complete(
     cursor = conn.cursor()
     cursor.execute(query)
     result_frame = cursor.fetch_pandas_all()
+    result: List[str] = result_frame["RESULT"].to_list()
 
-    return result_frame["RESULT"].to_list()
+    return result
 
 
 def _get_table_comment(
@@ -272,7 +273,7 @@ def _get_column_representation(
         assert cursor_execute is not None, "cursor_execute should not be none "
         res = cursor_execute.fetchall()
         if len(res) <= max_string_sample_values:
-            column_values = [x[column_name] for x in res]
+            column_values = [str(x[column_name]) for x in res]
 
     column = Column(
         id_=column_index,

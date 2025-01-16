@@ -30,7 +30,6 @@ class Column:
     values: Optional[List[str]] = None
     # comment field's to save the column comment user specified on the column
     comment: Optional[str] = None
-    # TODO(kschmaus): this probably doesn't belong here.
     cortex_search_service: Optional[CortexSearchService] = None
 
     def __post_init__(self: Any) -> None:

@@ -13,7 +13,6 @@ from snowflake.connector.pandas_tools import write_pandas
 
 from app_utils.chat import send_message
 from app_utils.shared_utils import (
-    batch_cortex_complete,
     get_snowflake_connection,
     schema_selector_container,
     set_sit_query_tag,
@@ -23,6 +22,7 @@ from app_utils.shared_utils import (
     validate_table_schema,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
+from semantic_model_generator.snowflake_utils.snowflake_connector import batch_cortex_complete
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     create_table_in_schema,
     execute_query,
@@ -138,7 +138,6 @@ def _llm_judge(frame: pd.DataFrame, max_frame_size=200) -> pd.DataFrame:
     if frame.empty:
         return pd.DataFrame({"EXPLANATION": [], "CORRECT": []})
 
-    # TODO(kschmaus): abstract batch complete call <----
     prompt_frame = frame.apply(
         axis=1,
         func=lambda x: LLM_JUDGE_PROMPT_TEMPLATE.format(

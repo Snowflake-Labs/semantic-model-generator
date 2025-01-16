@@ -7,6 +7,7 @@ from snowflake.connector import SnowflakeConnection
 from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing import data_types, proto_utils
+from semantic_model_generator.data_processing.data_types import Table
 from semantic_model_generator.protos import semantic_model_pb2
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     AUTOGEN_TOKEN,
@@ -151,18 +152,6 @@ def _raw_table_to_semantic_context_table(
                     sample_values=col.values,
                 )
             )
-    #         elif col.column_type.upper() in DIMENSION_DATATYPES:
-    #             print("HELLO!!!!!!", col.column_type.upper())
-    #             dimensions.append(
-    #                 semantic_model_pb2.Dimension(
-    #                     name=col.column_name,
-    #                     expr=col.column_name,
-    #                     data_type=col.column_type,
-    #                     sample_values=col.values,
-    #                     synonyms=[_PLACEHOLDER_COMMENT],
-    #                     description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
-    #                 )
-    #             )
     if len(time_dimensions) + len(dimensions) + len(measures) == 0:
         raise ValueError(
             f"No valid columns found for table {raw_table.name}. Please verify that this table contains column's datatypes not in {OBJECT_DATATYPES}."
@@ -183,11 +172,49 @@ def _raw_table_to_semantic_context_table(
     )
 
 
+def get_table_representations(conn: SnowflakeConnection, base_tables: List[str]) -> List[Table]:
+    raw_tables = []
+    for table_fqn in base_tables:
+        columns_df = get_valid_schemas_tables_columns_df(conn=conn, table_fqn=table_fqn)
+        assert not columns_df.empty
+
+        session = Session.builder.configs({"connection": conn}).create()
+        raw_table = get_table_representation(
+            session=session,
+            table_fqn=table_fqn,
+            max_string_sample_values=16,
+            columns_df=columns_df,
+            max_workers=1,
+        )
+        raw_tables.append(raw_table)
+    return raw_tables
+
+
+def translate_data_class_tables_to_model_protobuf(
+    raw_tables: List[Table],
+    semantic_model_name: str,
+    allow_joins: bool = False,
+) -> semantic_model_pb2.SemanticModel:
+    table_objects = []
+    for raw_table in raw_tables:
+        table_object = _raw_table_to_semantic_context_table(raw_table=raw_table)
+        table_objects.append(table_object)
+    # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
+
+    placeholder_relationships = _get_placeholder_joins() if allow_joins else None
+    context = semantic_model_pb2.SemanticModel(
+        name=semantic_model_name,
+        tables=table_objects,
+        relationships=placeholder_relationships,
+    )
+    return context
+
+
 def raw_schema_to_semantic_context(
     base_tables: List[str],
     semantic_model_name: str,
     conn: SnowflakeConnection,
-    allow_joins: Optional[bool] = False,
+    allow_joins: bool = False,
 ) -> semantic_model_pb2.SemanticModel:
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -210,32 +237,14 @@ def raw_schema_to_semantic_context(
     """
 
     # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
-    table_objects = []
-    raw_tables = []
-    for table_fqn in base_tables:
-        columns_df = get_valid_schemas_tables_columns_df(conn=conn, table_fqn=table_fqn)
-        assert not columns_df.empty
-
-        # TODO(kschmaus): clean this up, it's pretty awkward.
-        session = Session.builder.configs({"connection": conn}).create()
-        raw_table = get_table_representation(
-            session=session,
-            table_fqn=table_fqn,
-            max_string_sample_values=16,
-            columns_df=columns_df,
-            max_workers=1,
-        )
-        raw_tables.append(raw_table)
-
-        table_object = _raw_table_to_semantic_context_table(raw_table=raw_table)
-        table_objects.append(table_object)
-    # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
-
-    placeholder_relationships = _get_placeholder_joins() if allow_joins else None
-    context = semantic_model_pb2.SemanticModel(
-        name=semantic_model_name,
-        tables=table_objects,
-        relationships=placeholder_relationships,
+    raw_tables = get_table_representations(
+        conn=conn,
+        base_tables=base_tables,
+    )
+    context = translate_data_class_tables_to_model_protobuf(
+        raw_tables=raw_tables,
+        semantic_model_name=semantic_model_name,
+        allow_joins=allow_joins
     )
     return context
 
@@ -394,12 +403,26 @@ def generate_base_semantic_model_from_snowflake(
     return None
 
 
-#TODO(kschmaus): repair?
+def context_to_yaml(context: semantic_model_pb2.SemanticModel) -> str:
+    # Validate the generated yaml is within context limits.
+    # We just throw a warning here to allow users to update.
+    validate_context_length(context)
+
+    yaml_str = proto_utils.proto_to_yaml(context)
+    # Once we have the yaml, update to include to # <FILL-OUT> tokens.
+    yaml_str = append_comment_to_placeholders(yaml_str)
+    # Comment out the filters section as we don't have a way to auto-generate these yet.
+    yaml_str = comment_out_section(yaml_str, "filters")
+    yaml_str = comment_out_section(yaml_str, "relationships")
+
+    return yaml_str
+
+
 def generate_model_str_from_snowflake(
     base_tables: List[str],
     semantic_model_name: str,
     conn: SnowflakeConnection,
-    allow_joins: Optional[bool] = False,
+    allow_joins: bool = False,
 ) -> str:
     """
     Generates a base semantic context from specified Snowflake tables and returns the raw string.
@@ -419,15 +442,5 @@ def generate_model_str_from_snowflake(
         allow_joins=allow_joins,
         conn=conn,
     )
-    # Validate the generated yaml is within context limits.
-    # We just throw a warning here to allow users to update.
-    validate_context_length(context)
-
-    yaml_str = proto_utils.proto_to_yaml(context)
-    # Once we have the yaml, update to include to # <FILL-OUT> tokens.
-    yaml_str = append_comment_to_placeholders(yaml_str)
-    # Comment out the filters section as we don't have a way to auto-generate these yet.
-    yaml_str = comment_out_section(yaml_str, "filters")
-    yaml_str = comment_out_section(yaml_str, "relationships")
-
+    yaml_str = context_to_yaml(context)
     return yaml_str

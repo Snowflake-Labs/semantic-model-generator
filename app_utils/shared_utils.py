@@ -574,6 +574,7 @@ class GeneratorAppScreen(str, Enum):
 
     ONBOARDING = "onboarding"
     ITERATION = "iteration"
+    BUILDER = "builder"
 
 
 def return_home_button() -> None:
@@ -1454,7 +1455,7 @@ def run_generate_model_str_from_snowflake(
     model_name: str,
     sample_values: int,
     base_tables: list[str],
-    allow_joins: Optional[bool] = False,
+    allow_joins: bool = False,
 ) -> None:
     """
     Runs generate_model_str_from_snowflake to generate cortex semantic shell.
@@ -1484,7 +1485,6 @@ def run_generate_model_str_from_snowflake(
             st.session_state["yaml"] = yaml_str
 
 
-# TODO(kschmaus): I still need to use this!
 def create_cortex_search_service(
     conn: SnowflakeConnection,
     service_name: str,
@@ -1492,17 +1492,20 @@ def create_cortex_search_service(
     table_fqn: str,
     warehouse_name: str,
     target_lag: str,
-):
-    query = f"""
-    CREATE OR REPLACE CORTEX SEARCH SERVICE {service_name}
-    ON {column_name}
-    WAREHOUSE = {warehouse_name}
-    TARGET_LAG = '{target_lag}'
-    AS (
-        SELECT DISTINCT {column_name} FROM {table_fqn}
-    );`
-    """
-    conn.cursor().execute(query)
+) -> None:
+    try:
+        query = f"""
+        CREATE CORTEX SEARCH SERVICE IF NOT EXISTS {service_name}
+        ON {column_name}
+        WAREHOUSE = {warehouse_name}
+        TARGET_LAG = '{target_lag}'
+        AS (
+            SELECT DISTINCT {column_name} FROM {table_fqn}
+        );
+        """
+        conn.cursor().execute(query)
+    except Exception as e:
+        st.error(f"Error creating cortex search service: {e}")
 
 
 @dataclass

@@ -3,9 +3,14 @@ from dataclasses import dataclass
 import streamlit as st
 from loguru import logger
 
+from app_utils.shared_utils import create_cortex_search_service
 from semantic_model_generator.data_processing import proto_utils
+from semantic_model_generator.data_processing.data_types import Table
 from semantic_model_generator.generate_model import append_comment_to_placeholders
 from semantic_model_generator.generate_model import comment_out_section
+from semantic_model_generator.generate_model import context_to_yaml
+from semantic_model_generator.generate_model import get_table_representations
+from semantic_model_generator.generate_model import translate_data_class_tables_to_model_protobuf
 from semantic_model_generator.protos import semantic_model_pb2
 from snowflake.connector import ProgrammingError
 from streamlit_extras.tags import tagger_component
@@ -37,16 +42,23 @@ class CortexSearchConfig:
     warehouse_name: str
     target_lag: str
 
-
+#         if not st.session_state["semantic_model_name"]:
+#             st.error("Please provide a name for your semantic model.")
+#         elif not st.session_state["selected_tables"]:
+#             st.error("Please select at least one table to proceed.")
+#         else:
+#             st.session_state["table_selector_submitted"] = True
 def init_session_state() -> None:
     default_state = {
+        "build_semantic_model": False,
         "cortex_search_configs": dict(),
-        "enable_joins": False,
+        "experimental_features": False,
         "selected_databases": list(),
         "selected_schemas": list(),
         "selected_tables": list(),
-        "build_semantic_model": False,
+        "semantic_model_name": "",
         "table_selector_submitted": False,
+        "tables": list()
     }
     for key, value in default_state.items():
         if key not in st.session_state:
@@ -112,7 +124,7 @@ def table_selector_fragment() -> None:
     st.markdown(
         "## Please fill out the following fields to start building your semantic model."
     )
-    _ = input_semantic_file_name()
+    st.session_state["semantic_model_name"] = input_semantic_file_name()
     st.markdown("")
 
     with st.spinner("Loading databases..."):
@@ -155,7 +167,7 @@ def table_selector_fragment() -> None:
     )
 
     if st.button(
-        "Create Semantic Model Skeleton",
+        "Select Semantic Model Tables",
         key="table_selector_button",
         use_container_width=True,
         type="primary",
@@ -171,30 +183,28 @@ def table_selector_fragment() -> None:
         st.rerun()
 
 
-@st.cache_resource(show_spinner=False)
+@st.cache_data(show_spinner=False)
+def call_get_table_representations(base_tables: list[str]) -> list[Table]:
+    conn = get_snowflake_connection()
+    tables = get_table_representations(
+        conn=conn, base_tables=base_tables
+    )
+    return tables
+
+
+def table_representations() -> None:
+    base_tables = st.session_state["selected_tables"]
+    st.session_state["tables"] = call_get_table_representations(base_tables)
+
+
 def generate_table_configs() -> None:
     with st.spinner(
-        "Writing Semantic Model Descriptions Using AI (this may take a moment) ..."
+        "Writing semantic model descriptions using AI (this may take a moment) ..."
     ):
-        tables = []
-        conn = get_snowflake_connection()
-        for table_fqn in st.session_state.get("selected_tables", []):
-            columns_df = get_valid_schemas_tables_columns_df(
-                conn=conn,
-                table_fqn=table_fqn,
-            )
-            table = get_table_representation(
-                session=st.session_state["session"],
-                table_fqn=table_fqn,
-                max_string_sample_values=16,
-                columns_df=columns_df,
-                max_workers=1,
-            )
-            tables.append(table)
+        table_representations()
 
         # We will need warehouses for search integration.
         st.session_state["available_warehouses"] = get_available_warehouses()
-        st.session_state["tables"] = tables
 
 
 @st.experimental_fragment()
@@ -241,7 +251,6 @@ def cortex_search_fragment() -> None:
                 )
                 cortex_search_configs[column] = cortex_search_config
                 st.rerun()
-
 
     def _remove_search_form(column: str) -> None:
         with st.form(key=f"remove_cortex_search_form_{column}"):
@@ -291,43 +300,38 @@ def cortex_search_fragment() -> None:
                         service=config.service_name,
                         literal_column=config.column_name,
                     )
-
-        # TODO(kschmaus) create cortex search instances, use spinner ...
-
         st.rerun()
-        # TODO(kschmaus): this should probably it's own function ...
 
-        # TODO(kschmaus): at a certain point this shouldn't live in builder ...
-        placeholder_relationships = (
-            _get_placeholder_joins()
-            if st.session_state["enable_joins"]
-            else None
-        )
-        table_objects = [
-            _raw_table_to_semantic_context_table(raw_table=table) for table in tables
-        ]
-        context = semantic_model_pb2.SemanticModel(
-            name=st.session_state["semantic_model_name"],
-            tables=table_objects,
-            relationships=placeholder_relationships,
-        )
-        # Validate the generated yaml is within context limits.
-        # We just throw a warning here to allow users to update.
-        validate_context_length(context)
 
-        yaml_str = proto_utils.proto_to_yaml(context)
-        # Once we have the yaml, update to include to # <FILL-OUT> tokens.
-        yaml_str = append_comment_to_placeholders(yaml_str)
-        # Comment out the filters section as we don't have a way to auto-generate these yet.
-        yaml_str = comment_out_section(yaml_str, "filters")
-        yaml_str = comment_out_section(yaml_str, "relationships")
-        st.session_state["yaml"] = yaml_str
+def create_cortex_search_services() -> None:
+    conn = get_snowflake_connection()
+    cortex_search_configs = st.session_state["cortex_search_configs"]
+    config: CortexSearchConfig
+    for config in cortex_search_configs.values():
+        service_name = config.service_name.replace(".", "_")
+        with st.spinner(
+            f"Creating Cortex Search Services for {service_name} "
+            f"(this may take several minutes...)"
+        ):
+            create_cortex_search_service(
+                conn=conn,
+                service_name=service_name,
+                column_name=config.column_name,
+                table_fqn=config.table_fqn,
+                warehouse_name=config.warehouse_name,
+                target_lag=config.target_lag
+            )
 
-        st.code(st.session_state["yaml"])
 
-        # TODO(kschmaus): this ends things
-        st.session_state["page"] = GeneratorAppScreen.ITERATION
-        st.rerun()
+def save_yaml() -> None:
+    tables = st.session_state["tables"]
+    context = translate_data_class_tables_to_model_protobuf(
+        raw_tables=tables,
+        semantic_model_name=st.session_state["semantic_model_name"],
+        allow_joins=st.session_state["experimental_features"],
+    )
+    yaml_string = context_to_yaml(context)
+    st.session_state["yaml"] = yaml_string
 
 
 def show() -> None:
@@ -351,4 +355,11 @@ def show() -> None:
     if not st.session_state["build_semantic_model"]:
         st.stop()
 
-    # TODO(kschmaus): final function?
+    # (Re)Create cortex search services.
+    create_cortex_search_services()
+
+    # Save YAML model to session state.
+    save_yaml()
+
+    st.session_state["page"] = GeneratorAppScreen.ITERATION
+    st.rerun()

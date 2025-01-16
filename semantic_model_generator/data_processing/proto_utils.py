@@ -30,7 +30,7 @@ def proto_to_yaml(message: ProtoMsg) -> str:
         # Using ruamel.yaml package to preserve message order.
         yaml = ruamel.yaml.YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
-        yaml.preserve_quotes = True  # type: ignore[assignment]
+        yaml.preserve_quotes = True
 
         with io.StringIO() as stream:
             yaml.dump(json_data, stream)
