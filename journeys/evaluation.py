@@ -129,7 +129,7 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
             st.write(f"**Explanation**: {row['EXPLANATION']}")
 
 
-def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
+def _llm_judge(frame: pd.DataFrame, max_frame_size = 200) -> pd.DataFrame:
 
     if frame.empty:
         return pd.DataFrame({"EXPLANATION": [], "CORRECT": []})
@@ -141,8 +141,8 @@ def _llm_judge(frame: pd.DataFrame) -> pd.DataFrame:
         axis=1,
         func=lambda x: LLM_JUDGE_PROMPT_TEMPLATE.format(
             input_question=x["QUERY"],
-            frame1_str=x["ANALYST_RESULT"].to_string(index=False),
-            frame2_str=x["GOLD_RESULT"].to_string(index=False),
+            frame1_str=x["ANALYST_RESULT"][:max_frame_size].to_string(index=False),
+            frame2_str=x["GOLD_RESULT"][:max_frame_size].to_string(index=False),
         ),
     ).to_frame(name=col_name)
     session = st.session_state["session"]
@@ -355,7 +355,9 @@ def run_sql_queries() -> None:
 
     for i, (row_id, row) in enumerate(eval_table_frame.iterrows(), start=1):
         status_text.text(f"Evaluating Analyst query {i}/{total_requests}...")
+        
 
+        
         analyst_query = analyst_results_frame.loc[row_id, "ANALYST_SQL"]
         analyst_result = execute_query(
             conn=get_snowflake_connection(), query=analyst_query
@@ -588,6 +590,7 @@ def clear_evaluation_selection() -> None:
         "selected_results_eval_old_table",
         "selected_results_eval_schema",
         "use_existing_eval_results_table",
+        "selected_eval_run_name",
     )
     for feature in session_states:
         if feature in st.session_state:
@@ -600,6 +603,9 @@ def clear_evaluation_data() -> None:
         "eval_accuracy",
         "analyst_results_frame",
         "query_results_frame",
+        "eval_run_name",
+        "eval_timestamp",
+        "eval_hash",
     )
     for feature in session_states:
         if feature in st.session_state:
@@ -614,7 +620,7 @@ def evaluation_mode_show() -> None:
     st.write(
         "Welcome!🧪 In the evaluation mode you can evaluate your semantic model using pairs of golden queries/questions and their expected SQL statements. These pairs should be captured in an **Evaluation Table**. Accuracy metrics will be shown and the results will be stored in an **Evaluation Results Table**."
     )
-    st.text_input("Evaluation Run Name", key="eval_run_name")
+    st.text_input("Evaluation Run Name", key="selected_eval_run_name", value= st.session_state.get("selected_eval_run_name", ""))
 
     # TODO: find a less awkward way of specifying this.
     if any(key not in st.session_state for key in ("eval_table", "results_eval_table")):
@@ -688,8 +694,12 @@ def run_evaluation() -> None:
             return
     placeholder.write("Model validated ✅")
     clear_evaluation_data()
+    st.session_state["eval_run_name"] = st.session_state["selected_eval_run_name"]
     st.session_state["semantic_model_hash"] = current_hash
-    st.write("Running evaluation...")
+    if st.session_state["eval_run_name"] == "":
+        st.write("Running evaluation ...")
+    else:
+        st.write(f"Running evaluation for name: {st.session_state['eval_run_name']} ...")
     st.session_state["eval_timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
     st.session_state["eval_hash"] = generate_hash(st.session_state["eval_timestamp"])
     send_analyst_requests()
