@@ -25,6 +25,7 @@ from app_utils.shared_utils import (
     upload_yaml,
     validate_and_upload_tmp_yaml,
 )
+from journeys.evaluation import evaluation_mode_show
 from journeys.joins import joins_dialog
 from semantic_model_generator.data_processing.cte_utils import (
     context_to_column_format,
@@ -42,10 +43,6 @@ from semantic_model_generator.validate_model import validate
 # Set minCachedMessageSize to 500 MB to disable forward message cache:
 # st.set_config would trigger an error, only the set_config from config module works
 config.set_option("global.minCachedMessageSize", 500 * 1e6)
-
-
-def get_file_name() -> str:
-    return st.session_state.file_name  # type: ignore
 
 
 @st.cache_data(show_spinner=False)
@@ -470,9 +467,6 @@ def yaml_editor(yaml_str: str) -> None:
 
     Args:
         yaml_str (str): YAML content to be edited.
-        status_container (DeltaGenerator): Container in
-            which we will write the edition status (validated, editing
-            or failed).
     """
     css_yaml_editor = """
     textarea{
@@ -482,7 +476,7 @@ def yaml_editor(yaml_str: str) -> None:
         background-color: #fbfbfb;
     }
     """
-    st.session_state.confirm = st.checkbox("Preview YAML")
+
     # Style text_area to mirror st.code
     with stylable_container(key="customized_text_area", css_styles=css_yaml_editor):
         content = st.text_area(
@@ -678,7 +672,15 @@ def show() -> None:
         # If coming from the builder flow, there's no need to collect this information until the user wants to upload.
         set_up_requirements()
     else:
-        return_home_button()
+        home, mode = st.columns(2)
+        with home:
+            return_home_button()
+        with mode:
+            st.session_state["app_mode"] = st.selectbox(
+                label="App Mode",
+                label_visibility="collapsed",
+                options=["Chat", "Evaluation", "Preview YAML"],
+            )
         if "yaml" not in st.session_state:
             # Only proceed to download the YAML from stage if we don't have one from the builder flow.
             yaml = download_yaml(
@@ -705,14 +707,17 @@ def show() -> None:
             yaml_editor(editor_contents)
 
         with chat_container:
-            if st.session_state.confirm:
+            app_mode = st.session_state["app_mode"]
+            if app_mode == "Preview YAML":
                 st.code(
                     st.session_state.working_yml, language="yaml", line_numbers=True
                 )
-            else:
-                header_row = row([0.85, 0.15], vertical_align="center")
-                header_row.markdown("**Chat**")
-                if header_row.button("Settings"):
+            elif app_mode == "Evaluation":
+                evaluation_mode_show()
+            elif app_mode == "Chat":
+                if st.button("Settings"):
                     chat_settings_dialog()
                 # We still initialize an empty connector and pass it down in order to propagate the connector auth token.
                 chat_and_edit_vqr(get_snowflake_connection())
+            else:
+                st.error(f"Unknown App Mode: {app_mode}")
