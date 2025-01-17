@@ -36,13 +36,12 @@ SELECT SYSTEM$BEHAVIOR_CHANGE_BUNDLE_STATUS('2024_08');
 
 > For more information on this bundle please see our [BCR Documentation](https://docs.snowflake.com/en/release-notes/behavior-changes).
 
-**UPDATED WITH EVAL INSTALL INSTRUCTION**
 
 [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index) is recommended for deploying the app in Streamlit in Snowflake. Please see Snowflake CLI [installation instructions](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/installation/installation) to install. **Snowflake CLI version 3.0+ is recommended**. Follow the below instructions to install the Semantic Model Generator in Streamlit in Snowflake.
 
 If you do not have Snowflake CLI installed, the setup can be replicated manually with the [VS Code Snowflake extension](https://docs.snowflake.com/en/user-guide/vscode-ext), Snowsight or [Snowflake Native Git Integration](https://docs.snowflake.com/en/developer-guide/git/git-overview):
- - If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup_eval_branch.sql`.
- - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/blob/customer-eval/sis_setup/sissetup_snowsightgit_eval_branch.sql) and run in Snowsight. 
+ - If using Snowsight, you may use the files upload wizard to upload files. Please pay close attention to maintain the directory structure referenced in `setup_sis/app_setup.sql`.
+ - If using the Native Git Integration, copy and paste the code from this [setup file](https://github.com/Snowflake-Labs/semantic-model-generator/blob/main/sis_setup/sissetup_snowsightgit.sql) and run in Snowsight. 
 
 ### Snowflake CLI Installation
 
