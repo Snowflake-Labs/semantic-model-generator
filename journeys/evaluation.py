@@ -80,53 +80,55 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
     n_questions = len(frame)
     n_correct = frame["CORRECT"].sum()
     accuracy = (n_correct / n_questions) * 100
-    st.markdown(
-        f"###### Results: {n_correct} out of {n_questions} questions correct with accuracy {accuracy:.2f}%"
-    )
-    for row_id, row in frame.iterrows():
-        match_emoji = "✅" if row["CORRECT"] else "❌"
-        with st.expander(f"Row ID: {row_id} {match_emoji}"):
-            st.write(f"Input Query: {row['QUERY']}")
-            st.write(row["ANALYST_TEXT"].replace("\n", " "))
+    results_placeholder = st.session_state.get("eval_results_placeholder")
+    with results_placeholder.container():
+        st.markdown(
+            f"###### Results: {n_correct} out of {n_questions} questions correct with accuracy {accuracy:.2f}%"
+        )
+        for row_id, row in frame.iterrows():
+            match_emoji = "✅" if row["CORRECT"] else "❌"
+            with st.expander(f"Row ID: {row_id} {match_emoji}"):
+                st.write(f"Input Query: {row['QUERY']}")
+                st.write(row["ANALYST_TEXT"].replace("\n", " "))
 
-            col1, col2 = st.columns(2)
+                col1, col2 = st.columns(2)
 
-            try:
-                analyst_sql = sqlglot.parse_one(row["ANALYST_SQL"], dialect="snowflake")
-                analyst_sql = analyst_sql.sql(dialect="snowflake", pretty=True)
-            except Exception as e:
-                logger.warning(f"Error parsing analyst SQL: {e} for {row_id}")
-                analyst_sql = row["ANALYST_SQL"]
+                try:
+                    analyst_sql = sqlglot.parse_one(row["ANALYST_SQL"], dialect="snowflake")
+                    analyst_sql = analyst_sql.sql(dialect="snowflake", pretty=True)
+                except Exception as e:
+                    logger.warning(f"Error parsing analyst SQL: {e} for {row_id}")
+                    analyst_sql = row["ANALYST_SQL"]
 
-            try:
-                gold_sql = sqlglot.parse_one(row["GOLD_SQL"], dialect="snowflake")
-                gold_sql = gold_sql.sql(dialect="snowflake", pretty=True)
-            except Exception as e:
-                logger.warning(f"Error parsing gold SQL: {e} for {row_id}")
-                gold_sql = row["GOLD_SQL"]
+                try:
+                    gold_sql = sqlglot.parse_one(row["GOLD_SQL"], dialect="snowflake")
+                    gold_sql = gold_sql.sql(dialect="snowflake", pretty=True)
+                except Exception as e:
+                    logger.warning(f"Error parsing gold SQL: {e} for {row_id}")
+                    gold_sql = row["GOLD_SQL"]
 
-            with col1:
-                st.write("Analyst SQL")
-                st.code(analyst_sql, language="sql")
+                with col1:
+                    st.write("Analyst SQL")
+                    st.code(analyst_sql, language="sql")
 
-            with col2:
-                st.write("Golden SQL")
-                st.code(gold_sql, language="sql")
+                with col2:
+                    st.write("Golden SQL")
+                    st.code(gold_sql, language="sql")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                if isinstance(row["ANALYST_RESULT"], str):
-                    st.error(row["ANALYST_RESULT"])
-                else:
-                    st.write(row["ANALYST_RESULT"])
+                col1, col2 = st.columns(2)
+                with col1:
+                    if isinstance(row["ANALYST_RESULT"], str):
+                        st.error(row["ANALYST_RESULT"])
+                    else:
+                        st.write(row["ANALYST_RESULT"])
 
-            with col2:
-                if isinstance(row["GOLD_RESULT"], str):
-                    st.error(row["GOLD_RESULT"])
-                else:
-                    st.write(row["GOLD_RESULT"])
+                with col2:
+                    if isinstance(row["GOLD_RESULT"], str):
+                        st.error(row["GOLD_RESULT"])
+                    else:
+                        st.write(row["GOLD_RESULT"])
 
-            st.write(f"**Explanation**: {row['EXPLANATION']}")
+                st.write(f"**Explanation**: {row['EXPLANATION']}")
 
 
 def _llm_judge(frame: pd.DataFrame, max_frame_size = 200) -> pd.DataFrame:
@@ -640,6 +642,8 @@ def evaluation_mode_show() -> None:
     if st.button("Run Evaluation"):
         run_evaluation()
 
+
+
     if "total_eval_frame" in st.session_state:
         current_hash = generate_hash(st.session_state["working_yml"])
         model_changed_test = current_hash != st.session_state["semantic_model_hash"]
@@ -661,6 +665,7 @@ def evaluation_mode_show() -> None:
         else:
             st.markdown("#### Current Evaluation Run Summary")
         st.dataframe(evolution_run_summary, hide_index=True)
+        st.session_state["eval_results_placeholder"] = st.empty()
         visualize_eval_results(st.session_state["total_eval_frame"])
 
 
@@ -700,6 +705,9 @@ def run_evaluation() -> None:
         st.write("Running evaluation ...")
     else:
         st.write(f"Running evaluation for name: {st.session_state['eval_run_name']} ...")
+    if "eval_results_placeholder" in st.session_state:
+        results_placeholder = st.session_state["eval_results_placeholder"]
+        results_placeholder.empty()
     st.session_state["eval_timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
     st.session_state["eval_hash"] = generate_hash(st.session_state["eval_timestamp"])
     send_analyst_requests()
