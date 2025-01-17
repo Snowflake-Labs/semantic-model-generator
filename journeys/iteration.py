@@ -1,8 +1,3 @@
-
-
-from streamlit import config
-
-
 import json
 import time
 from typing import Any, Dict, List, Optional
@@ -11,10 +6,6 @@ import pandas as pd
 import sqlglot
 import streamlit as st
 from snowflake.connector import ProgrammingError, SnowflakeConnection
-
-
-from streamlit import config
-
 from streamlit import config
 from streamlit.delta_generator import DeltaGenerator
 from streamlit_extras.row import row

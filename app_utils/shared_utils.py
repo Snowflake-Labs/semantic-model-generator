@@ -9,7 +9,6 @@ from enum import Enum
 from io import StringIO
 from typing import Any, Dict, List, Optional, Union
 
-
 import pandas as pd
 import streamlit as st
 from PIL import Image
@@ -26,26 +25,10 @@ from semantic_model_generator.generate_model import (
     raw_schema_to_semantic_context,
 )
 from semantic_model_generator.protos import semantic_model_pb2
-<<<<<<< HEAD
-
-=======
->>>>>>> d067d5c (that is a lot of changes, but here we are)
 from semantic_model_generator.protos.semantic_model_pb2 import Dimension, Table
 from semantic_model_generator.snowflake_utils.env_vars import (  # noqa: E402
     assert_required_env_vars,
 )
-<<<<<<< HEAD
-
-
-from semantic_model_generator.snowflake_utils.snowflake_connector import SnowflakeConnector
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_table_schema
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_databases
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_schemas_in_database
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_stages_in_schema
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_tables_views_in_schema
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_warehouses
-from semantic_model_generator.snowflake_utils.snowflake_connector import fetch_yaml_names_in_stage
-=======
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
     SnowflakeConnector,
     fetch_databases,
@@ -57,7 +40,6 @@ from semantic_model_generator.snowflake_utils.snowflake_connector import (
     fetch_yaml_names_in_stage,
 )
 
->>>>>>> d067d5c (that is a lot of changes, but here we are)
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT_LOCATOR", "")
 
 # Add a logo on the top-left corner of the app

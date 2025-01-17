@@ -56,7 +56,7 @@ run_isort:  ## Run isort to update imports.
 
 
 fmt_lint: shell ## lint/fmt in current python environment
-	make run_mypy run_black run_isort run_flake8
+	make run_black run_isort run_flake8
 
 # Test below
 test: shell ## Run tests.

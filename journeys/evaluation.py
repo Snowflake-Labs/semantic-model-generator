@@ -94,7 +94,9 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
                 col1, col2 = st.columns(2)
 
                 try:
-                    analyst_sql = sqlglot.parse_one(row["ANALYST_SQL"], dialect="snowflake")
+                    analyst_sql = sqlglot.parse_one(
+                        row["ANALYST_SQL"], dialect="snowflake"
+                    )
                     analyst_sql = analyst_sql.sql(dialect="snowflake", pretty=True)
                 except Exception as e:
                     logger.warning(f"Error parsing analyst SQL: {e} for {row_id}")
@@ -131,7 +133,7 @@ def visualize_eval_results(frame: pd.DataFrame) -> None:
                 st.write(f"**Explanation**: {row['EXPLANATION']}")
 
 
-def _llm_judge(frame: pd.DataFrame, max_frame_size = 200) -> pd.DataFrame:
+def _llm_judge(frame: pd.DataFrame, max_frame_size=200) -> pd.DataFrame:
 
     if frame.empty:
         return pd.DataFrame({"EXPLANATION": [], "CORRECT": []})
@@ -357,9 +359,7 @@ def run_sql_queries() -> None:
 
     for i, (row_id, row) in enumerate(eval_table_frame.iterrows(), start=1):
         status_text.text(f"Evaluating Analyst query {i}/{total_requests}...")
-        
 
-        
         analyst_query = analyst_results_frame.loc[row_id, "ANALYST_SQL"]
         analyst_result = execute_query(
             conn=get_snowflake_connection(), query=analyst_query
@@ -622,7 +622,11 @@ def evaluation_mode_show() -> None:
     st.write(
         "Welcome!🧪 In the evaluation mode you can evaluate your semantic model using pairs of golden queries/questions and their expected SQL statements. These pairs should be captured in an **Evaluation Table**. Accuracy metrics will be shown and the results will be stored in an **Evaluation Results Table**."
     )
-    st.text_input("Evaluation Run Name", key="selected_eval_run_name", value= st.session_state.get("selected_eval_run_name", ""))
+    st.text_input(
+        "Evaluation Run Name",
+        key="selected_eval_run_name",
+        value=st.session_state.get("selected_eval_run_name", ""),
+    )
 
     # TODO: find a less awkward way of specifying this.
     if any(key not in st.session_state for key in ("eval_table", "results_eval_table")):
@@ -641,8 +645,6 @@ def evaluation_mode_show() -> None:
     st.dataframe(summary_stats, hide_index=True)
     if st.button("Run Evaluation"):
         run_evaluation()
-
-
 
     if "total_eval_frame" in st.session_state:
         current_hash = generate_hash(st.session_state["working_yml"])
@@ -704,7 +706,9 @@ def run_evaluation() -> None:
     if st.session_state["eval_run_name"] == "":
         st.write("Running evaluation ...")
     else:
-        st.write(f"Running evaluation for name: {st.session_state['eval_run_name']} ...")
+        st.write(
+            f"Running evaluation for name: {st.session_state['eval_run_name']} ..."
+        )
     if "eval_results_placeholder" in st.session_state:
         results_placeholder = st.session_state["eval_results_placeholder"]
         results_placeholder.empty()
