@@ -1,4 +1,6 @@
+import concurrent.futures
 import os
+import time
 from datetime import datetime
 from typing import List, Optional
 
@@ -160,6 +162,37 @@ def _raw_table_to_semantic_context_table(
     )
 
 
+def process_table(
+    table: str, conn: SnowflakeConnection, n_sample_values: int
+) -> semantic_model_pb2.Table:
+    fqn_table = create_fqn_table(table)
+    valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
+        conn=conn,
+        db_name=fqn_table.database,
+        table_schema=fqn_table.schema_name,
+        table_names=[fqn_table.table],
+    )
+    assert not valid_schemas_tables_columns_df.empty
+
+    valid_columns_df_this_table = valid_schemas_tables_columns_df[
+        valid_schemas_tables_columns_df["TABLE_NAME"] == fqn_table.table
+    ]
+
+    raw_table = get_table_representation(
+        conn=conn,
+        schema_name=fqn_table.database + "." + fqn_table.schema_name,
+        table_name=fqn_table.table,
+        table_index=0,
+        ndv_per_column=n_sample_values,
+        columns_df=valid_columns_df_this_table,
+    )
+    return _raw_table_to_semantic_context_table(
+        database=fqn_table.database,
+        schema=fqn_table.schema_name,
+        raw_table=raw_table,
+    )
+
+
 def raw_schema_to_semantic_context(
     base_tables: List[str],
     semantic_model_name: str,
@@ -167,69 +200,21 @@ def raw_schema_to_semantic_context(
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
     allow_joins: Optional[bool] = False,
 ) -> semantic_model_pb2.SemanticModel:
-    """
-    Converts a list of fully qualified Snowflake table names into a semantic model.
-
-    Parameters:
-    - base_tables  (list[str]): Fully qualified table names to include in the semantic model.
-    - snowflake_account (str): Snowflake account identifier.
-    - semantic_model_name (str): A meaningful semantic model name.
-    - conn (SnowflakeConnection): SnowflakeConnection to reuse.
-    - n_sample_values (int): The number of sample values per col.
-
-    Returns:
-    - The semantic model (semantic_model_pb2.SemanticModel).
-
-    This function fetches metadata for the specified tables, performs schema validation, extracts key information,
-    enriches metadata from the Snowflake database, and constructs a semantic model in protobuf format.
-    It handles different databases and schemas within the same account by creating unique Snowflake connections as needed.
-
-    Raises:
-    - AssertionError: If no valid tables are found in the specified schema.
-    """
-
-    # For FQN tables, create a new snowflake connection per table in case the db/schema is different.
+    start_time = time.time()
     table_objects = []
-    unique_database_schema: List[str] = []
-    for table in base_tables:
-        # Verify this is a valid FQN table. For now, we check that the table follows the following format.
-        # {database}.{schema}.{table}
-        fqn_table = create_fqn_table(table)
-        fqn_databse_schema = f"{fqn_table.database}.{fqn_table.schema_name}"
 
-        if fqn_databse_schema not in unique_database_schema:
-            unique_database_schema.append(fqn_databse_schema)
-
-        logger.info(f"Pulling column information from {fqn_table}")
-        valid_schemas_tables_columns_df = get_valid_schemas_tables_columns_df(
-            conn=conn,
-            db_name=fqn_table.database,
-            table_schema=fqn_table.schema_name,
-            table_names=[fqn_table.table],
-        )
-        assert not valid_schemas_tables_columns_df.empty
-
-        # get the valid columns for this table.
-        valid_columns_df_this_table = valid_schemas_tables_columns_df[
-            valid_schemas_tables_columns_df["TABLE_NAME"] == fqn_table.table
+    # Create a Table object representation for each provided table name.
+    # This is done concurrently because `process_table` is I/O bound, executing potentially long-running
+    # queries to fetch column metadata and sample values.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        table_futures = [
+            executor.submit(process_table, table, conn, n_sample_values)
+            for table in base_tables
         ]
-
-        raw_table = get_table_representation(
-            conn=conn,
-            schema_name=fqn_databse_schema,  # Fully-qualified schema
-            table_name=fqn_table.table,  # Non-qualified table name
-            table_index=0,
-            ndv_per_column=n_sample_values,  # number of sample values to pull per column.
-            columns_df=valid_columns_df_this_table,
-            max_workers=1,
-        )
-        table_object = _raw_table_to_semantic_context_table(
-            database=fqn_table.database,
-            schema=fqn_table.schema_name,
-            raw_table=raw_table,
-        )
-        table_objects.append(table_object)
-    # TODO(jhilgart): Call cortex model to generate a semantically friendly name here.
+        concurrent.futures.wait(table_futures)
+        for future in table_futures:
+            table_object = future.result()
+            table_objects.append(table_object)
 
     placeholder_relationships = _get_placeholder_joins() if allow_joins else None
     context = semantic_model_pb2.SemanticModel(
@@ -237,6 +222,9 @@ def raw_schema_to_semantic_context(
         tables=table_objects,
         relationships=placeholder_relationships,
     )
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    logger.info(f"Time taken to generate semantic model: {elapsed_time} seconds.")
     return context
 
 
