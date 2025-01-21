@@ -519,24 +519,23 @@ def create_table_in_schema(
 def get_valid_schemas_tables_columns_df(
     conn: SnowflakeConnection, table_fqn: str
 ) -> pd.DataFrame:
-    if table_names and not table_schema:
-        logger.warning(
-            "Provided table_name without table_schema, cannot filter to fetch the specific table"
-        )
-    where_clause = ""
-    if table_schema:
-        where_clause += f" where t.table_schema ilike '{table_schema}' "
-        if table_names:
-            table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
-            where_clause += f"AND LOWER(t.table_name) in ({table_names_str}) "
-    query = dedent(
-        f"""
-        select t.{_TABLE_SCHEMA_COL}, t.{_TABLE_NAME_COL}, c.{_COLUMN_NAME_COL}, c.{_DATATYPE_COL}, c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS}
-        from {db_name}.information_schema.tables as t
-        join {db_name}.information_schema.columns as c on t.table_schema = c.table_schema and t.table_name = c.table_name{where_clause}
-        order by 1, 2, c.ordinal_position
-        """
-    )
+    database_name, schema_name, table_name = table_fqn.split(".")
+
+    query = f"""
+        select
+            c.{_COLUMN_NAME_COL},
+            c.{_DATATYPE_COL},
+            c.{_COMMENT_COL} as {_COLUMN_COMMENT_ALIAS},
+            t.{_COMMENT_COL} as {_TABLE_COMMENT_COL}
+        from {database_name}.information_schema.tables as t
+        join {database_name}.information_schema.columns as c
+        on true
+        and t.table_schema = c.table_schema
+        and t.table_name = c.table_name
+        and t.table_name ilike '{table_name}'
+        where t.table_schema ilike '{schema_name}'
+        order by c.ordinal_position
+    """
     cursor_execute = conn.cursor().execute(query)
     columns_df = cursor_execute.fetch_pandas_all()  # type: ignore[union-attr]
     return columns_df

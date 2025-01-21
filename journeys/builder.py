@@ -42,12 +42,7 @@ class CortexSearchConfig:
     warehouse_name: str
     target_lag: str
 
-#         if not st.session_state["semantic_model_name"]:
-#             st.error("Please provide a name for your semantic model.")
-#         elif not st.session_state["selected_tables"]:
-#             st.error("Please select at least one table to proceed.")
-#         else:
-#             st.session_state["table_selector_submitted"] = True
+
 def init_session_state() -> None:
     default_state = {
         "build_semantic_model": False,
