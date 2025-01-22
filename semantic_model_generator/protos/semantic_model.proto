@@ -279,7 +279,7 @@ message Metric {
   MetricsFilter filter = 5 [(optional) = true];
 }
 
-message MetricsFilter { string expr = 1 [(sql_expression) = true]; }
+message MetricsFilter {string expr = 1 [(sql_expression) = true];}
 
 // Type of the join - inner, left outer, etc.
 enum JoinType {
@@ -364,4 +364,4 @@ message VerifiedQuery {
 }
 
 // VerifiedQueryRepository is a simply a collection of verified queries.
-message VerifiedQueryRepository { repeated VerifiedQuery verified_queries = 1; }
+message VerifiedQueryRepository {repeated VerifiedQuery verified_queries = 1;}

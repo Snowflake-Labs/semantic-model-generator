@@ -289,12 +289,15 @@ def cortex_search_fragment() -> None:
                 if search_key in cortex_search_configs:
                     config: CortexSearchConfig = cortex_search_configs[search_key]
                     database, schema, _ = config.table_fqn.split(".")
+
                     column.cortex_search_service = CortexSearchService(
                         database=database,
                         schema=schema,
                         service=config.service_name,
                         literal_column=config.column_name,
                     )
+
+        st.session_state["updated_tables"] = tables
         st.rerun()
 
 
@@ -319,7 +322,7 @@ def create_cortex_search_services() -> None:
 
 
 def save_yaml() -> None:
-    tables = st.session_state["tables"]
+    tables = st.session_state["updated_tables"]
     context = translate_data_class_tables_to_model_protobuf(
         raw_tables=tables,
         semantic_model_name=st.session_state["semantic_model_name"],

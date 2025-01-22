@@ -247,7 +247,7 @@ def _add_column_comments(
     i = 0
     for column in columns:
         if not column.comment:
-            column.comment = comments[i]
+            column.comment = comments[i].strip()
             i += 1
 
 
@@ -269,7 +269,7 @@ def _get_column_representation(
         cursor_execute = cursor.execute(
             f"""
             select distinct "{column_name}" from {table_fqn}
-            where {column_name} is not null
+            where "{column_name}" is not null
             limit {max_string_sample_values + 1}
             """
         )
