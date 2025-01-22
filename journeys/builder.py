@@ -2,36 +2,32 @@ from dataclasses import dataclass
 
 import streamlit as st
 from loguru import logger
-
-from app_utils.shared_utils import create_cortex_search_service
-from semantic_model_generator.data_processing import proto_utils
-from semantic_model_generator.data_processing.data_types import Table
-from semantic_model_generator.generate_model import append_comment_to_placeholders
-from semantic_model_generator.generate_model import comment_out_section
-from semantic_model_generator.generate_model import context_to_yaml
-from semantic_model_generator.generate_model import get_table_representations
-from semantic_model_generator.generate_model import translate_data_class_tables_to_model_protobuf
-from semantic_model_generator.protos import semantic_model_pb2
 from snowflake.connector import ProgrammingError
 from streamlit_extras.tags import tagger_component
 
 from app_utils.shared_utils import (
     GeneratorAppScreen,
+    create_cortex_search_service,
     format_snowflake_context,
     get_available_databases,
     get_available_schemas,
     get_available_tables,
+    get_available_warehouses,
+    get_snowflake_connection,
     input_semantic_file_name,
 )
-from app_utils.shared_utils import get_available_warehouses
-from app_utils.shared_utils import get_snowflake_connection
-from semantic_model_generator.data_processing.data_types import CortexSearchService
-from semantic_model_generator.generate_model import _get_placeholder_joins
-from semantic_model_generator.generate_model import _raw_table_to_semantic_context_table
-from semantic_model_generator.snowflake_utils.snowflake_connector import DIMENSION_DATATYPES
-from semantic_model_generator.snowflake_utils.snowflake_connector import get_table_representation
-from semantic_model_generator.snowflake_utils.snowflake_connector import get_valid_schemas_tables_columns_df
-from semantic_model_generator.validate.context_length import validate_context_length
+from semantic_model_generator.data_processing.data_types import (
+    CortexSearchService,
+    Table,
+)
+from semantic_model_generator.generate_model import (
+    context_to_yaml,
+    get_table_representations,
+    translate_data_class_tables_to_model_protobuf,
+)
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    DIMENSION_DATATYPES,
+)
 
 
 @dataclass(frozen=True)
@@ -53,7 +49,7 @@ def init_session_state() -> None:
         "selected_tables": list(),
         "semantic_model_name": "",
         "table_selector_submitted": False,
-        "tables": list()
+        "tables": list(),
     }
     for key, value in default_state.items():
         if key not in st.session_state:
@@ -181,9 +177,7 @@ def table_selector_fragment() -> None:
 @st.cache_data(show_spinner=False)
 def call_get_table_representations(base_tables: list[str]) -> list[Table]:
     conn = get_snowflake_connection()
-    tables = get_table_representations(
-        conn=conn, base_tables=base_tables
-    )
+    tables = get_table_representations(conn=conn, base_tables=base_tables)
     return tables
 
 
@@ -220,7 +214,7 @@ def cortex_search_fragment() -> None:
         with st.form(key=f"add_cortex_search_form_{column}"):
             st.write("Add Cortex Search Integration")
             service_name = st.text_input(
-                label=f"Cortex Search Service Name",
+                label="Cortex Search Service Name",
                 value=f"CORTEX_SEARCH.{column}",
                 key=f"cortex_search_service_name_{column}",
             )
@@ -317,7 +311,7 @@ def create_cortex_search_services() -> None:
                 column_name=config.column_name,
                 table_fqn=config.table_fqn,
                 warehouse_name=config.warehouse_name,
-                target_lag=config.target_lag
+                target_lag=config.target_lag,
             )
 
 

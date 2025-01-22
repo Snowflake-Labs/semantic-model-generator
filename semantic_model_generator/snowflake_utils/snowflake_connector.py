@@ -11,7 +11,6 @@ from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.connector.errors import ProgrammingError
 from snowflake.connector.pandas_tools import write_pandas
-from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.snowflake_utils import env_vars
@@ -398,21 +397,6 @@ def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, s
     result = cursor.fetchall()
     return dict([x[:2] for x in result])
 
-def fetch_table_schema(conn: SnowflakeConnection, table_fqn: str) -> dict[str, str]:
-    """
-    Fetches the table schema the current user has access
-    Args:
-        conn: SnowflakeConnection to run the query
-        table_fqn: The fully qualified name of the table to connect to.
-
-    Returns: a list of column names
-    """
-    query = f"DESCRIBE TABLE {table_fqn};"
-    cursor = conn.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
-    return dict([x[:2] for x in result])
-
 
 def fetch_yaml_names_in_stage(
     conn: SnowflakeConnection, stage_name: str, include_yml: bool = False
@@ -450,44 +434,6 @@ def create_table_in_schema(
     conn: SnowflakeConnection,
     table_fqn: str,
     columns_schema: Dict[str, str],
-) -> bool:
-    """
-    Creates a table in the specified schema with the specified columns
-    Args:
-        conn: SnowflakeConnection to run the query
-        table_fqn: The fully qualified name of the table to create
-        columns_schema: A list of Column objects representing the columns of the table
-
-    Returns: True if the table was created successfully, False otherwise
-    """
-    field_type_list = [f"{k} {v}" for k, v in columns_schema.items()]
-    # Construct the create table query
-    create_table_query = f"""
-    CREATE TABLE IF NOT EXISTS {table_fqn} (
-        {', '.join(field_type_list)}
-    )
-    """
-
-    # Execute the query
-    cursor = conn.cursor()
-    try:
-        cursor.execute(create_table_query)
-        return True
-    except ProgrammingError as e:
-        logger.error(f"Error creating table: {e}")
-        return False
-
-
-def fetch_table(conn: SnowflakeConnection, table_fqn: str) -> pd.DataFrame:
-    query = f"SELECT * FROM {table_fqn};"
-    cursor = conn.cursor()
-    cursor.execute(query)
-    query_result = cursor.fetch_pandas_all()
-    return query_result
-
-
-def create_table_in_schema(
-    conn: SnowflakeConnection, table_fqn: str, columns_schema: Dict[str, str]
 ) -> bool:
     """
     Creates a table in the specified schema with the specified columns

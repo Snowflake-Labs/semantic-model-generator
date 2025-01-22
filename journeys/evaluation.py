@@ -22,8 +22,8 @@ from app_utils.shared_utils import (
     validate_table_schema,
 )
 from semantic_model_generator.data_processing.proto_utils import proto_to_yaml
-from semantic_model_generator.snowflake_utils.snowflake_connector import batch_cortex_complete
 from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    batch_cortex_complete,
     create_table_in_schema,
     execute_query,
     fetch_table,

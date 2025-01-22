@@ -4,7 +4,6 @@ from typing import List, Optional
 
 from loguru import logger
 from snowflake.connector import SnowflakeConnection
-from snowflake.snowpark import Session
 
 from semantic_model_generator.data_processing import data_types, proto_utils
 from semantic_model_generator.data_processing.data_types import Table
@@ -172,7 +171,9 @@ def _raw_table_to_semantic_context_table(
     )
 
 
-def get_table_representations(conn: SnowflakeConnection, base_tables: List[str]) -> List[Table]:
+def get_table_representations(
+    conn: SnowflakeConnection, base_tables: List[str]
+) -> List[Table]:
     raw_tables = []
     for table_fqn in base_tables:
         columns_df = get_valid_schemas_tables_columns_df(conn=conn, table_fqn=table_fqn)
@@ -243,7 +244,7 @@ def raw_schema_to_semantic_context(
     context = translate_data_class_tables_to_model_protobuf(
         raw_tables=raw_tables,
         semantic_model_name=semantic_model_name,
-        allow_joins=allow_joins
+        allow_joins=allow_joins,
     )
     return context
 

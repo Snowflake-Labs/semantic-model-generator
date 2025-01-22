@@ -3,7 +3,6 @@ from unittest.mock import call, patch
 
 import pandas as pd
 import pytest
-from pandas.testing import assert_frame_equal
 
 from semantic_model_generator.data_processing.data_types import Column, Table
 from semantic_model_generator.snowflake_utils import snowflake_connector
