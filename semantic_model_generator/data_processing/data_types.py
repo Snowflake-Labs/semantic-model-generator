@@ -15,14 +15,22 @@ class FQNParts:
 
 
 @dataclass
+class CortexSearchService:
+    database: str
+    schema: str
+    service: str
+    literal_column: str
+
+
+@dataclass
 class Column:
     id_: int
     column_name: str
     column_type: str
     values: Optional[List[str]] = None
-    comment: Optional[str] = (
-        None  # comment field's to save the column comment user specified on the column
-    )
+    # comment field's to save the column comment user specified on the column
+    comment: Optional[str] = None
+    cortex_search_service: Optional[CortexSearchService] = None
 
     def __post_init__(self: Any) -> None:
         """
@@ -34,12 +42,10 @@ class Column:
 
 @dataclass
 class Table:
-    id_: int
     name: str
     columns: List[Column]
-    comment: Optional[str] = (
-        None  # comment field's to save the table comment user specified on the table
-    )
+    # comment field's to save the table comment user specified on the table
+    comment: Optional[str] = None
 
     def __post_init__(self: Any) -> None:
         for col in self.columns:

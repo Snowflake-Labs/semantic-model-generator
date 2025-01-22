@@ -78,7 +78,8 @@ if __name__ == "__main__":
                 use_container_width=True,
                 type="primary",
             ):
-                builder.show()
+                st.session_state["page"] = GeneratorAppScreen.BUILDER
+                st.rerun()
             st.markdown("")
             if st.button(
                 "**✏️ Edit an existing semantic model**",
@@ -115,5 +116,7 @@ if __name__ == "__main__":
     # The builder flow is simply an intermediate dialog before the iteration flow.
     if st.session_state["page"] == GeneratorAppScreen.ITERATION:
         iteration.show()
+    elif st.session_state["page"] == GeneratorAppScreen.BUILDER:
+        builder.show()
     else:
         onboarding_dialog()

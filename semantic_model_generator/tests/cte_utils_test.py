@@ -58,7 +58,7 @@ def get_test_ctx() -> semantic_model_pb2.SemanticModel:
                     ),
                 ],
                 measures=[
-                    semantic_model_pb2.Measure(
+                    semantic_model_pb2.Fact(
                         name="m1",
                         description="m1_description",
                         synonyms=["m1_synonym1", "m1_synonym2"],
@@ -67,12 +67,12 @@ def get_test_ctx() -> semantic_model_pb2.SemanticModel:
                         default_aggregation=semantic_model_pb2.AggregationType.avg,
                         sample_values=["m1_sample_value1", "m1_sample_value2"],
                     ),
-                    semantic_model_pb2.Measure(
+                    semantic_model_pb2.Fact(
                         name="m2",
                         description="m1_description",
                         expr="m1_expr",
                     ),
-                    semantic_model_pb2.Measure(
+                    semantic_model_pb2.Fact(
                         name="total_m3",
                         description="m3_description",
                         expr="sum(m3_expr)",

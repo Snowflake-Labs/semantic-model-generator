@@ -1,17 +1,59 @@
+from dataclasses import dataclass
+
 import streamlit as st
 from loguru import logger
 from snowflake.connector import ProgrammingError
+from streamlit_extras.tags import tagger_component
 
 from app_utils.shared_utils import (
     GeneratorAppScreen,
+    create_cortex_search_service,
     format_snowflake_context,
     get_available_databases,
     get_available_schemas,
     get_available_tables,
-    input_sample_value_num,
+    get_available_warehouses,
+    get_snowflake_connection,
     input_semantic_file_name,
-    run_generate_model_str_from_snowflake,
 )
+from semantic_model_generator.data_processing.data_types import (
+    CortexSearchService,
+    Table,
+)
+from semantic_model_generator.generate_model import (
+    context_to_yaml,
+    get_table_representations,
+    translate_data_class_tables_to_model_protobuf,
+)
+from semantic_model_generator.snowflake_utils.snowflake_connector import (
+    DIMENSION_DATATYPES,
+)
+
+
+@dataclass(frozen=True)
+class CortexSearchConfig:
+    service_name: str
+    column_name: str
+    table_fqn: str
+    warehouse_name: str
+    target_lag: str
+
+
+def init_session_state() -> None:
+    default_state = {
+        "build_semantic_model": False,
+        "cortex_search_configs": dict(),
+        "experimental_features": False,
+        "selected_databases": list(),
+        "selected_schemas": list(),
+        "selected_tables": list(),
+        "semantic_model_name": "",
+        "table_selector_submitted": False,
+        "tables": list(),
+    }
+    for key, value in default_state.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 def update_schemas_and_tables() -> None:
@@ -68,23 +110,13 @@ def update_tables() -> None:
     st.session_state["selected_tables"] = valid_selected_tables
 
 
-@st.experimental_dialog("Selecting your tables", width="large")
-def table_selector_dialog() -> None:
-    st.write(
-        "Please fill out the following fields to start building your semantic model."
+@st.experimental_fragment()
+def table_selector_fragment() -> None:
+    st.markdown(
+        "## Please fill out the following fields to start building your semantic model."
     )
-    model_name = input_semantic_file_name()
-    sample_values = input_sample_value_num()
+    st.session_state["semantic_model_name"] = input_semantic_file_name()
     st.markdown("")
-
-    if "selected_databases" not in st.session_state:
-        st.session_state["selected_databases"] = []
-
-    if "selected_schemas" not in st.session_state:
-        st.session_state["selected_schemas"] = []
-
-    if "selected_tables" not in st.session_state:
-        st.session_state["selected_tables"] = []
 
     with st.spinner("Loading databases..."):
         available_databases = get_available_databases()
@@ -95,7 +127,6 @@ def table_selector_dialog() -> None:
         placeholder="Select the databases that contain the tables you'd like to include in your semantic model.",
         on_change=update_schemas_and_tables,
         key="selected_databases",
-        # default=st.session_state.get("selected_databases", []),
     )
 
     st.multiselect(
@@ -115,28 +146,212 @@ def table_selector_dialog() -> None:
         format_func=lambda x: format_snowflake_context(x, -1),
     )
 
-    st.markdown("<div style='margin: 240px;'></div>", unsafe_allow_html=True)
-    experimental_features = st.checkbox(
-        "Enable joins (optional)",
-        help="Checking this box will enable you to add/edit join paths in your semantic model. If enabling this setting, please ensure that you have the proper parameters set on your Snowflake account. Reach out to your account team for access.",
+    st.checkbox(
+        label="Enable joins (optional)",
+        help=(
+            "Checking this box will enable you to add/edit join paths in your semantic "
+            "model. If enabling this setting, please ensure that you have the proper "
+            "parameters set on your Snowflake account. Reach out to your account team "
+            "for access."
+        ),
+        key="experimental_features",
     )
 
-    st.session_state["experimental_features"] = experimental_features
+    if st.button(
+        "Select Semantic Model Tables",
+        key="table_selector_button",
+        use_container_width=True,
+        type="primary",
+        disabled=st.session_state["table_selector_submitted"],
+    ):
+        if not st.session_state["semantic_model_name"]:
+            st.error("Please provide a name for your semantic model.")
+        elif not st.session_state["selected_tables"]:
+            st.error("Please select at least one table to proceed.")
+        else:
+            st.session_state["table_selector_submitted"] = True
 
-    submit = st.button("Submit", use_container_width=True, type="primary")
-    if submit:
-        try:
-            run_generate_model_str_from_snowflake(
-                model_name,
-                sample_values,
-                st.session_state["selected_tables"],
-                allow_joins=experimental_features,
+        st.rerun()
+
+
+@st.cache_data(show_spinner=False)
+def call_get_table_representations(base_tables: list[str]) -> list[Table]:
+    conn = get_snowflake_connection()
+    tables = get_table_representations(conn=conn, base_tables=base_tables)
+    return tables
+
+
+def table_representations() -> None:
+    base_tables = st.session_state["selected_tables"]
+    st.session_state["tables"] = call_get_table_representations(base_tables)
+
+
+def generate_table_configs() -> None:
+    with st.spinner(
+        "Writing semantic model descriptions using AI (this may take a moment) ..."
+    ):
+        table_representations()
+
+        # We will need warehouses for search integration.
+        st.session_state["available_warehouses"] = get_available_warehouses()
+
+
+@st.experimental_fragment()
+def cortex_search_fragment() -> None:
+    tables = st.session_state["tables"]
+
+    # Let's use a form instead of a button
+    possible_columns = list()
+    for table in tables:
+        for column in table.columns:
+            if (column.column_type in DIMENSION_DATATYPES) and (column.values is None):
+                table_column = f"{table.name}.{column.column_name}"
+                possible_columns.append(table_column)
+
+    cortex_search_configs = st.session_state["cortex_search_configs"]
+
+    def _add_search_form(column: str) -> None:
+        with st.form(key=f"add_cortex_search_form_{column}"):
+            st.write("Add Cortex Search Integration")
+            service_name = st.text_input(
+                label="Cortex Search Service Name",
+                value=f"CORTEX_SEARCH.{column}",
+                key=f"cortex_search_service_name_{column}",
             )
-            st.session_state["page"] = GeneratorAppScreen.ITERATION
-            st.rerun()
-        except ValueError as e:
-            st.error(e)
+            warehouse_name = st.selectbox(
+                label="Warehouse",
+                options=get_available_warehouses(),
+                key=f"cortex_search_warehouse_name_{column}",
+            )
+            target_lag = st.text_input(
+                label="Target Lag",
+                value="1 hour",
+                key=f"cortex_search_target_lag_{column}",
+            )
+
+            if st.form_submit_button(label="Add Cortex Search Integration"):
+                table_name, column_name = column.rsplit(".", 1)
+                cortex_search_config = CortexSearchConfig(
+                    service_name=service_name,
+                    column_name=column_name,
+                    table_fqn=table_name,
+                    warehouse_name=warehouse_name,
+                    target_lag=target_lag,
+                )
+                cortex_search_configs[column] = cortex_search_config
+                st.rerun()
+
+    def _remove_search_form(column: str) -> None:
+        with st.form(key=f"remove_cortex_search_form_{column}"):
+            st.write("Remove Cortex Search Integration")
+            if st.form_submit_button(label="Remove Cortex Search Integration"):
+                del cortex_search_configs[column]
+                st.rerun()
+
+    st.markdown("## Optionally Integrate Cortex Search For High Cardinality Dimensions")
+    if len(cortex_search_configs) > 0:
+        tagger_component(
+            content="Columns with Search Integrations: ",
+            tags=list(cortex_search_configs),
+        )
+    else:
+        st.write("Columns with Search Integrations: None")
+
+    current_column = st.selectbox(
+        label="Table Column To Setup Cortex Search",
+        options=possible_columns,
+        key="cortex_search_possible_columns",
+    )
+    if current_column not in cortex_search_configs:
+        _add_search_form(current_column)
+    else:
+        _remove_search_form(current_column)
+
+    if st.button(
+        "Build Semantic Model",
+        key="setup_table_button",
+        use_container_width=True,
+        type="primary",
+        disabled=st.session_state["build_semantic_model"],
+    ):
+        st.session_state["build_semantic_model"] = True
+
+        # Add Cortex Search Configs
+        for table in tables:
+            for column in table.columns:
+                search_key = f"{table.name}.{column.column_name}"
+                if search_key in cortex_search_configs:
+                    config: CortexSearchConfig = cortex_search_configs[search_key]
+                    database, schema, _ = config.table_fqn.split(".")
+
+                    column.cortex_search_service = CortexSearchService(
+                        database=database,
+                        schema=schema,
+                        service=config.service_name,
+                        literal_column=config.column_name,
+                    )
+
+        st.session_state["updated_tables"] = tables
+        st.rerun()
+
+
+def create_cortex_search_services() -> None:
+    conn = get_snowflake_connection()
+    cortex_search_configs = st.session_state["cortex_search_configs"]
+    config: CortexSearchConfig
+    for config in cortex_search_configs.values():
+        service_name = config.service_name.replace(".", "_")
+        with st.spinner(
+            f"Creating Cortex Search Services for {service_name} "
+            f"(this may take several minutes...)"
+        ):
+            create_cortex_search_service(
+                conn=conn,
+                service_name=service_name,
+                column_name=config.column_name,
+                table_fqn=config.table_fqn,
+                warehouse_name=config.warehouse_name,
+                target_lag=config.target_lag,
+            )
+
+
+def save_yaml() -> None:
+    tables = st.session_state["updated_tables"]
+    context = translate_data_class_tables_to_model_protobuf(
+        raw_tables=tables,
+        semantic_model_name=st.session_state["semantic_model_name"],
+        allow_joins=st.session_state["experimental_features"],
+    )
+    yaml_string = context_to_yaml(context)
+    st.session_state["yaml"] = yaml_string
 
 
 def show() -> None:
-    table_selector_dialog()
+    # Initialize session state.
+    init_session_state()
+
+    # Prompt user for table selection.
+    table_selector_fragment()
+
+    # Stop app until user table selection is complete.
+    if not st.session_state["table_selector_submitted"]:
+        st.stop()
+
+    # Fetch table config and generate descriptions.
+    generate_table_configs()
+
+    # Setup cortex search integration
+    cortex_search_fragment()
+
+    # Stop app until user submits semantic model config.
+    if not st.session_state["build_semantic_model"]:
+        st.stop()
+
+    # (Re)Create cortex search services.
+    create_cortex_search_services()
+
+    # Save YAML model to session state.
+    save_yaml()
+
+    st.session_state["page"] = GeneratorAppScreen.ITERATION
+    st.rerun()

@@ -447,6 +447,7 @@ class GeneratorAppScreen(str, Enum):
 
     ONBOARDING = "onboarding"
     ITERATION = "iteration"
+    BUILDER = "builder"
 
 
 def return_home_button() -> None:
@@ -606,7 +607,7 @@ def add_dimension(table: semantic_model_pb2.Table) -> None:
 
 
 @st.experimental_dialog("Edit Measure")  # type: ignore[misc]
-def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
+def edit_measure(table_name: str, measure: semantic_model_pb2.Fact) -> None:
     """
     Renders a dialog box to edit an existing measure.
     """
@@ -684,7 +685,7 @@ def add_measure(table: semantic_model_pb2.Table) -> None:
     Renders a dialog box to add a new measure.
     """
     with st.form(key="add-measure"):
-        measure = semantic_model_pb2.Measure()
+        measure = semantic_model_pb2.Fact()
         measure.name = st.text_input("Name", key=f"{table.name}-add-measure-name")
         measure.expr = st.text_input(
             "SQL Expression", key=f"{table.name}-add-measure-expr"
@@ -1327,7 +1328,7 @@ def run_generate_model_str_from_snowflake(
     model_name: str,
     sample_values: int,
     base_tables: list[str],
-    allow_joins: Optional[bool] = False,
+    allow_joins: bool = False,
 ) -> None:
     """
     Runs generate_model_str_from_snowflake to generate cortex semantic shell.
@@ -1335,6 +1336,7 @@ def run_generate_model_str_from_snowflake(
         model_name (str): Semantic file name (without .yaml suffix).
         sample_values (int): Number of sample values to provide for each table in generation.
         base_tables (list[str]): List of fully-qualified Snowflake tables to include in the semantic model.
+        allow_joins: whether to allow joins
 
     Returns: None
     """
@@ -1354,6 +1356,29 @@ def run_generate_model_str_from_snowflake(
             )
 
             st.session_state["yaml"] = yaml_str
+
+
+def create_cortex_search_service(
+    conn: SnowflakeConnection,
+    service_name: str,
+    column_name: str,
+    table_fqn: str,
+    warehouse_name: str,
+    target_lag: str,
+) -> None:
+    try:
+        query = f"""
+        CREATE CORTEX SEARCH SERVICE IF NOT EXISTS {service_name}
+        ON {column_name}
+        WAREHOUSE = {warehouse_name}
+        TARGET_LAG = '{target_lag}'
+        AS (
+            SELECT DISTINCT {column_name} FROM {table_fqn}
+        );
+        """
+        conn.cursor().execute(query)
+    except Exception as e:
+        st.error(f"Error creating cortex search service: {e}")
 
 
 @dataclass
