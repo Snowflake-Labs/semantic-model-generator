@@ -13,6 +13,7 @@ If you want to see what a semantic model looks like, skip to [Examples](#example
 * [Streamlit in Snowflake Deployment](#streamlit-in-snowflake-deployment)
 * [Local Deployment](#local-deployment)
 * [Partner Tool Translation](#partner-tool-translation)
+* [Callable Semantic Generation](#callable-semantic-generation)
 * [Usage](#usage)
     + [Semantic Model Context Length Constraints](#semantic-model-context-length-constraints)
     + [Auto-Generated Descriptions](#auto-generated-descriptions)
@@ -206,6 +207,33 @@ Please see below for details about current partner support.
 | DBT Semantic Model   | We extract and translate metadata from [semantic_models](https://docs.getdbt.com/docs/build/semantic-models#semantic-models-components) in uploaded DBT yaml file(s) and merge with a generated Cortex Analyst semantic file table-by-table. | DBT models and sources leading up to the semantic model layer(s) must be tables/views in Snowflake. |
 | DBT SQL Model | DBT SQL Models should be materialized in Snowflake with persist docs to capture comments. A new semantic file can be generated for these newly materialized tables/views in Snowflake directly.| |
 | Looker Explore | We materialize your Explore dataset in Looker as Snowflake table(s) and generate a Cortex Analyst semantic file. Metadata from your Explore fields can be merged with the generated Cortex Analyst semantic file.                            | Looker Views referenced in the Looker Explores must be tables/views in Snowflake. Looker SDK credentials are required. Visit [Looker Authentication SDK Docs](https://cloud.google.com/looker/docs/api-auth#authentication_with_an_sdk) for more information. Install Looker's [API Explorer extension](https://cloud.google.com/looker/docs/api-explorer) from the Looker Marketplace to view API credentials directly. |
+
+## Callable Semantic Generation
+
+A semantic model for table(s) can be generated in a callable fashion using the below stored procedure:
+
+```sql
+CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.GENERATE_SEMANTIC_FILE(
+    STAGE_NAME STRING,
+    MODEL_NAME STRING,
+    SAMPLE_VALUE INT,
+    ALLOW_JOINS BOOLEAN,
+    TABLE_LIST ARRAY
+)
+```
+
+Calling the stored procedure will generate and upload a **minimal** semantic model YAML file to the specified Snowflake stage. Below is an example of calling the stored procedure for a single table. 
+
+```sql
+CALL CORTEX_ANALYST_SEMANTICS.SEMANTIC_MODEL_GENERATOR.GENERATE_SEMANTIC_FILE(
+'CATRANSLATOR.ANALYTICS.DATA',
+'MY_SEMANTIC_MODEL',
+5,
+False,
+['CATRANSLATOR.ANALYTICS.CUSTOMERS']
+);
+```
+Please note that high accuracy generally requires hands-on curation beyond that of a minimal semantic model.
 
 ## Usage
 
