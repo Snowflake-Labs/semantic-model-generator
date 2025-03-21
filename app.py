@@ -63,8 +63,9 @@ if __name__ == "__main__":
             """
                 <div style="text-align: center;">
                     <h1>Welcome to the Snowflake Semantic Model Generator! ❄️</h1>
-                    <p>Let's get started. What would you like to do?</p>
-                    <p>⚠️  Creation of Semantic Models was deprecated and moved to Snowsight UI(PuPr) ⚠️ </p>
+                    <p>⚠️  Heads up! The Streamlit app is no longer supported for semantic model creation.
+                    <p>👉 Please use the Snowsight UI in Snowflake to create and update semantic models — it’s newer and works better! </p>
+                    <p>✅ Once your model is created in Snowsight, come back here to run evaluations, which still work best in this app.</p>
                 </div>
             """,
             unsafe_allow_html=True,
@@ -89,7 +90,7 @@ if __name__ == "__main__":
                 iteration.show()
             st.markdown("")
             if st.button(
-                "**[⚠️ Deprecated]:package: Start with partner semantic model**",
+                "**[⚠️ Deprecated]📦 Start with partner semantic model**",
                 use_container_width=True,
                 type="primary",
             ):
