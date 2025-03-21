@@ -605,8 +605,8 @@ def add_dimension(table: semantic_model_pb2.Table) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Edit Measure")  # type: ignore[misc]
-def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
+@st.experimental_dialog("Edit Measure/Fact")  # type: ignore[misc]
+def edit_measure(table_name: str, measure: semantic_model_pb2.Fact) -> None:
     """
     Renders a dialog box to edit an existing measure.
     """
@@ -678,13 +678,13 @@ def edit_measure(table_name: str, measure: semantic_model_pb2.Measure) -> None:
         st.rerun()
 
 
-@st.experimental_dialog("Add Measure")  # type: ignore[misc]
+@st.experimental_dialog("Add Measure/Fact")  # type: ignore[misc]
 def add_measure(table: semantic_model_pb2.Table) -> None:
     """
     Renders a dialog box to add a new measure.
     """
     with st.form(key="add-measure"):
-        measure = semantic_model_pb2.Measure()
+        measure = semantic_model_pb2.Fact()
         measure.name = st.text_input("Name", key=f"{table.name}-add-measure-name")
         measure.expr = st.text_input(
             "SQL Expression", key=f"{table.name}-add-measure-expr"

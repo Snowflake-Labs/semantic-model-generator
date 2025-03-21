@@ -64,6 +64,7 @@ if __name__ == "__main__":
                 <div style="text-align: center;">
                     <h1>Welcome to the Snowflake Semantic Model Generator! ❄️</h1>
                     <p>Let's get started. What would you like to do?</p>
+                    <p>⚠️  Creation of Semantic Models was deprecated and moved to Snowsight UI(PuPr) ⚠️ </p>
                 </div>
             """,
             unsafe_allow_html=True,
@@ -74,7 +75,7 @@ if __name__ == "__main__":
         _, center, _ = st.columns([1, 2, 1])
         with center:
             if st.button(
-                "**🛠 Create a new semantic model**",
+                "**[⚠️ Deprecated]🛠 Create a new semantic model**",
                 use_container_width=True,
                 type="primary",
             ):
@@ -88,7 +89,7 @@ if __name__ == "__main__":
                 iteration.show()
             st.markdown("")
             if st.button(
-                "**:package: Start with partner semantic model**",
+                "**[⚠️ Deprecated]:package: Start with partner semantic model**",
                 use_container_width=True,
                 type="primary",
             ):

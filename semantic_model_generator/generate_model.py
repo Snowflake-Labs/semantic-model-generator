@@ -113,7 +113,7 @@ def _raw_table_to_semantic_context_table(
 
         elif col.column_type.upper() in MEASURE_DATATYPES:
             measures.append(
-                semantic_model_pb2.Measure(
+                semantic_model_pb2.Fact(
                     name=col.column_name,
                     expr=col.column_name,
                     data_type=col.column_type,
