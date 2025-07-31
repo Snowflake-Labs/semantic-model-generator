@@ -1,5 +1,8 @@
 # semantic-model-generator
 
+> [!NOTE]  
+> The Semantic Model Generator in Streamlit has been replaced by the native [Cortex Analyst Semantic View Generator in Snowsight](https://docs.snowflake.com/en/user-guide/views-semantic/ui). Please use the native semantic generation moving forward. The team is actively working to support translating existing semantic layers from partner tools into consumable semantic models in Snowflake.
+
 The `Semantic Model Generator` is an open-source tool used to generate and curate a semantic model for Snowflake [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst).
 
 The tool is rendered as a Streamlit application, which can be started in [Streamlit in Snowflake](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit) or locally with open-source Streamlit.
