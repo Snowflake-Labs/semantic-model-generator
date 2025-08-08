@@ -525,7 +525,7 @@ def yaml_editor(yaml_str: str) -> None:
             file_name="semantic_model.yaml",
             mime="text/yaml",
             use_container_width=True,
-            help=UPLOAD_HELP,
+            help=DOWNLOAD_HELP,
         )
 
     if button_row.button(
