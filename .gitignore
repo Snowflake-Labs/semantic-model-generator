@@ -1,3 +1,6 @@
+#Configuration
+connections.toml
+
 # Local python environment
 pyvenv
 *.DS_Store

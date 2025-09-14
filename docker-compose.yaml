@@ -1,0 +1,12 @@
+services:
+    semantic-model-generator:
+        build:
+            context: .
+        ports:
+            - 8501:8501
+        networks:
+            - external_network
+
+networks:
+    external_network:
+        driver: bridge
